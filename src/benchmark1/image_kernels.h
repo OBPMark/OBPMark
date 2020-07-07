@@ -54,7 +54,16 @@ void f_bad_pixel_cor(
 	);
 
 /**
- * \brief Radiation scrubbing. 
+ * \brief Replaced masked pixels with average of (good) neighbouring pixels, based on mask frame.
+ * Used for both bad pixel correction and radiation scrubbing.
+ */
+void f_mask_replace(
+	frame32_t *frame,
+	uint8_t **mask
+	);
+
+/**
+ * \brief Radiation scrubbing.
  */
 void f_scrub(
 	frame32_t *fs,
