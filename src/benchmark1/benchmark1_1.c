@@ -39,7 +39,7 @@ void benchmark_1_1_image_preproc(
 		f_offset(frame, offset_frame);
 
 		/* [II]: Bad pixel correction */
-		f_bad_pixel_cor(frame, bad_pixel_frame);
+		f_mask_replace(frame, bad_pixel_frame);
 
 		/* [III]: Radiation scrubbing */
 		f_scrub(frame, num_frames, num_neigh); // FIXME remove general num_ parameters

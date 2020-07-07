@@ -46,14 +46,6 @@ void f_gain(
 	);
 
 /**
- * \brief Bad-pixel correction. Replaces the value of a pixel with average of the neighbours, if it is marked in a bad pixel map.
- */
-void f_bad_pixel_cor(
-	frame32_t *frame, 
-	uint8_t	**bad_pixel_frame
-	);
-
-/**
  * \brief Replaced masked pixels with average of (good) neighbouring pixels, based on mask frame.
  * Used for both bad pixel correction and radiation scrubbing.
  */
