@@ -58,8 +58,17 @@ void f_bad_pixel_cor(
  */
 void f_scrub(
 	frame32_t *fs,
-	unsigned int num_frames,
-	unsigned int num_neigh
+	unsigned int num_frames, // FIXME should be removed, not general implementation
+	unsigned int num_neigh // FIXME should be removed, not general implementation
 	);
+
+/** 
+ * \brief 2x2 binning. 
+ */
+void f_2x2_bin(
+	frame32_t frame,
+	frame32_t binned_frame
+	);
+
 #endif // OBPMARK_IMAGE_KERNELS_H_
 

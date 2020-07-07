@@ -78,3 +78,25 @@ void f_scrub(
 	// FIXME Add from other implementation.
 }
 
+void f_2x2_bin(
+	frame32_t frame,
+	frame32_t binned_frame
+	)
+{
+	unsigned int x,y;
+	unsigned int x2,y2;
+
+	x2 = 0;
+	for(x=0; x<frame->w; x+=2)
+	{
+		y2 = 0;
+		for(y=0; y<frame->h; y+=2)
+		{
+			PIXEL(binned_frame,x2,y2)	= PIXEL(frame,x,y)	+ PIXEL(frame,(x+1),y)
+							+ PIXEL(frame,x,(y+1))	+ PIXEL(frame,(x+1),(y+1));
+			x2 += 1;
+		}
+		y2 += 1;
+	}
+}
+
