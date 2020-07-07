@@ -65,8 +65,91 @@ void f_bad_pixel_cor(
 	frame32_t *frame, 
 	uint8_t	**bad_pixel_frame
 	)
-{
-	// FIXME Add from implementation.
+	unsigned int x,y;
+
+	for(y=0; y<frame->h; y++)
+	{
+		for(x=0; x<frame->w; x++)
+		{
+			if(bad_pixel_frame[x][y] == 1)
+			{
+				/* Pixel in top-left corner (use: E,S,SE) */
+				if( (x == 0) && (y == 0) ) {
+					PIXEL(frame,x,y) =
+							( PIXEL(frame,	1,  		0) / 3
+							+ PIXEL(frame,	0,  		1) / 3
+							+ PIXEL(frame,	1,  		1) / 3
+						);
+				}
+				/* Pixel in top-right corner (use: W,S,SW) */
+				else if( (x == (frame->w-1)) && (y == 0) ) {
+					PIXEL(frame,x,y) =
+							( PIXEL(frame,	(frame->w-2),	0) / 3
+							+ PIXEL(frame,	0,		1) / 3
+							+ PIXEL(frame,	(frame->w-2),	1) / 3
+						);
+				}
+				/* Pixel in bottom-left-corner (use: N,E,NE) */
+				else if( (x == 0) && (y == (frame->h-1)) ) {
+					PIXEL(frame,x,y) =
+							( PIXEL(frame,	0,		(frame->h-2)) / 3
+							+ PIXEL(frame,	1,		(frame->h-1)) / 3
+							+ PIXEL(frame,	1,		(frame->h-2)) / 3
+						);
+				}
+				/* Pixel in bottom-right corner (use: N,W,NW) */
+				else if( (x == (frame->w-1)) && (y == (frame->h-1)) ) {
+					PIXEL(frame,x,y) =
+							( PIXEL(frame,	(frame->w-1),	(frame->h-2)) / 3
+							+ PIXEL(frame,	(frame->w-2),	(frame->h-1)) / 3
+							+ PIXEL(frame,	(frame->w-2),	(frame->h-2)) / 3
+						);
+				}
+				/* Pixel on top edge */
+				else if(x == 0) {
+					PIXEL(frame,x,y) =
+							( PIXEL(frame,	(x-1),		y) 	/ 3
+							+ PIXEL(frame,	(x+1),		y)	/ 3
+							+ PIXEL(frame,	x,		(y+1)) 	/ 3
+						);
+				}
+				/* Pixel on left edge */
+				else if(y == 0) {
+					PIXEL(frame,x,y) =
+							( PIXEL(frame,	x,		(y-1)) 	/ 3
+							+ PIXEL(frame,	(x+1),		y) 	/ 3
+							+ PIXEL(frame,	x,		(y+1)) 	/ 3
+						);
+				}
+				/* Pixel on right edge */
+				else if(x == (frame->w-1)) {
+					PIXEL(frame,x,y) =
+							( PIXEL(frame,	x,		(y-1)) 	/ 3
+							+ PIXEL(frame,	(x-1),		y) 	/ 3
+							+ PIXEL(frame,	x,		(y+1)) 	/ 3
+						);
+				}
+				/* Pixel on bottom edge */
+				else if(y == (frame->h-1)) {
+					PIXEL(frame,x,y) =
+							( PIXEL(frame,	x,		(y-1)) 	/ 3
+							+ PIXEL(frame,	(x-1),		y) 	/ 3
+							+ PIXEL(frame,	(x+1),		y) 	/ 3
+						);
+				}
+
+				/* Pixel not on edge or corner */
+				else {
+					PIXEL(frame,x,y) =
+							( PIXEL(frame,  (x-1),  	y)	/ 4
+							+ PIXEL(frame,  (x+1), 		y)	/ 4
+							+ PIXEL(frame,  x,	 	(y-1))	/ 4
+							+ PIXEL(frame,  x,	  	(y+1))	/ 4
+						);
+				}
+			}
+		}
+	}
 }
 
 void f_scrub(
