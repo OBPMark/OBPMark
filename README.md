@@ -1,16 +1,17 @@
-### Hi there 👋
+### OBPMark (On Board Processing Benchmark)
 
-<!--
-**OBPMark/OBPMark** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+This repository contains a set of reference implementations for performing benchmarks on devices and systems on-board spacecraft. 
 
-Here are some ideas to get you started:
+# Benchmark #1: Image Processing
 
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+# Benchmark #2: Standard Compression Algorithms
+TBA.
+
+# Benchmark #3: Standard Encryption Algorithms
+TBA.
+
+# Benchmark #4: Processing Building Blocks 
+TBA.
+
+# Benchmark #5: ML Inference 
+TBA.
