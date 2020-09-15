@@ -30,7 +30,7 @@ void gen_offsets(frame16_t *offsets)
 		for(y=0; y<offsets->h; y++)
 		{
 			/* Using 2^10 as estimate of variance of pixel */
-			PIXEL(offsets,x,y)	= (uint32_t)(rand() % 128);
+			PIXEL(offsets,x,y) = (uint32_t)(rand() % 128);
 
 		}
 	}
@@ -44,7 +44,7 @@ void gen_gains(frame16_t *gains)
 	{
 		for(y=0; y<gains->h; y++)
 		{
-			// FIXME gain function
+			PIXEL(gains,x,y) = 1; // FIXME gain function
 		}
 	}
 }
@@ -154,13 +154,65 @@ void gen_frame(
 
 /* Generation of data set */
 
+int benchmark1_1_write_files(
+	frame16_t *offsets,
+	frame16_t *gains,
+	frame8_t *bad_pixels,
+	frame16_t *fs, 
+	unsigned int frame_width,
+	unsigned int frame_height,
+	unsigned int num_frames
+	)
+{
+	unsigned int i;
+
+	char offsets_name[50];
+	char gains_name[50];
+	char bad_pixels_name[50];
+
+	char frame_name[50];
+
+	sprintf(offsets_name,	 "out/offsets-%d-%d.bin", 	frame_width, frame_height);
+	sprintf(gains_name, 	 "out/gains-%d-%d.bin", 	frame_width, frame_height);
+	sprintf(bad_pixels_name, "out/bad_pixels-%d-%d.bin", 	frame_width, frame_height);
+
+	printf("Writing calibration data to files...\n");
+	// FIXME pre-defined file_names -- should include frame width and height
+	if(!write_frame16(offsets_name, offsets)) {
+		printf("error: failed to write offsets.\n");
+		return 0;
+	}
+
+	if(!write_frame16(gains_name, gains)) {
+		printf("error: failed to write gains.\n");
+		return 0;
+	}
+
+	if(!write_frame8(bad_pixels_name, bad_pixels)) {
+		printf("error: failed to write bad_pixels.\n");
+		return 0;
+	}
+
+	/* Write frame data to files */
+	printf("Writing frame data to files...\n");
+	for(i=0; i<num_frames; i++)
+	{
+		sprintf(frame_name, "out/frame_%d-%d-%d.bin", i, frame_width, frame_height);
+		if(!write_frame16(frame_name, &fs[i])) {
+			printf("error: failed to write frame data: %d\n", i);
+			return 0;
+		}
+	}
+	return 1;
+}
+
 int benchmark1_1_data_gen(
 	unsigned int frame_width,
 	unsigned int frame_height,
 	unsigned int num_frames
 	)
 {
-	int i; 
+	unsigned int i; 
 
 	frame16_t offsets;
 	frame16_t gains;
@@ -199,36 +251,9 @@ int benchmark1_1_data_gen(
 
 
 	/* Write calibration data to files */
-	printf("Writing calibration data to files...\n");
-	// FIXME pre-defined file_names -- should include frame width and height
-	if(!write_frame16("out/image_offsets.bin", &offsets)) {
-		printf("error: failed to write offsets.\n");
-		// FIXME cleanup
-		return 3;
-	}
-
-	if(!write_frame16("out/image_gains.bin", &gains)) {
-		printf("error: failed to write gains.\n");
-		// FIXME cleanup
-		return 3;
-	}
-
-	if(!write_frame8("out/image_bad_pixels.bin", &bad_pixels)) {
-		printf("error: failed to write bad_pixels.\n");
-		// FIXME cleanup
-		return 3;
-	}
-
-	/* Write frame data to files */
-	printf("Writing frame data to files...\n");
-	for(i=0; i<num_frames; i++)
-	{
-		// FIXME add frame width, height and frame number to output file name
-		if(!write_frame16("out/frame_data.bin", &fs[i])) {
-			printf("error: failed to write frame data: %d\n", i);
-			// FIXME cleanup
-			return 4;
-		}
+	if(!benchmark1_1_write_files(&offsets, &gains, &bad_pixels, fs, frame_width, frame_height, num_frames)) {
+		 // FIXME cleanup
+		 return 3;
 	}
 
 	/* Free buffers */
