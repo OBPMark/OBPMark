@@ -50,11 +50,11 @@ void f_mask_replace(
  * \brief Radiation scrubbing.
  */
 void f_scrub(
-	frame16_t *frame,
-	frame16_t *fs,
-	frame8_t *scrub_mask,
-	unsigned int num_frames, // FIXME should be removed, not general implementation
-	unsigned int num_neigh // FIXME should be removed, not general implementation
+        frame16_t *frame,
+        frame16_t *fs,
+        frame8_t *scrub_mask,
+        unsigned int num_frames,
+        unsigned int num_neighbours
 	);
 
 /** 

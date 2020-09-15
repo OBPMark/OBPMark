@@ -25,7 +25,7 @@ COMMON_SOURCES  = $(pathsubst %,$(COMMON_PATH)/%,$(_COMMON_SOURCES))
 _INCLUDES = image_kernels.h
 INCLUDES = $(pathsubst %,$(INCLUDE_PATH)/%,$(_INCLUDES)) $(COMMON_INCLUDES)
 
-OBJECTS = image_kernels.o $(COMMON_OBJECTS)
+OBJECTS = benchmark1_1.o image_kernels.o $(COMMON_OBJECTS)
 OUTFILE = obpmark_1_1-image
 
 

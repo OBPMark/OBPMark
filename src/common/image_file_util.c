@@ -29,30 +29,30 @@ int write_frame(char filename[], void **f, unsigned int width, unsigned int heig
 		bytes_written = fwrite(f[x], height, data_width, framefile);
 		bytes_total += bytes_written;
 		if(bytes_written != bytes_expected) {
-			printf("error: writing file: %s, failed at col: %d, expected: %d bytes, wrote: %d bytes, total read: %d bytes\n",
+			printf("error: writing file: %s, failed at col: %d, expected: %ld bytes, wrote: %ld bytes, total read: %ld bytes\n",
 					filename, x, bytes_expected, bytes_written, bytes_total);
 			return 0;
 		}
 	}
 
 	fclose(framefile);
-	printf("Wrote %d bytes to file: %s, (expected %d bytes)\n", bytes_total, filename, (bytes_expected*width));
+	printf("Wrote %ld bytes to file: %s, (expected %ld bytes)\n", bytes_total, filename, (bytes_expected*width));
 	return 1;
 }
 
 int write_frame8(char filename[], frame8_t *frame)
 {
-	return write_frame(filename, (void**)(frame->f), frame->w, frame->h, sizeof(uint8_t));
+	return write_frame(filename, (void**)(frame->f), frame->w, frame->h, (int)sizeof(uint8_t));
 }
 
 int write_frame16(char filename[], frame16_t *frame)
 {
-	return write_frame(filename, (void**)(frame->f), frame->w, frame->h, sizeof(uint16_t));
+	return write_frame(filename, (void**)(frame->f), frame->w, frame->h, (int)sizeof(uint16_t));
 }
 
 int write_frame32(char filename[], frame32_t *frame)
 {
-	return write_frame(filename, (void**)(frame->f), frame->w, frame->h, sizeof(uint32_t));
+	return write_frame(filename, (void**)(frame->f), frame->w, frame->h, (int)sizeof(uint32_t));
 }
 
 /* Read data from file */
@@ -76,14 +76,14 @@ int read_frame(char filename[], void **f, unsigned int width, unsigned int heigh
 		bytes_read = fread(f[x], height, data_width, framefile);
 		bytes_total += bytes_read;
 		if(bytes_read != bytes_expected) {
-			printf("error: reading file: %s, failed at col: %d, expected: %d bytes, read: %d bytes, total read: %d bytes\n",
+			printf("error: reading file: %s, failed at col: %d, expected: %ld bytes, read: %ld bytes, total read: %ld bytes\n",
 					filename, x, bytes_expected, bytes_read, bytes_total);
 			return 0;
 		}
 	}
 	
 	fclose(framefile);
-	printf("Read %d bytes from file: %s, (expected %d bytes)\n", bytes_total, filename, (bytes_expected*width));
+	printf("Read %ld bytes from file: %s, (expected %ld bytes)\n", bytes_total, filename, (bytes_expected*width));
 	return 1;
 }
 
