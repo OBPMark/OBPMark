@@ -97,7 +97,7 @@ int benchmark_1_1_cleanup(benchmark_params_t *p)
 	frame32_free(&p->binned_frame);
 	frame32_free(&p->image);
 
-	for(frame_i=0; frame_i<p->num_frames; frame_i)
+	for(frame_i=0; frame_i<p->num_frames; frame_i++)
 	{
 		frame16_free(&p->frames[frame_i]); 
 	}
