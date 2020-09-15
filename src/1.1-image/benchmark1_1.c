@@ -8,8 +8,11 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "image_kernels.h"
+
 #include "../common/timing.h"
-#include "../common/file_handling.h" 
+#include "../common/image_util.h" 
+#include "../common/image_mem_util.h" 
+#include "../common/image_file_util.h" 
 
 #define DATA_ROOT_DIR "../../data/images/"
 #define DATA_CALIBRATION
@@ -39,16 +42,15 @@ typedef struct {
 #endif // OBPMARK_VERBOSE_TIMING
 } benchmark_params_t;
 
-int benchmark_1_1_alloc_buffers(benchmark_params_t *params)
+int benchmark_1_1_alloc_buffers(benchmark_params_t *params, unsigned int frame_width, unsigned int frame_height)
 {
 	/* 
 	 * PORTING:
 	 * If dynamic memory allocation should not be used, please define global static buffers in this file and make references in *param here. 
 	 */
-	// FIXME implement
-	
-	alloc_frame16(p->offsets);
-	// FIXME copy from other files.
+	if(!frame16_alloc(p->offsets,	frame_width, frame_height)) return 0;
+	if(!frame16_alloc(p->gains,	frame_width, frame_height)) return 0;
+	if(!frame8_alloc(p->bad_pixels,	frame_width, frame_height)) return 0;
 	
 	return 1; 
 }
@@ -58,11 +60,21 @@ int benchmark_1_1_load_calibration_data(benchmark_params_t *params)
 	int read_frame8(char filename[], frame8_t *frame);
 	int read_frame16(char filename[], frame16_t *frame);
 
-	if(!read_frame16("../../data/images/frame 
+	// FIXME add different file names per frame width / height
 
+	if(!read_frame16("../../data/images/frame_offsets.bin", p->offsets)) {
+		printf("error: could not open offsets file.\n");
+		return 0;
+	}
+	if(!read_frame16("../../data/images/frame_gains.bin", p->offsets)) {
+		printf("error: could not open gains file.\n");
+		return 0;
+	}
+	if(!read_frame8("../../data/images/frame_bad_pixels.bin", p->offsets)) {
+		printf("error: could not open bad pixels file.\n");
+		return 0;
+	}
 
-	// FIXME implement
-	
 	return 1;
 }
 
@@ -189,7 +201,7 @@ int benchmark_1_1(unsigned int frame_width, unsigned int frame_height)
 	
 	/* Allocate buffers */
 	printf("Allocating buffers...\n");
-	if(!benchmark_1_1_alloc_buffers(&params)) {
+	if(!benchmark_1_1_alloc_buffers(&params), frame_width, frame_height) {
 		printf("fatal error: could not allocate buffers for benchmark.\n");
 		return 1;
 	}

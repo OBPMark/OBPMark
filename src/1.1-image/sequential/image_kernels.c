@@ -1,21 +1,17 @@
 /**
- * \brief OBPMark #1: Image Pre-Processing - Common processing kernel functions. 
- * \file image_kernels.c 
+ * \brief OBPMark #1.1: Image Calibrations and Corrections -- kernel functions
+ * \file image_kernels.c
  * \author David Steenari
+ * European Space Agency Community License V2.3 applies.
+ * For more info see the LICENSE file in the root folder.
  */
-// FIXME add licence info 
 #include "image_kernels.h"
-
-/* Defines */
-
-/** \brief Meta definition for frame pixel access */
-#define PIXEL(frame,x,y) ((frame)->f[x][y])
 
 /* Functions */
 
 void f_offset(
-	frame32_t *frame,
-	frame32_t *offset
+	frame16_t *frame,
+	frame16_t *offsets
 	)
 {
 	unsigned int x,y; 
@@ -24,7 +20,7 @@ void f_offset(
 	{
 		for(y=0; y<frame->h; y++)
 		{
-			PIXEL(frame,x,y) -= PIXEL(offset,x,y);
+			PIXEL(frame,x,y) -= PIXEL(offsets,x,y);
 		}
 	}
 }
@@ -36,9 +32,9 @@ void f_coadd(
 {
 	unsigned int x,y; 
 
-	for(x=0; x<frame->w; x++)
+	for(x=0; x<sum_frame->w; x++)
 	{
-		for(y=0; y<frame->h; y++)
+		for(y=0; y<sum_frame->h; y++)
 		{
 			PIXEL(sum_frame,x,y) += PIXEL(add_frame,x,y);
 		}
@@ -46,8 +42,8 @@ void f_coadd(
 }
 
 void f_gain(
-	frame32_t *frame,
-	float **gain_frame	
+	frame16_t *frame,
+	frame16_t *gains	
 	)
 {
 	unsigned int x,y;
@@ -56,7 +52,8 @@ void f_gain(
 	{
 		for(y=0; y<frame->h; y++)
 		{
-			PIXEL(frame,x,y) = (uint32_t)(PIXEL(frame,x,y) * gain_frame[x][y]);
+			// FIXME Q15 multiplication
+			PIXEL(frame,x,y) = (uint16_t)(PIXEL(frame,x,y) * PIXEL(gains,x,y));
 		}
 	}
 }
@@ -65,8 +62,8 @@ void f_gain(
  * \brief Help function for f_mask_replace(). Calculates mean of neighbours not marked in mask frame.
  */
 uint32_t f_neighbour_masked_sum(
-	frame32_t *frame,
-	uint8_t **mask,
+	frame16_t *frame,
+	frame8_t *mask,
 	int x_mid,
 	int y_mid
 	)
@@ -103,7 +100,7 @@ uint32_t f_neighbour_masked_sum(
 		for(y=y_start; y<(y_stop+1); y++)
 		{
 			/* Only include good pixels */
-			if(mask[x_mid+x][y_mid+y] == 0)
+			if(PIXEL(mask,(x_mid+x),(y_mid+y)) == 0)
 			{
 				sum += PIXEL(frame,(x_mid+x),(y_mid+y));
 				n_sum++;
@@ -118,18 +115,18 @@ uint32_t f_neighbour_masked_sum(
 }
 
 void f_mask_replace(
-	frame32_t *frame,
-	uint8_t **mask
+	frame16_t *frame,
+	frame8_t *mask
 	)
 {
 	unsigned int x,y;
 
 	/* Replace based on mask */
-	for(x=0; x<frame.w; x++)
+	for(x=0; x<frame->w; x++)
 	{
 		for(y=0; y<frame->h; y++)
 		{
-			if(mask[x][y] == 1)
+			if(PIXEL(mask,x,y) == 1)
 			{
 				/* Replace pixel value */
 				PIXEL(frame,x,y) = f_neighbour_masked_sum(frame,mask, x,y);
@@ -139,8 +136,9 @@ void f_mask_replace(
 }
 
 void f_scrub(
-	frame32_t *fs,
-	uint8_t **scrub_mask,
+	frame16_t *frame,
+	frame16_t *fs,
+	frame8_t *scrub_mask,
 	unsigned int num_frames,
 	unsigned int num_neighbours
 	)
@@ -151,12 +149,10 @@ void f_scrub(
 	float mean;
 	uint32_t thr;
 
-	frame32_t *frame = fs[cur]; 
-
 	/* Generate scrubbing mask */
-	for(x=0; x<frame.w; x++) 
+	for(x=0; x<frame->w; x++) 
 	{
-		for(y=0; y<frame.h; y++)
+		for(y=0; y<frame->h; y++)
 		{
 			/* Sum temporal neighbours */
 			sum = 0;
@@ -171,10 +167,10 @@ void f_scrub(
 
 			/* Compare with threshold and mark result in scrubbing mask */
 			if(PIXEL(frame,x,y) > thr) {
-				scrub_mask[x][y] = 1; 
+				PIXEL(scrub_mask,x,y) = 1; 
 			}
 			else {
-				scrub_mask[x][y] = 0;
+				PIXEL(scrub_mask,x,y) = 0;
 			}
 		}
 	}
@@ -185,8 +181,8 @@ void f_scrub(
 
 
 void f_2x2_bin(
-	frame32_t frame,
-	frame32_t binned_frame
+	frame16_t *frame,
+	frame32_t *binned_frame
 	)
 {
 	unsigned int x,y;

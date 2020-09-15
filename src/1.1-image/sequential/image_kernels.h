@@ -1,22 +1,15 @@
 /**
- * \brief OBPMark #1: Image Pre-Processing - Common processing kernel functions.
+ * \brief OBPMark #1.1: Image Calibrations and Corrections -- kernel functions
  * \file image_kernels.h
  * \author David Steenari
+ * European Space Agency Community License V2.3 applies.
+ * For more info see the LICENSE file in the root folder.
  */
-// FIXME add licence info 
 #ifndef OBPMARK_IMAGE_KERNELS_H_
 #define OBPMARK_IMAGE_KERNELS_H_
 
 #include <stdint.h>
-
-/* Typedefs */
-
-/** \brief Frame structure. */
-typedef struct {
-	uint32_t **f; 	///< Frame buffer
-	unsigned int w; ///< Frame width 
-	unsigned int h; ///< Frame width 
-} frame32_t;
+#include "../../common/image_util.h"
 
 /* Functions */
 
@@ -24,8 +17,8 @@ typedef struct {
  * \brief Remove an offset frame from another frame. 
  */
 void f_offset(
-	frame32_t *frame,
-	frame32_t *offset
+	frame16_t *frame,
+	frame16_t *offsets
 	);
 
 /**
@@ -39,10 +32,9 @@ void f_coadd(
 /**
  * \brief Multiply a frame by a gain frame, pixel by pixel.
  */
-// FIXME gain should be an Q15(?) integer
 void f_gain(
-	frame32_t *frame,
-	float **gain_frame	
+	frame16_t *frame,
+	frame16_t *gains	
 	);
 
 /**
@@ -50,15 +42,17 @@ void f_gain(
  * Used for both bad pixel correction and radiation scrubbing.
  */
 void f_mask_replace(
-	frame32_t *frame,
-	uint8_t **mask
+	frame16_t *frame,
+	frame8_t *mask
 	);
 
 /**
  * \brief Radiation scrubbing.
  */
 void f_scrub(
-	frame32_t *fs,
+	frame16_t *frame,
+	frame16_t *fs,
+	frame8_t *scrub_mask,
 	unsigned int num_frames, // FIXME should be removed, not general implementation
 	unsigned int num_neigh // FIXME should be removed, not general implementation
 	);
@@ -67,8 +61,8 @@ void f_scrub(
  * \brief 2x2 binning. 
  */
 void f_2x2_bin(
-	frame32_t frame,
-	frame32_t binned_frame
+	frame16_t *frame,
+	frame32_t *binned_frame
 	);
 
 #endif // OBPMARK_IMAGE_KERNELS_H_
