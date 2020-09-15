@@ -15,7 +15,7 @@ int write_frame(char filename[], void **f, unsigned int width, unsigned int heig
 	FILE *framefile;
 	size_t bytes_written;
 	size_t bytes_expected = height * data_width;
-	size_t bytes_total;
+	size_t bytes_total=0;
 	unsigned int x;
 
 	framefile = fopen(filename, "wb");
@@ -26,10 +26,10 @@ int write_frame(char filename[], void **f, unsigned int width, unsigned int heig
 
 	for(x=0; x<width; x++)
 	{
-		bytes_written = fwrite(f[x], height, data_width, framefile);
+		bytes_written = data_width * fwrite(f[x], data_width, height, framefile);
 		bytes_total += bytes_written;
 		if(bytes_written != bytes_expected) {
-			printf("error: writing file: %s, failed at col: %d, expected: %ld bytes, wrote: %ld bytes, total read: %ld bytes\n",
+			printf("error: writing file: %s, failed at col: %d, expected: %ld bytes, wrote: %ld bytes, total written: %ld bytes\n",
 					filename, x, bytes_expected, bytes_written, bytes_total);
 			return 0;
 		}
@@ -63,7 +63,7 @@ int read_frame(char filename[], void **f, unsigned int width, unsigned int heigh
 	unsigned int x;
 	size_t bytes_read;
 	size_t bytes_expected = height * data_width;
-	size_t bytes_total;
+	size_t bytes_total=0;
 
 	framefile = fopen(filename, "rb");
 	if(framefile == NULL) {
@@ -73,7 +73,7 @@ int read_frame(char filename[], void **f, unsigned int width, unsigned int heigh
 
 	for(x=0; x<width; x++)
 	{
-		bytes_read = fread(f[x], height, data_width, framefile);
+		bytes_read = data_width * fread(f[x], data_width, height, framefile);
 		bytes_total += bytes_read;
 		if(bytes_read != bytes_expected) {
 			printf("error: reading file: %s, failed at col: %d, expected: %ld bytes, read: %ld bytes, total read: %ld bytes\n",
