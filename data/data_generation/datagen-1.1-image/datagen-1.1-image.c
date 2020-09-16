@@ -177,7 +177,6 @@ int benchmark1_1_write_files(
 	sprintf(bad_pixels_name, "out/bad_pixels-%d-%d.bin", 	frame_width, frame_height);
 
 	printf("Writing calibration data to files...\n");
-	// FIXME pre-defined file_names -- should include frame width and height
 	if(!write_frame16(offsets_name, offsets)) {
 		printf("error: failed to write offsets.\n");
 		return 0;
@@ -276,6 +275,8 @@ int benchmark1_1_data_gen(
 
 int main(int argc, char *argv[])
 {
+	int ret;
+
 	/* Settings */
 	int num_frames;
 	int frame_width, frame_height; 
@@ -283,7 +284,17 @@ int main(int argc, char *argv[])
 	// FIXME input parameters handling
 	num_frames = 8;
 	frame_width = 2048;
-	frame_height = 2048;	
+	frame_height = 2048;
 
-	return benchmark1_1_data_gen(frame_width, frame_height, num_frames);	
+	//ret = benchmark1_1_data_gen(frame_width, frame_height, num_frames);	
+	ret = benchmark1_1_data_gen(1024, 1024, num_frames);	
+	if(ret != 0) return ret;
+
+	ret = benchmark1_1_data_gen(2048, 2048, num_frames);	
+	if(ret != 0) return ret;
+
+	ret = benchmark1_1_data_gen(4096, 4096, num_frames);	
+	if(ret != 0) return ret;
+
+	return 0;
 }

@@ -15,9 +15,13 @@
 #include "../common/image_mem_util.h" 
 #include "../common/image_file_util.h" 
 
-#define DATA_ROOT_DIR 			"../../data/images/"
-#define DATA_CAL_OFFSETS_FILEPATH	(DATA_ROOT_DIR "offsets.bin")
-// FIXME other file names 
+#define DATA_FILENAME_LENGTH_MAX	255
+#define DATA_ROOT_DIR 			"../../data/input_data/1.1-image/"
+#define DATA_OFFSETS_FILENAME		"offsets"
+#define DATA_GAINS_FILENAME		"gains"
+#define DATA_BAD_PIXELS_FILENAME	"bad_pixels"
+#define DATA_FRAME_FILENAME		"frame"
+#define DATA_FILE_ENDING		".bin"
 
 typedef struct {
 	frame16_t *frames;
@@ -114,24 +118,44 @@ int benchmark_1_1_cleanup(benchmark_params_t *p)
 #endif
 }
 
-int benchmark_1_1_load_calibration_data(benchmark_params_t *p)
+int benchmark_1_1_load_data(benchmark_params_t *p, unsigned int frame_width, unsigned int frame_height)
 {
+	unsigned int frame_i;
+
 	int read_frame8(char filename[], frame8_t *frame);
 	int read_frame16(char filename[], frame16_t *frame);
 
-	// FIXME add different file names per frame width / height
+	char offsets_filename[DATA_FILENAME_LENGTH_MAX];
+	char gains_filename[DATA_FILENAME_LENGTH_MAX];
+	char bad_pixels_filename[DATA_FILENAME_LENGTH_MAX];
+	char frame_filename[DATA_FILENAME_LENGTH_MAX];
 
-	if(!read_frame16("../../data/images/frame_offsets.bin", &p->offsets)) {
-		printf("error: could not open offsets file.\n");
+	sprintf(offsets_filename, 	DATA_ROOT_DIR DATA_OFFSETS_FILENAME"-%d-%d" DATA_FILE_ENDING, 	frame_width, frame_height);
+	sprintf(gains_filename,  	DATA_ROOT_DIR DATA_GAINS_FILENAME"-%d-%d" DATA_FILE_ENDING, 	frame_width, frame_height);
+	sprintf(bad_pixels_filename,	DATA_ROOT_DIR DATA_BAD_PIXELS_FILENAME"-%d-%d" DATA_FILE_ENDING, frame_width, frame_height);
+
+	if(!read_frame16(offsets_filename, &p->offsets)) {
+		printf("error: could not open offsets file: %s\n", offsets_filename);
 		return 0;
 	}
-	if(!read_frame16("../../data/images/frame_gains.bin", &p->gains)) {
-		printf("error: could not open gains file.\n");
+
+	if(!read_frame16(gains_filename, &p->gains)) {
+		printf("error: could not open gains file: %s\n", gains_filename);
 		return 0;
 	}
-	if(!read_frame8("../../data/images/frame_bad_pixels.bin", &p->bad_pixels)) {
-		printf("error: could not open bad pixels file.\n");
+
+	if(!read_frame8(bad_pixels_filename, &p->bad_pixels)) {
+		printf("error: could not open bad pixels file: %s\n", bad_pixels_filename);
 		return 0;
+	}
+
+	for(frame_i=0; frame_i<p->num_frames; frame_i++)
+	{
+		sprintf(frame_filename, DATA_ROOT_DIR DATA_FRAME_FILENAME"_%d-%d-%d" DATA_FILE_ENDING, frame_i, frame_width, frame_height);
+		if(!read_frame16(frame_filename, &p->frames[frame_i])) {
+			printf("error: could not open frame file: %s\n", frame_filename);
+			return 0;
+		}
 	}
 
 	return 1;
@@ -273,7 +297,7 @@ int benchmark_1_1(unsigned int frame_width, unsigned int frame_height, unsigned 
 	
 	/* Load calibration data */
 	printf("Loading calibration data...\n");
-	if(!benchmark_1_1_load_calibration_data(&params)) {
+	if(!benchmark_1_1_load_data(&params, frame_width, frame_height)) {
 		printf("fatal error: could not load calibration data.\n");
 		benchmark_1_1_cleanup(&params);
 		return 2;
