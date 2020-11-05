@@ -1,4 +1,5 @@
 ### OBPMark (On Board Processing Benchmark)
+Contact: OBPMark@esa.int
 Author: David Steenari (david.steenari@esa.int)
 
 This repository contains a set of reference implementations for performing benchmarks on devices and systems on-board spacecraft. 
