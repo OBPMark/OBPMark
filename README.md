@@ -1,14 +1,14 @@
 ### OBPMark (On Board Processing Benchmark) --- PRIVATE BETA
-Contact: OBPMark@esa.int
-Authors/Chairs:
-David Steenari, European Space Agency (ESA)
-Dr. Leonidas Kosmidis, Barcelona Supercomputing Centre (BSC)
-
-Contributors: 
-Ivan Rodriguez Ferrandez, BSC -- implementation and parallelisation of CCSDS compression algorithms.
-
-The OBPMark definition and implementation has been made available through the ESA "General Studies Programme (GSP)".
-
+Contact: OBPMark@esa.int  
+  
+Authors/Chairs:  
+David Steenari, European Space Agency (ESA)  
+Dr. Leonidas Kosmidis, Barcelona Supercomputing Centre (BSC)  
+  
+Contributors:  
+Ivan Rodriguez Ferrandez, BSC -- implementation and parallelisation of CCSDS compression algorithms.  
+The OBPMark definition and implementation has been made available through the ESA "General Studies Programme (GSP)".  
+  
 ## PRIVATE BETA VERSION NOTICE
 Please note that OBPMark is currently in "Private Beta" while the implementations and verifications of the benchmarks are being completed.
 
@@ -30,14 +30,14 @@ The benchmarks are organised in the following structure ("Private Beta" current 
 
 	src/1.1-image/				-- Sequential available. Parallel implementations to commited (BSC).
 	src/1.2-radar/				-- Not available yet.
-	src/2.1-data_compression/		-- To be commited (BSC).
+	src/2.1-data_compression/			-- To be commited (BSC).
 	src/2.2-image_compression/		-- To be commited (BSC).
 	src/2.3-hyperspectral_compression/	-- Not available yet.
-	src/3.1-aes_compression/		-- Not available yet.
+	src/3.1-aes_compression/			-- Not available yet.
 	src/4.1-fir_filter/			-- To be commited (BSC).
 	src/4.2-fft/				-- To be commited (BSC).
-	src/5.1-object_detection/		-- Not available yet. 
-	src/5.2-cloud_screening/		-- Not available yet.
+	src/5.1-object_detection/			-- Not available yet. 
+	src/5.2-cloud_screening/			-- Not available yet.
 	src/common/
 
 The entire set of benchmarks can be built by invoking the Makefile in the top src/ directory, or by invoking the individual Makefiles in each of the src sub-directories. 
