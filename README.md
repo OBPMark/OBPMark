@@ -7,6 +7,7 @@ Dr. Leonidas Kosmidis, Barcelona Supercomputing Centre (BSC)
   
 Contributors:  
 Ivan Rodriguez Ferrandez, BSC -- implementation and parallelisation of CCSDS compression algorithms.  
+  
 The OBPMark definition and implementation has been made available through the ESA "General Studies Programme (GSP)".  
   
 ## PRIVATE BETA VERSION NOTICE
