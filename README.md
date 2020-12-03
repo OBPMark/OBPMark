@@ -31,14 +31,14 @@ The benchmarks are organised in the following structure ("Private Beta" current 
 
 	src/1.1-image/				-- Sequential available. Parallel implementations to commited (BSC).
 	src/1.2-radar/				-- Not available yet.
-	src/2.1-data_compression/			-- To be commited (BSC).
+	src/2.1-data_compression/		-- To be commited (BSC).
 	src/2.2-image_compression/		-- To be commited (BSC).
 	src/2.3-hyperspectral_compression/	-- Not available yet.
-	src/3.1-aes_compression/			-- Not available yet.
+	src/3.1-aes_compression/		-- Not available yet.
 	src/4.1-fir_filter/			-- To be commited (BSC).
 	src/4.2-fft/				-- To be commited (BSC).
-	src/5.1-object_detection/			-- Not available yet. 
-	src/5.2-cloud_screening/			-- Not available yet.
+	src/5.1-object_detection/		-- Not available yet. 
+	src/5.2-cloud_screening/		-- Not available yet.
 	src/common/
 
 The entire set of benchmarks can be built by invoking the Makefile in the top src/ directory, or by invoking the individual Makefiles in each of the src sub-directories. 
