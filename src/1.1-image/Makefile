@@ -1,53 +1,142 @@
-# OBPMark - Benchmark #1.1: Image Calibrations and Corrections
-# Author: david.steenari@esa.int
-#
-# European Space Agency Community License V2.3 applies.
-# For more info see the LICENSE file in the root folder.
+# CONFIGURATION DIRECTIVES
+# Compilers 
+CC = g++
+NVCC = /usr/local/cuda/bin/nvcc
+HIP = /opt/rocm/hip/bin/hipcc
+# the build target executable:
+TARGET = obpmark_image
+# FLAGS 
+# PRINT flag
+PRINT = #-DPRINT
+# CC compiler flags:
+CFLAGS  = -g
+# NVCC compiler flags
+NVCCFLAGS = -arch compute_75 -code sm_75
+# CUDA FLAGS
+CUFLAGS = -I/usr/local/cuda/include/ -L/usr/local/cuda/lib64 -lcuda -lcudart 
+# OPENCL FLAGS
+OPFLAGS =  -lOpenCL 
+# OPENMP FLAGS
+OMPFLAGS = -fopenmp -lm
+# HIP FLAGS
+HIPFLAGS = -I/opt/rocm/hip/include -L/opt/rocm/hip/lib
 
-################################## SETTINGS ####################################
-# FIXME add build options for OpenMP, OpenCL and CUDA
-INCLUDE_PATH = ./sequential
-SOURCE_PATH = ./sequential
+# Littelendian and Bigendian flags, by default if value is not set is Littelendian if value is set to -DBIGENDIAN is Bigendian
+# -DBIGENDIAN
+ENDIANFLAGS = 
 
-CC = gcc
-CFLAGS = -g -O3 -I$(INCLUDE_PATH)
+# FOLDERS
+# CUDA FOLDER
+CUFOLDER = ./cuda/
+# OPENCL FOLDER
+OPFOLDER = ./opencl/
+# OPENMP FOLDER
+OMPFOLDER = ./openmp/
+# HIP FOLDER
+HIPFOLDER = ./hip/
+# CPU FOLDER
+CPUFOLDER = ./cpu/
+# OUTPUT FOLDER
+OUTPUTFOLDER = ./bin/
 
-################################################################################
-COMMON_PATH = ../common
+# COMPILER MAIN
+all:
+	@echo "YOU NEED TO SELECT CUDA OR OPENCL -> make CUDA / make OpenCL / make OpenMP / make Hip / make Sequential"
+# End Main
+# Shortcuts
+.PHONY: all-bin
+all-bin: cuda opencl openmp hip 
+.PHONY: all-cuda
+all-cuda: cuda 
+.PHONY: all-opencl
+all-opencl: opencl 
+.PHONY: all-openmp
+all-openmp: openmp 
+.PHONY: all-hip
+all-hip: hip 
+.PHONY: CUDA
+CUDA: cuda
+.PHONY: OpenCL
+OpenCL: opencl
+.PHONY: OpenMP
+OpenMP: openmp
+.PHONY: Hip
+Hip: hip
+.PHONY: Sequential
+Sequential: sequential
+# End Shortcuts
 
-_COMMON_INCLUDES = timing.h image_util.h image_mem_util.h image_file_util.h 
-_COMMON_SOURCES  = image_mem_util.c image_file_util.c
-COMMON_OBJECTS   = image_mem_util.o image_file_util.o
+# CUDA part
+.PHONY: cuda
+cuda: main_cuda
 
-COMMON_INCLUDES = $(pathsubst %,$(COMMON_PATH)/%,$(_COMMON_INCLUDES))
-COMMON_SOURCES  = $(pathsubst %,$(COMMON_PATH)/%,$(_COMMON_SOURCES))
+cuda_processing.o: $(CUFOLDER)processing.cu
+	$(NVCC) -DCUDA -c $(CUFOLDER)processing.cu  -o $(CUFOLDER)cuda_processing.o $(NVCCFLAGS)
 
-_INCLUDES = image_kernels.h
-INCLUDES = $(pathsubst %,$(INCLUDE_PATH)/%,$(_INCLUDES)) $(COMMON_INCLUDES)
+main_cuda: cuda_processing.o
+	mkdir -p $(OUTPUTFOLDER) 
+	$(CC) main.cpp  -DCUDA $(CUFOLDER)cuda_processing.o -o $(OUTPUTFOLDER)$(TARGET)_cuda $(CUFLAGS) $(CFLAGS) -lstdc++
 
-OBJECTS = benchmark1_1.o image_kernels.o $(COMMON_OBJECTS)
-OUTFILE = obpmark_1_1-image
+# End CUDA
+
+# OpenCL Part
+opencl:  main_opencl
+
+opencl_processing.o: $(OPFOLDER)processing.c
+	/bin/bash CLHT.sh
+	$(CC) -DOPENCL -c $(OPFOLDER)processing.c  -o $(OPFOLDER)opencl_processing.o $(OPFLAGS)
+
+main_opencl: opencl_processing.o
+	mkdir -p $(OUTPUTFOLDER) 
+	$(CC) main.cpp  -DOPENCL $(OPFOLDER)opencl_processing.o -o $(OUTPUTFOLDER)$(TARGET)_opencl $(OPFLAGS) $(CFLAGS) -lstdc++
+
+# End OpenCL
+
+# OpenMP Part
+openmp:  main_openmp
+
+openmp_processing.o: $(OMPFOLDER)processing.c
+	export OMP_NUM_THREADS=8
+	$(CC) -DOPENMP -c $(OMPFOLDER)processing.c  -o $(OMPFOLDER)openmp_processing.o $(OMPFLAGS)
+
+main_openmp: openmp_processing.o
+	mkdir -p $(OUTPUTFOLDER) 
+	$(CC) main.cpp  -DOPENMP $(OMPFOLDER)openmp_processing.o -o $(OUTPUTFOLDER)$(TARGET)_openmp $(OMPFLAGS) $(CFLAGS) -lstdc++
+# End OpenMP
+
+# Hip part
+hip: main_hip
+
+lib_hip.o: $(HIPFOLDER)lib_hip.cpp
+	$(HIP) -D$(DATATYPE) -DBLOCK_SIZE=$(BLOCKSIZE) -DHIP -c $(HIPFOLDER)lib_hip.cpp -o $(HIPFOLDER)lib_hip.o $(CFLAGS) $(HIPFLAGS)
+
+main_hip: main.cpp lib_hip.o lib_cpu.o
+	mkdir -p $(OUTPUTFOLDER) 
+	$(HIP) -D$(DATATYPE) -DHIP main.cpp $(HIPFOLDER)lib_hip.o  $(CPUFOLDER)lib_cpu.o -o $(OUTPUTFOLDER)$(TARGET)_hip_$(shell echo $(DATATYPE) | tr A-Z a-z)_$(BLOCKSIZESQUARED) $(CFLAGS) $(HIPFLAGS)
+# End Hip 
+
+# CPU part
+sequential: main_cpu
 
 
-################################################################################
+cpu_processing.o: $(CPUFOLDER)processing.c
+	$(CC) -c $(CPUFOLDER)processing.c  -o $(CPUFOLDER)cpu_processing.o 
 
-obpmark1_1-image: $(OBJECTS)
-	$(CC) $(CFLAGS) -o $(OUTFILE) $(OBJECTS)
+main_cpu: cpu_processing.o
+	mkdir -p $(OUTPUTFOLDER) 
+	$(CC) main.cpp  $(CPUFOLDER)cpu_processing.o -o $(OUTPUTFOLDER)$(TARGET)_sequential  $(CFLAGS) -lstdc++
 
-image_mem_util.o: $(COMMON_PATH)/image_mem_util.c $(INCLUDES)
-	$(CC) $(CFLAGS) -c $(COMMON_PATH)/image_mem_util.c
+# End CPU 
 
-image_file_util.o: $(COMMON_PATH)/image_file_util.c $(INCLUDES)
-	$(CC) $(CFLAGS) -c $(COMMON_PATH)/image_file_util.c
-
-timing.o: $(COMMON_PATH)/timing.c $(INCLUDES)
-	$(CC) $(CFLAGS) -c $(COMMON_PATH)/timing.c
-
-image_kernels.o: $(SOURCE_PATH)/image_kernels.c $(INCLUDES)
-	$(CC) $(CFLAGS) -c $(SOURCE_PATH)/image_kernels.c
-
-benchmark1_1.o: benchmark1_1.c $(INCLUDES)
-	$(CC) $(CFLAGS) -c benchmark1_1.c
-
+# Clean
+.PHONY: clean
 clean:
-	rm $(OUTFILE) $(OBJECTS)
+	rm -rf *.o
+	rm -rf *.out
+	rm -rf $(CPUFOLDER)*.o
+	rm -rf $(OPFOLDER)*.o
+	rm -rf $(OMPFOLDER)*.o
+	rm -rf $(HIPFOLDER)*.o
+	rm -rf $(CUFOLDER)*.o
+	rm -rf $(OUTPUTFOLDER)$(TARGET)_*
+	rm -rf $(OUTPUTFOLDER)*.out
