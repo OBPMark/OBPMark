@@ -29,14 +29,16 @@ The following folders are in the repository:
 
 The benchmarks are organised in the following structure ("Private Beta" current status also shown): 
 
-	src/1.1-image/				-- Sequential available. Parallel implementations to commited (BSC).
+	src/1.1-image/				-- Available in C (sequential), OpenMP, OpenCL and CUDA.
 	src/1.2-radar/				-- Not available yet.
-	src/2.1-data_compression/		-- To be commited (BSC).
-	src/2.2-image_compression/		-- To be commited (BSC).
+	src/2.1-data_compression/		-- Available in C (sequential), OpenMP, OpenCL and CUDA.
+	src/2.2-image_compression/		-- Available in C (sequential), OpenMP, OpenCL and CUDA.
 	src/2.3-hyperspectral_compression/	-- Not available yet.
 	src/3.1-aes_compression/		-- Not available yet.
-	src/4.1-fir_filter/			-- To be commited (BSC).
-	src/4.2-fft/				-- To be commited (BSC).
+	src/4.1-fir_filter/			-- Available in C (sequential), OpenMP, OpenCL and CUDA.
+	src/4.2-fft/				-- Available in C (sequential), OpenMP, OpenCL and CUDA.
+	src/4.3-convolution/			-- Available in C (sequential), OpenMP, OpenCL and CUDA.
+	src/4.4-matrix_multiplication/		-- Available in C (sequential), OpenMP, OpenCL and CUDA.
 	src/5.1-object_detection/		-- Not available yet. 
 	src/5.2-cloud_screening/		-- Not available yet.
 	src/common/
