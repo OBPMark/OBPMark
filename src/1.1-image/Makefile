@@ -1,142 +1,172 @@
-# CONFIGURATION DIRECTIVES
-# Compilers 
-CC = g++
-NVCC = /usr/local/cuda/bin/nvcc
-HIP = /opt/rocm/hip/bin/hipcc
-# the build target executable:
-TARGET = obpmark_image
-# FLAGS 
-# PRINT flag
-PRINT = #-DPRINT
-# CC compiler flags:
-CFLAGS  = -g
-# NVCC compiler flags
-NVCCFLAGS = -arch compute_75 -code sm_75
-# CUDA FLAGS
-CUFLAGS = -I/usr/local/cuda/include/ -L/usr/local/cuda/lib64 -lcuda -lcudart 
-# OPENCL FLAGS
-OPFLAGS =  -lOpenCL 
-# OPENMP FLAGS
-OMPFLAGS = -fopenmp -lm
-# HIP FLAGS
-HIPFLAGS = -I/opt/rocm/hip/include -L/opt/rocm/hip/lib
+# OBPMark Benchmark #1.1 Makefile
+# Author: David Steenari (ESA)
+include ../../config/all.config
 
-# Littelendian and Bigendian flags, by default if value is not set is Littelendian if value is set to -DBIGENDIAN is Bigendian
-# -DBIGENDIAN
-ENDIANFLAGS = 
+################################# CONFIGURUATION ##############################
+EXEC_NAME	:= obpmark-1.1-image
 
-# FOLDERS
-# CUDA FOLDER
-CUFOLDER = ./cuda/
-# OPENCL FOLDER
-OPFOLDER = ./opencl/
-# OPENMP FOLDER
-OMPFOLDER = ./openmp/
-# HIP FOLDER
-HIPFOLDER = ./hip/
-# CPU FOLDER
-CPUFOLDER = ./cpu/
-# OUTPUT FOLDER
-OUTPUTFOLDER = ./bin/
+# Relative paths
+CONFIG_PATH	:= ../../$(CONFIG_FOLDER)
+BUILD_PATH 	:= ../../$(BUILD_FOLDER)/1.1-image
+BIN_PATH 	:= ../../$(BIN_FOLDER)/1.1-image
+EXEC_PATH	:= $(BIN_PATH)/$(EXEC_NAME)
 
-# COMPILER MAIN
-all:
-	@echo "YOU NEED TO SELECT CUDA OR OPENCL -> make CUDA / make OpenCL / make OpenMP / make Hip / make Sequential"
-# End Main
+# - Sequential - 
+SEQ_TARGET	:= $(BUILD_PATH)/$(SEQ_FOLDER)
+SEQ_EXEC	:= $(EXEC_PATH)_$(SEQ_NAME)
+
+# - OpenMP -
+OPENMP_TARGET	:= $(BUILD_PATH)/$(OPENMP_FOLDER)
+OPENMP_EXEC	:= $(EXEC_PATH)_$(OPENMP_NAME)
+
+# - OpenCL - 
+OPENCL_TARGET	:= $(BUILD_PATH)/$(OPENCL_FOLDER)
+OPENCL_EXEC	:= $(EXEC_PATH)_$(OPENCL_NAME)
+
+# - CUDA - 
+CUDA_TARGET	:= $(BUILD_PATH)/$(CUDA_FOLDER)
+CUDA_EXEC	:= $(EXEC_PATH)_$(CUDA_NAME)
+
+# - HIP - 
+HIP_TARGET	:= $(BUILD_PATH)/$(HIP_FOLDER)
+HIP_EXEC	:= $(EXEC_PATH)_$(HIP_NAME)
+
+############################## LOAD EXTERNAL CONFIG ############################
+
+ifeq ($(MAKECMDGOALS),cpu)
+include $(CONFIG_PATH)/$(SEQ_CONFIG)
+endif
+
+ifeq ($(MAKECMDGOALS),openmp)
+include $(CONFIG_PATH)/$(OPENMP_CONFIG)
+endif
+
+ifeq ($(MAKECMDGOALS),opencl)
+include $(CONFIG_PATH)/$(OPENCL_CONFIG)
+endif
+
+ifeq ($(MAKECMDGOALS),cuda)
+include $(CONFIG_PATH)/$(CUDA_CONFIG)
+endif
+
+ifeq ($(MAKECMDGOALS),hip)
+include $(CONFIG_PATH)/$(HIP_CONFIG)
+endif
+
+################################# COMPILER MAIN ###############################
+all:  
+	@echo "error: must specify target: cpu, openmp, opencl, cuda, hip"
+
+################################### SEQUENTIAL ################################
 # Shortcuts
-.PHONY: all-bin
-all-bin: cuda opencl openmp hip 
-.PHONY: all-cuda
-all-cuda: cuda 
-.PHONY: all-opencl
-all-opencl: opencl 
+.PHONY: CPU
+CPU: cpu
+
+# Build target
+cpu: main_cpu
+
+cpu_conf:
+	mkdir -p $(SEQ_TARGET)
+	@echo "SEQ_FOLDER = $(SEQ_FOLDER)"
+	@echo "SEQ_TARGET = $(SEQ_TARGET)"
+
+cpu_processing.o: cpu_conf $(SEQ_FOLDER)/processing.c
+	$(CC) $(CFLAGS) -c cpu/processing.c -o $(SEQ_TARGET)/cpu_processing.o
+
+main_cpu: cpu_conf cpu_processing.o
+	mkdir -p $(BIN_PATH) 
+	$(CC) $(CFLAGS) main.cpp $(SEQ_TARGET)/cpu_processing.o -o $(SEQ_EXEC)
+
+##################################### OPENMP #################################
+# Shortcuts
 .PHONY: all-openmp
 all-openmp: openmp 
-.PHONY: all-hip
-all-hip: hip 
-.PHONY: CUDA
-CUDA: cuda
-.PHONY: OpenCL
-OpenCL: opencl
 .PHONY: OpenMP
 OpenMP: openmp
-.PHONY: Hip
-Hip: hip
-.PHONY: Sequential
-Sequential: sequential
-# End Shortcuts
 
-# CUDA part
-.PHONY: cuda
-cuda: main_cuda
+# Build target
+openmp: main_openmp
 
-cuda_processing.o: $(CUFOLDER)processing.cu
-	$(NVCC) -DCUDA -c $(CUFOLDER)processing.cu  -o $(CUFOLDER)cuda_processing.o $(NVCCFLAGS)
+openmp_conf:
+	mkdir -p $(OPENMP_TARGET)
+	export OMP_NUM_THREADS # FIXME this could probably be deleted, test first 
 
-main_cuda: cuda_processing.o
-	mkdir -p $(OUTPUTFOLDER) 
-	$(CC) main.cpp  -DCUDA $(CUFOLDER)cuda_processing.o -o $(OUTPUTFOLDER)$(TARGET)_cuda $(CUFLAGS) $(CFLAGS) -lstdc++
+openmp_processing.o: openmp_conf $(OPENMP_FOLDER)/processing.c
+	$(CC) $(OMPFLAGS) -DOPENMP -c $(OPENMP_FOLDER)/processing.c  -o $(OPENMP_TARGET)/openmp_processing.o # FIXME -DOPENMP should be variable above, check others below as well
 
-# End CUDA
+main_openmp: openmp_conf openmp_processing.o
+	mkdir -p $(BIN_PATH) 
+	$(CC) $(CFLAGS) $(OMPFLAGS) main.cpp  -DOPENMP $(OPENMP_TARGET)/openmp_processing.o -o $(OPENMP_EXEC)
 
-# OpenCL Part
-opencl:  main_opencl
+##################################### OPENCL #################################
+# Shortcuts
+.PHONY: all-opencl
+all-opencl: opencl 
+.PHONY: OpenCL
+OpenCL: opencl
 
-opencl_processing.o: $(OPFOLDER)processing.c
-	/bin/bash CLHT.sh
-	$(CC) -DOPENCL -c $(OPFOLDER)processing.c  -o $(OPFOLDER)opencl_processing.o $(OPFLAGS)
+# Build target
+opencl: main_opencl
+
+opencl_conf:
+	mkdir -p $(OPENCL_TARGET)
+
+opencl_processing.o: $(OPENCL_FOLDER)/processing.c
+	/bin/bash CLHT.sh # FIXME is this header tool generic? place somewhere else? 
+	$(CC) $(OPFLAGS) -DOPENCL -c $(OPENCL_FOLDER)/processing.c  -o $(OPENCL_TARGET)/opencl_processing.o
 
 main_opencl: opencl_processing.o
-	mkdir -p $(OUTPUTFOLDER) 
-	$(CC) main.cpp  -DOPENCL $(OPFOLDER)opencl_processing.o -o $(OUTPUTFOLDER)$(TARGET)_opencl $(OPFLAGS) $(CFLAGS) -lstdc++
+	mkdir -p $(BIN_PATH) 
+	$(CC) $(CFLAGS) $(OPFLAGS) main.cpp  -DOPENCL $(OPENCL_TARGET)/opencl_processing.o -o $(OPENCL_EXEC)
 
-# End OpenCL
+###################################### CUDA ##################################
+# Shortcuts
+.PHONY: all-cuda
+all-cuda: cuda 
+.PHONY: CUDA
+CUDA: cuda
 
-# OpenMP Part
-openmp:  main_openmp
+# Build target
+cuda: main_cuda
 
-openmp_processing.o: $(OMPFOLDER)processing.c
-	export OMP_NUM_THREADS=8
-	$(CC) -DOPENMP -c $(OMPFOLDER)processing.c  -o $(OMPFOLDER)openmp_processing.o $(OMPFLAGS)
+cuda_conf:
+	mkdir -p $(CUDA_TARGET)
 
-main_openmp: openmp_processing.o
-	mkdir -p $(OUTPUTFOLDER) 
-	$(CC) main.cpp  -DOPENMP $(OMPFOLDER)openmp_processing.o -o $(OUTPUTFOLDER)$(TARGET)_openmp $(OMPFLAGS) $(CFLAGS) -lstdc++
-# End OpenMP
+cuda_processing.o: cuda_conf $(CUDA_FOLDER)/processing.cu
+	$(NVCC) $(NVCCFLAGS) -DCUDA -c $(CUDA_FOLDER)/processing.cu  -o $(CUDA_TARGET)/cuda_processing.o
 
-# Hip part
+main_cuda: cuda_conf cuda_processing.o
+	mkdir -p $(BIN_PATH) 
+	$(CC) $(CFLAGS) $(CUFLAGS) main.cpp -DCUDA $(CUDA_TARGET)/cuda_processing.o -o $(CUDA_EXEC)
+
+###################################### HIP ###################################
+# Shortcuts
+.PHONY: all-hip
+all-hip: hip 
+.PHONY: HIP
+HIP: hip
+.PHONY: Hip
+Hip: hip
+
+# Build target
 hip: main_hip
 
-lib_hip.o: $(HIPFOLDER)lib_hip.cpp
-	$(HIP) -D$(DATATYPE) -DBLOCK_SIZE=$(BLOCKSIZE) -DHIP -c $(HIPFOLDER)lib_hip.cpp -o $(HIPFOLDER)lib_hip.o $(CFLAGS) $(HIPFLAGS)
+hip_conf:
+	mkdir -p $(HIP_TARGET)
 
-main_hip: main.cpp lib_hip.o lib_cpu.o
-	mkdir -p $(OUTPUTFOLDER) 
-	$(HIP) -D$(DATATYPE) -DHIP main.cpp $(HIPFOLDER)lib_hip.o  $(CPUFOLDER)lib_cpu.o -o $(OUTPUTFOLDER)$(TARGET)_hip_$(shell echo $(DATATYPE) | tr A-Z a-z)_$(BLOCKSIZESQUARED) $(CFLAGS) $(HIPFLAGS)
-# End Hip 
+lib_hip.o: hip_conf $(HIP_FOLDER)/lib_hip.cpp
+	$(HIP) $(CFLAGS) $(HIPFLAGS) -D$(DATATYPE) -DBLOCK_SIZE=$(BLOCKSIZE) -DHIP -c $(HIP_FOLDER)/lib_hip.cpp -o $(HIP_TARGET)/lib_hip.o
 
-# CPU part
-sequential: main_cpu
+main_hip: hip_conf main.cpp lib_hip.o lib_cpu.o
+	mkdir -p $(BIN_PATH) 
+	$(HIP) $(CFLAGS) $(HIPFLAGS) -D$(DATATYPE) -DHIP main.cpp $(BUILD_PATH)/lib_hip.o  $(SEQ_FOLDER)/lib_cpu.o -o $(HIP_EXEC)_$(shell echo $(DATATYPE) | tr A-Z a-z)_$(BLOCKSIZESQUARED) 
 
-
-cpu_processing.o: $(CPUFOLDER)processing.c
-	$(CC) -c $(CPUFOLDER)processing.c  -o $(CPUFOLDER)cpu_processing.o 
-
-main_cpu: cpu_processing.o
-	mkdir -p $(OUTPUTFOLDER) 
-	$(CC) main.cpp  $(CPUFOLDER)cpu_processing.o -o $(OUTPUTFOLDER)$(TARGET)_sequential  $(CFLAGS) -lstdc++
-
-# End CPU 
-
-# Clean
+##################################### CLEAN ##################################
 .PHONY: clean
 clean:
-	rm -rf *.o
-	rm -rf *.out
-	rm -rf $(CPUFOLDER)*.o
-	rm -rf $(OPFOLDER)*.o
-	rm -rf $(OMPFOLDER)*.o
-	rm -rf $(HIPFOLDER)*.o
-	rm -rf $(CUFOLDER)*.o
-	rm -rf $(OUTPUTFOLDER)$(TARGET)_*
-	rm -rf $(OUTPUTFOLDER)*.out
+	rm -f $(SEQ_TARGET)/*.o
+	rm -f $(OPENMP_TARGET)/*.o
+	rm -f $(OPENCL_TARGET)/*.o
+	rm -f $(CUDA_TARGET)/*.o
+	rm -f $(HIP_TARGET)/*.o
+	rm -f $(EXEC_PATH)_*
