@@ -6,8 +6,8 @@ David Steenari, European Space Agency (ESA)
 Dr. Leonidas Kosmidis, Barcelona Supercomputing Center (BSC)  
   
 Contributors:  
-Alvaro Jover, Universitat Politècnica de Catalunya (UPC) -- implementation of OpenMP versions. 
-Ivan Rodriguez Ferrandez, Barcelona Supercomputing Center (BSC) -- implementation of OpenCL / CUDA versions.  
+Alvaro Jover-Alvarez, Universitat Politècnica de Catalunya and Barcelona Supercomputing Center (UPC/BSC) -- implementation of OpenMP versions. 
+Ivan Rodriguez Ferrandez, Universitat Politècnica de Catalunya and Barcelona Supercomputing Center (UPC/BSC) -- implementation of OpenCL / CUDA versions.  
   
 The OBPMark definition and implementation has been made available through the ESA "General Studies Programme (GSP)".  
   
