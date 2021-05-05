@@ -1,4 +1,4 @@
-# OBPMark Benchmark #1.1 Makefile
+# OBPMark Benchmark #1.1 "Image processing" Makefile
 # Author: David Steenari (ESA)
 include ../../config/all.config
 
