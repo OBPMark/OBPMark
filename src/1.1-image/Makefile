@@ -67,15 +67,13 @@ cpu: main_cpu
 
 cpu_conf:
 	mkdir -p $(SEQ_TARGET)
-	@echo "SEQ_FOLDER = $(SEQ_FOLDER)"
-	@echo "SEQ_TARGET = $(SEQ_TARGET)"
 
-cpu_processing.o: cpu_conf $(SEQ_FOLDER)/processing.c
-	$(CC) $(CFLAGS) -c cpu/processing.c -o $(SEQ_TARGET)/cpu_processing.o
+cpu_processing.o: cpu_conf $(SEQ_SRC)/processing.c
+	$(CC) $(CFLAGS) -c $(SEQ_SRC)/processing.c -o $(SEQ_TARGET)/cpu_processing.o
 
 main_cpu: cpu_conf cpu_processing.o
 	mkdir -p $(BIN_PATH) 
-	$(CC) $(CFLAGS) main.cpp $(SEQ_TARGET)/cpu_processing.o -o $(SEQ_EXEC)
+	$(CC) $(CFLAGS) $(SRC_FOLDER)/main.cpp $(SEQ_TARGET)/cpu_processing.o -o $(SEQ_EXEC)
 
 ##################################### OPENMP #################################
 # Shortcuts
@@ -91,12 +89,12 @@ openmp_conf:
 	mkdir -p $(OPENMP_TARGET)
 	export OMP_NUM_THREADS # FIXME this could probably be deleted, test first 
 
-openmp_processing.o: openmp_conf $(OPENMP_FOLDER)/processing.c
-	$(CC) $(OMPFLAGS) -DOPENMP -c $(OPENMP_FOLDER)/processing.c  -o $(OPENMP_TARGET)/openmp_processing.o # FIXME -DOPENMP should be variable above, check others below as well
+openmp_processing.o: openmp_conf $(OPENMP_SRC)/processing.c
+	$(CC) $(CFLAGS) $(OMPFLAGS) -DOPENMP -c $(OPENMP_SRC)/processing.c  -o $(OPENMP_TARGET)/openmp_processing.o # FIXME -DOPENMP should be variable above, check others below as well
 
 main_openmp: openmp_conf openmp_processing.o
 	mkdir -p $(BIN_PATH) 
-	$(CC) $(CFLAGS) $(OMPFLAGS) main.cpp  -DOPENMP $(OPENMP_TARGET)/openmp_processing.o -o $(OPENMP_EXEC)
+	$(CC) $(CFLAGS) $(OMPFLAGS) $(SRC_FOLDER)/main.cpp  -DOPENMP $(OPENMP_TARGET)/openmp_processing.o -o $(OPENMP_EXEC)
 
 ##################################### OPENCL #################################
 # Shortcuts
@@ -111,13 +109,13 @@ opencl: main_opencl
 opencl_conf:
 	mkdir -p $(OPENCL_TARGET)
 
-opencl_processing.o: $(OPENCL_FOLDER)/processing.c
-	/bin/bash CLHT.sh # FIXME is this header tool generic? place somewhere else? 
-	$(CC) $(OPFLAGS) -DOPENCL -c $(OPENCL_FOLDER)/processing.c  -o $(OPENCL_TARGET)/opencl_processing.o
+opencl_processing.o: $(OPENCL_SRC)/processing.c
+	/bin/bash $(OPENCL_SRC)/CLHT.sh # FIXME is this header tool generic? place somewhere else? 
+	$(CC) $(OPFLAGS) -DOPENCL -c $(OPENCL_SRC)/processing.c  -o $(OPENCL_TARGET)/opencl_processing.o
 
 main_opencl: opencl_processing.o
 	mkdir -p $(BIN_PATH) 
-	$(CC) $(CFLAGS) $(OPFLAGS) main.cpp  -DOPENCL $(OPENCL_TARGET)/opencl_processing.o -o $(OPENCL_EXEC)
+	$(CC) $(CFLAGS) $(OPFLAGS) $(SRC_FOLDER)/main.cpp  -DOPENCL $(OPENCL_TARGET)/opencl_processing.o -o $(OPENCL_EXEC)
 
 ###################################### CUDA ##################################
 # Shortcuts
@@ -132,12 +130,12 @@ cuda: main_cuda
 cuda_conf:
 	mkdir -p $(CUDA_TARGET)
 
-cuda_processing.o: cuda_conf $(CUDA_FOLDER)/processing.cu
-	$(NVCC) $(NVCCFLAGS) -DCUDA -c $(CUDA_FOLDER)/processing.cu  -o $(CUDA_TARGET)/cuda_processing.o
+cuda_processing.o: cuda_conf $(CUDA_SRC)/processing.cu
+	$(NVCC) $(NVCCFLAGS) -DCUDA -c $(CUDA_SRC)/processing.cu  -o $(CUDA_TARGET)/cuda_processing.o
 
 main_cuda: cuda_conf cuda_processing.o
 	mkdir -p $(BIN_PATH) 
-	$(CC) $(CFLAGS) $(CUFLAGS) main.cpp -DCUDA $(CUDA_TARGET)/cuda_processing.o -o $(CUDA_EXEC)
+	$(CC) $(CFLAGS) $(CUFLAGS) $(SRC_FOLDER)/main.cpp -DCUDA $(CUDA_TARGET)/cuda_processing.o -o $(CUDA_EXEC)
 
 ###################################### HIP ###################################
 # Shortcuts
@@ -154,12 +152,12 @@ hip: main_hip
 hip_conf:
 	mkdir -p $(HIP_TARGET)
 
-lib_hip.o: hip_conf $(HIP_FOLDER)/lib_hip.cpp
-	$(HIP) $(CFLAGS) $(HIPFLAGS) -D$(DATATYPE) -DBLOCK_SIZE=$(BLOCKSIZE) -DHIP -c $(HIP_FOLDER)/lib_hip.cpp -o $(HIP_TARGET)/lib_hip.o
+lib_hip.o: hip_conf $(HIP_SRC)/lib_hip.cpp
+	$(HIP) $(CFLAGS) $(HIPFLAGS) -D$(DATATYPE) -DBLOCK_SIZE=$(BLOCKSIZE) -DHIP -c $(HIP_SRC)/lib_hip.cpp -o $(HIP_TARGET)/lib_hip.o
 
 main_hip: hip_conf main.cpp lib_hip.o lib_cpu.o
 	mkdir -p $(BIN_PATH) 
-	$(HIP) $(CFLAGS) $(HIPFLAGS) -D$(DATATYPE) -DHIP main.cpp $(BUILD_PATH)/lib_hip.o  $(SEQ_FOLDER)/lib_cpu.o -o $(HIP_EXEC)_$(shell echo $(DATATYPE) | tr A-Z a-z)_$(BLOCKSIZESQUARED) 
+	$(HIP) $(CFLAGS) $(HIPFLAGS) -D$(DATATYPE) -DHIP $(SRC_FOLDER)/main.cpp $(BUILD_PATH)/lib_hip.o  $(SEQ_FOLDER)/lib_cpu.o -o $(HIP_EXEC)_$(shell echo $(DATATYPE) | tr A-Z a-z)_$(BLOCKSIZESQUARED) 
 
 ##################################### CLEAN ##################################
 .PHONY: clean

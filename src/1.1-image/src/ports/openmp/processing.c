@@ -1,4 +1,4 @@
-#include "../benchmark_library.h"
+#include "benchmark_library.h"
 
 
 void init(DeviceObject *device_object, char* device_name)
@@ -33,20 +33,15 @@ void copy_memory_to_device(DeviceObject *device_object, int* correlation_table, 
 
 void copy_frame_to_device(DeviceObject *device_object, int* input_data, unsigned int size_image, unsigned int frame)
 {
-    
-    //for (unsigned int position = 0; position < 1; ++position)
-    //{
-        //device_object->image_input[0] = input_data[0 + (frame * size_image)] ;
-    //}
-    device_object->image_input = input_data + (frame * size_image) ;
-    
+    device_object->image_input = input_data + (frame * size_image) ;   
 }
+
 
 void process_full_frame_list (DeviceObject *device_object,int* input_frames,unsigned int frames, unsigned int size_frame,unsigned int w_size, unsigned int h_size){
     // Start timer
-    clock_gettime(CLOCK_MONOTONIC_RAW, &device_object->start);
+    const double start_wtime = omp_get_wtime();
    
-   for (unsigned int frame = 0; frame < frames; ++frame )
+    for (unsigned int frame = 0; frame < frames; ++frame )
     {
         // copy image
         copy_frame_to_device(device_object, input_frames, size_frame, frame);
@@ -55,25 +50,23 @@ void process_full_frame_list (DeviceObject *device_object,int* input_frames,unsi
     }
 
     // End timer
-    clock_gettime(CLOCK_MONOTONIC_RAW, &device_object->end);
+    device_object->elapsed_time = omp_get_wtime() - start_wtime;
 }
-
 
 void process_image(DeviceObject *device_object, unsigned int w_size, unsigned int h_size, unsigned int frame)
 {
     const unsigned int size_image = w_size * h_size;
 
     // Image offset correlation gain correction
-    // #pragma omp parallel for
+    #pragma omp parallel for
     for(unsigned int i = 0; i < size_image; ++i)
     {
-        //device_object->processing_image[i] = (device_object->image_input[i]);
         device_object->processing_image[i] = (device_object->image_input[i] - device_object->correlation_table[i]) * device_object->gain_correlation_map[i];
     }
 
 
     // Bad pixel correlation
-    // #pragma omp parallel for collapse(2)
+    #pragma omp parallel for collapse(2)
     for(unsigned int y = 0; y < h_size; ++y)
     {
         for(unsigned int x = 0; x < w_size; ++x)
@@ -132,17 +125,13 @@ void process_image(DeviceObject *device_object, unsigned int w_size, unsigned in
             {
                 device_object->processing_image_error_free[y * h_size + x ] = device_object->processing_image[y * h_size +  x];
             }
-            //printf("%hu, ", device_object->processing_image_error_free[(y * (h_size) + x)]);
         }
-        //printf("\n");
-        //printf("\n");
     }
-    //printf("\n");
 
     // Spatial Binning Temporal Binning
     const unsigned int w_size_half = w_size/2;
     const unsigned int h_size_half = h_size/2;
-    // #pragma omp parallel for
+    #pragma omp parallel for
     for(unsigned int y = 0; y < h_size_half; ++y)
     {
         for(unsigned int x = 0; x < w_size_half; ++x)
@@ -161,18 +150,17 @@ void copy_memory_to_host(DeviceObject *device_object, int* output_image, unsigne
 
 float get_elapsed_time(DeviceObject *device_object, bool csv_format)
 {
-    float elapsed =  (device_object->end.tv_sec - device_object->start.tv_sec) * 1000 + (device_object->end.tv_nsec - device_object->start.tv_nsec) / 1000000;
     if (csv_format)
 	{
-        printf("%.10f;%.10f;%.10f;\n", (float) 0, elapsed, (float) 0);
+        printf("%.10f;%.10f;%.10f;\n", (float) 0, device_object->elapsed_time * 1000.f, (float) 0);
     } 
 	else
 	{
 		printf("Elapsed time Host->Device: %.10f miliseconds\n", (float) 0);
-		printf("Elapsed time kernel: %.10f miliseconds\n", elapsed);
+		printf("Elapsed time kernel: %.10f miliseconds\n", device_object->elapsed_time * 1000.f);
 		printf("Elapsed time Device->Host: %.10f miliseconds\n", (float) 0);
     }
-	return elapsed;
+	return device_object->elapsed_time * 1000.f;
 }
 
 
