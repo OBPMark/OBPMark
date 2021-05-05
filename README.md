@@ -9,7 +9,7 @@ Contributors:
 Alvaro Jover-Alvarez, Universitat Politècnica de Catalunya and Barcelona Supercomputing Center (UPC/BSC) -- implementation of OpenMP versions. 
 Ivan Rodriguez Ferrandez, Universitat Politècnica de Catalunya and Barcelona Supercomputing Center (UPC/BSC) -- implementation of OpenCL / CUDA versions.  
   
-The OBPMark definition and implementation has been made available through the ESA "General Studies Programme (GSP)".  
+The OBPMark definition and implementation has partially been made available through the ESA "General Studies Programme (GSP)".  
   
 ## PRIVATE BETA VERSION NOTICE
 Please note that OBPMark is currently in "Private Beta" while the implementations and verifications of the benchmarks are being completed.
