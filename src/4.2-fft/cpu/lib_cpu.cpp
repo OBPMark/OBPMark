@@ -1,20 +1,52 @@
-#include "lib_cpu.h"
+#include "../benchmark_library.h"
+#include <cmath>
+#include <cstring>
+
+void init(GraficObject *device_object, char* device_name)
+{
+	init(device_object, 0,0, device_name);
+}
 
 
-void fft_function(bench_t* data, int64_t nn){
+void init(GraficObject *device_object, int platform ,int device, char* device_name)
+{
+	// TBD Feature: device name. -- Bulky generic platform implementation
+	strcpy(device_name,"Generic device");
+}
+
+
+bool device_memory_init(GraficObject *device_object, int64_t size)
+{
+	return true;
+}
+
+
+void copy_memory_to_device(GraficObject *device_object, bench_t* h_B,int64_t size)
+{
+	device_object->d_Br = h_B;
+}
+
+
+void execute_kernel(GraficObject *device_object, int64_t size)
+{
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+
+	int64_t loop_w = 0, loop_for_1 = 0, loop_for_2 = 0; 
 	int64_t n, mmax, m, j, istep, i;
     bench_t wtemp, wr, wpr, wpi, wi, theta;
     bench_t tempr, tempi;
  
     // reverse-binary reindexing
-    n = nn<<1;
+    n = size<<1;
     j=1;
+
     for (i=1; i<n; i+=2) {
         if (j>i) {
-            std::swap(data[j-1], data[i-1]);
-            std::swap(data[j], data[i]);
+            std::swap(device_object->d_Br[j-1], device_object->d_Br[i-1]);
+            std::swap(device_object->d_Br[j], device_object->d_Br[i]);
         }
-        m = nn;
+        m = size;
         while (m>=2 && j>m) {
             j -= m;
             m >>= 1;
@@ -33,99 +65,61 @@ void fft_function(bench_t* data, int64_t nn){
         wr = 1.0;
         wi = 0.0;
 
+		#pragma parallel for collapse(2)
         for (m=1; m < mmax; m += 2) {
             for (i=m; i <= n; i += istep) {
                 j=i+mmax;
-                tempr = wr*data[j-1] - wi*data[j];
-                tempi = wr * data[j] + wi*data[j-1];
+                tempr = wr*device_object->d_Br[j-1] - wi*device_object->d_Br[j];
+                tempi = wr * device_object->d_Br[j] + wi*device_object->d_Br[j-1];
  				
-                data[j-1] = data[i-1] - tempr;
-                data[j] = data[i] - tempi;
-                data[i-1] += tempr;
-                data[i] += tempi;
+                device_object->d_Br[j-1] = device_object->d_Br[i-1] - tempr;
+                device_object->d_Br[j] = device_object->d_Br[i] - tempi;
+                device_object->d_Br[i-1] += tempr;
+                device_object->d_Br[i] += tempi;
+                ++loop_for_1;
             }
+            loop_for_1 = 0;
             
             wtemp=wr;
             wr += wr*wpr - wi*wpi;
             wi += wi*wpr + wtemp*wpi;
+            ++loop_for_2;
 
         }
+        loop_for_2 = 0;
         mmax=istep;
+    	++loop_w;    
     }
-	
+    clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+    device_object->elapsed_time = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_nsec - start.tv_nsec) / 1000000;
 }
 
-bool compare_vectors(const bench_t* host,const bench_t* device, const int64_t size){
-		for (int i = 0; i < size; ++i){
-			if (fabs(host[i] - device[i]) > 1e-4){
-				printf("Error in element %d is %f but was %f\n", i,device[i], host[i]);
-				return false;
-			}
-		}
-		return true;
+
+void copy_memory_to_host(GraficObject *device_object, bench_t* h_B, int64_t size)
+{	     
+    return;
 }
 
-void print_double_hexadecimal_values(const char* filename, bench_t* float_vector, unsigned int size){
-	FILE *output_file = fopen(filename, "w");
-  	// file created
-  	for (unsigned int i = 0; i < size; ++i){
-  		binary_float.f = float_vector[i];
-		fprintf(output_file, "%02x", binary_float.binary_values.a );
-		fprintf(output_file, "%02x", binary_float.binary_values.b );
-		fprintf(output_file, "%02x", binary_float.binary_values.c );
-		fprintf(output_file, "%02x", binary_float.binary_values.d );
-		fprintf(output_file, "%02x", binary_float.binary_values.e );
-		fprintf(output_file, "%02x", binary_float.binary_values.f );
-		fprintf(output_file, "%02x", binary_float.binary_values.g );
-		fprintf(output_file, "%02x", binary_float.binary_values.h );
-		fprintf(output_file, "\n"); 
-  	}
-  	fclose(output_file);	
 
+float get_elapsed_time(GraficObject *device_object, bool csv_format, bool csv_format_timestamp, long int current_time)
+{
+    if (csv_format_timestamp){
+        printf("%.10f;%.10f;%.10f;%ld;\n",(bench_t) 0, device_object->elapsed_time , (bench_t) 0, current_time);
+    }
+    else if (csv_format){
+        printf("%.10f;%.10f;%.10f;\n", (bench_t) 0, device_object->elapsed_time, (bench_t) 0);
+    } 
+	else
+	{
+		printf("Elapsed time Host->Device: %.10f milliseconds\n", (bench_t) 0);
+		printf("Elapsed time kernel: %.10f milliseconds\n", device_object->elapsed_time );
+		printf("Elapsed time Device->Host: %.10f milliseconds\n", (bench_t) 0);
+    }
+    return device_object->elapsed_time;
 }
 
-void get_double_hexadecimal_values(const char* filename, bench_t* float_vector, unsigned int size){
-	// open file
-	FILE *file = fopen(filename, "r");
-	// read line by line
-	char * line = NULL;
-    size_t len = 0;
-    
 
-	for (unsigned int i = 0; i < size; ++i){
-		getline(&line, &len, file);
-		// delete /n
-		line[strlen(line)-1] = 0;
-		// strip for each char
-		char *temp = (char*) malloc(sizeof(char) * 2);
-		char *ptr;
-    	temp[0] = line[0];
-		temp[1] = line[1];
-    	binary_float.binary_values.a = (char)strtol(temp, &ptr, 16);
-		temp[0] = line[2];
-		temp[1] = line[3];
-		binary_float.binary_values.b = (char)strtol(temp, &ptr, 16);
-		temp[0] = line[4];
-		temp[1] = line[5];
-		binary_float.binary_values.c = (char)strtol(temp, &ptr, 16);
-		temp[0] = line[6];
-		temp[1] = line[7];
-		binary_float.binary_values.d = (char)strtol(temp, &ptr, 16);
-		temp[0] = line[8];
-		temp[1] = line[9];
-		binary_float.binary_values.e = (char)strtol(temp, &ptr, 16);
-		temp[0] = line[10];
-		temp[1] = line[11];
-		binary_float.binary_values.f = (char)strtol(temp, &ptr, 16);
-		temp[0] = line[12];
-		temp[1] = line[13];
-		binary_float.binary_values.g = (char)strtol(temp, &ptr, 16);
-		temp[0] = line[14];
-		temp[1] = line[15];
-		binary_float.binary_values.h = (char)strtol(temp, &ptr, 16);
-
-		float_vector[i] = binary_float.f;
-	}
-  	fclose(file);	
-
+void clean(GraficObject *device_object)
+{
+    return;
 }

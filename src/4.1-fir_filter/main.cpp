@@ -1,6 +1,6 @@
 #include <time.h>
+#include "cpu_functions/cpu_functions.h"
 #include "benchmark_library.h"
-#include "cpu/lib_cpu.h"
 #include <sys/time.h>
 
 #define NUMBER_BASE 1
@@ -13,7 +13,7 @@
 #define GPU_FILE "gpu_file.out"
 #define CPU_FILE "cpu_file.out"
 
-int arguments_handler(int argc, char ** argv,unsigned int *size, unsigned int *kernel_size,unsigned int *gpu,bool *verification, bool *export_results, bool *export_results_gpu,  bool *print_output, bool *print_timing, bool *csv_format,bool *print_input,char *input_file_A, char *input_file_B, bool *validation_timing, bool *mute_messages);
+int arguments_handler(int argc, char ** argv, BenchmarkParameters* arguments_parameters);
 
 int main(int argc, char *argv[])
 {
@@ -22,12 +22,10 @@ int main(int argc, char *argv[])
 	///////////////////////////////////////////////////////////////////////////////////////////////
 	// Arguments  
 	///////////////////////////////////////////////////////////////////////////////////////////////
-	unsigned int size = 0, gpu = 0, kernel_size=3;
-	bool verification  = false, export_results = false, print_output = false, print_timing = false, export_results_gpu = false, csv_format = false, print_input = false, validation_timing = false, mute_messages = false;
-	char input_file_A[100] = "";
-	char input_file_B[100] = "";
 
-	int resolution = arguments_handler(argc,argv, &size, &kernel_size, &gpu, &verification, &export_results, &export_results_gpu,&print_output, &print_timing, &csv_format, &print_input,input_file_A, input_file_B, &validation_timing, &mute_messages);
+	BenchmarkParameters *arguments_parameters = (BenchmarkParameters *)malloc(sizeof(BenchmarkParameters));
+
+	int resolution = arguments_handler(argc,argv,arguments_parameters);
 	if (resolution == ERROR_ARGUMENTS){
 		exit(-1);
 	}
@@ -35,18 +33,18 @@ int main(int argc, char *argv[])
 	// VARIABLES 
 	///////////////////////////////////////////////////////////////////////////////////////////////
 	// linearizable versions of matrix
-	unsigned int size_matrix =size;
+	unsigned int size_matrix =arguments_parameters->size;
 	// A input matrix
-	unsigned int size_A = size;
+	unsigned int size_A = arguments_parameters->size;
     unsigned int mem_size_A = sizeof(bench_t) * size_A;
 	bench_t* A = (bench_t*) malloc(mem_size_A);
 	// B output matrix
-	unsigned int size_B = size + kernel_size - 1;
+	unsigned int size_B = arguments_parameters->size + arguments_parameters->kernel_size - 1;
     unsigned int mem_size_B = sizeof(bench_t) * size_B;
 	bench_t* h_B = (bench_t*) malloc(mem_size_B);
 	bench_t* d_B = (bench_t*) malloc(mem_size_B);
 	// kernel matrix
-	unsigned int size_k = kernel_size ;
+	unsigned int size_k = arguments_parameters->kernel_size ;
 	unsigned int mem_size_k = sizeof(bench_t) * size_k;
 	bench_t* kernel = (bench_t*) malloc(mem_size_k);
 	// comparation result
@@ -56,10 +54,10 @@ int main(int argc, char *argv[])
 	///////////////////////////////////////////////////////////////////////////////////////////////
 	// DATA INIT
 	///////////////////////////////////////////////////////////////////////////////////////////////
-	if (strlen(input_file_A) == 0)
+	if (strlen(arguments_parameters->input_file_A) == 0)
 	{
 	// inicialice A matrix 
-		for (int i=0; i<size; i++){
+		for (int i=0; i<arguments_parameters->size; i++){
 	    		#ifdef INT
 	        	A[i] = rand() % (NUMBER_BASE * 100);
 
@@ -68,7 +66,7 @@ int main(int argc, char *argv[])
 	        	#endif
 		}
 		// iniciate B matrix
-		for (int i=0; i<size; i++){
+		for (int i=0; i<arguments_parameters->size; i++){
 			h_B[i] = 0;
 			d_B[i] = 0;
 		}
@@ -99,9 +97,9 @@ int main(int argc, char *argv[])
 		}*/
 	}
 	// print input
-	if (print_input)
+	if (arguments_parameters->print_input)
 	{
-		for (int i=0; i<size; i++){
+		for (int i=0; i<arguments_parameters->size; i++){
 			#ifdef INT
 			printf("%d ",A[i]);
 			#else
@@ -119,20 +117,7 @@ int main(int argc, char *argv[])
 		}
 		printf("\n\n");
 	}
-
-	///////////////////////////////////////////////////////////////////////////////////////////////
-	// CODE FOR ONLY TIMING  OF THE VALIDATION
-	///////////////////////////////////////////////////////////////////////////////////////////////
-	if(validation_timing){
-		clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-		vector_convolution(A,kernel,h_B,size,kernel_size);
-		clock_gettime(CLOCK_MONOTONIC_RAW, &end);
-		if (!mute_messages){
-			printf("CPU Time %lu miliseconds\n", (end.tv_sec - start.tv_sec) * 1000 + (end.tv_nsec - start.tv_nsec) / 1000000);
-		}
-		exit(0);
-	}
-
+	
 	///////////////////////////////////////////////////////////////////////////////////////////////
 	// CODE BENCKMARK
 	///////////////////////////////////////////////////////////////////////////////////////////////
@@ -141,26 +126,26 @@ int main(int argc, char *argv[])
 	GraficObject *conv_benck = (GraficObject *)malloc(sizeof(GraficObject));
 	// init devices
 	char device[100] = "";
-	init(conv_benck, 0,gpu, device);
-	if (!csv_format && !mute_messages ){
+	init(conv_benck, 0,arguments_parameters->gpu, device);
+	if (!arguments_parameters->csv_format_timestamp && !arguments_parameters->csv_format && !arguments_parameters->mute_messages ){
 		printf("Using device: %s\n", device);
 	}
 	
 	// init memory
-	device_memory_init(conv_benck, size , size_B , size_k);
+	device_memory_init(conv_benck, arguments_parameters->size , size_B , size_k);
 	// copy memory to device
-	copy_memory_to_device(conv_benck, A, kernel, size , size_k);
+	copy_memory_to_device(conv_benck, A, kernel, arguments_parameters->size , size_k);
 	// execute kernel
-	execute_kernel(conv_benck, size_B, size, size_B, kernel_size);
+	execute_kernel(conv_benck, size_B, arguments_parameters->size, size_B, arguments_parameters->kernel_size);
 	// copy memory to host
 	copy_memory_to_host(conv_benck, d_B, size_B);
 
 	// get time
-	if (print_timing || csv_format)
+	if (arguments_parameters->print_timing || arguments_parameters->csv_format || arguments_parameters->csv_format_timestamp)
 	{
-		get_elapsed_time(conv_benck, csv_format);
+		get_elapsed_time(conv_benck, arguments_parameters->csv_format, arguments_parameters->csv_format_timestamp, get_timestamp());
 	}
-	if (print_output)
+	if (arguments_parameters->print_output)
 	{
 		#ifdef INT
 		for (int i=0; i<size_B; i++){
@@ -180,16 +165,16 @@ int main(int argc, char *argv[])
 	
 
 
-	if (verification)
+	if (arguments_parameters->verification)
 	{
 		clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-		vector_convolution(A,kernel,h_B,size,kernel_size);
+		vector_convolution(A,kernel,h_B,arguments_parameters->size,arguments_parameters->kernel_size);
 		clock_gettime(CLOCK_MONOTONIC_RAW, &end);
-		if (print_timing)
+		if (arguments_parameters->print_timing)
 		{
-			printf("CPU Time %lu miliseconds\n", (end.tv_sec - start.tv_sec) * 1000 + (end.tv_nsec - start.tv_nsec) / 1000000);
+			printf("CPU Time %lu milliseconds\n", (end.tv_sec - start.tv_sec) * 1000 + (end.tv_nsec - start.tv_nsec) / 1000000);
 		}
-		if (print_output)
+		if (arguments_parameters->print_output)
 		{
 		#ifdef INT
 			for (int i=0; i<size_B; i++){
@@ -207,13 +192,13 @@ int main(int argc, char *argv[])
 	    if (result){
 	    	printf("OK\n");
 	    }
-	    if (export_results){
+	    if (arguments_parameters->export_results){
 	    	print_double_hexadecimal_values(GPU_FILE, d_B, size_B);
 	    	print_double_hexadecimal_values(CPU_FILE, h_B, size_B);
 	    }
 
 	}
-	if (export_results_gpu)
+	if (arguments_parameters->export_results_gpu)
 	{
 		print_double_hexadecimal_values(GPU_FILE, d_B, size_B);
 	}
@@ -239,22 +224,22 @@ void print_usage(const char * appName)
 	printf("Usage: %s -s Size -k [-v] [-e] [-o] [-t] [-d] [-i input_file_A_MATRIX input_file_B_MATRIX] \n", appName);
 	printf(" -s Size : set size of x and y of matrices A and B with Size \n");
 	printf(" -k: size of the kernel\n");
-	printf(" -e: exports the results of the output and the verification in hexadecimal format (this enables the verificaction of the results) \n");
+	printf(" -e: exports the results of the output and the verification in hexadecimal format (this enables the verification of the results) \n");
 	printf(" -v: verify the output of the gpu program with the cpu output \n");
 	printf(" -g: exports the results of the output \n");
 	printf(" -o: prints the results\n");
 	printf(" -t: prints the timing\n");
 	printf(" -c: prints the timing in csv format\n");
+	printf(" -C: prints the timing in csv format with timestamp\n");
 	printf(" -q: prints input values\n");
 	printf(" -i: pass input data and the result and compares\n");
 	printf(" -d: selects GPU\n");
-	printf(" -x: prints the timing of the validation. Only the sequential time of the application will be displayed\n");
 	printf(" -f: mutes all print\n");
 	printf(" -h: print help information\n");
 }
 
 
-int arguments_handler(int argc, char ** argv,unsigned int *size, unsigned int *kernel_size,unsigned int *gpu,bool *verification, bool *export_results, bool *export_results_gpu,  bool *print_output, bool *print_timing, bool *csv_format,bool *print_input,char *input_file_A, char *input_file_B, bool *validation_timing, bool *mute_messages) {
+int arguments_handler(int argc, char ** argv, BenchmarkParameters* arguments_parameters){
 	if (argc == 1){
 		printf("-s need to be set\n\n");
 		print_usage(argv[0]);
@@ -264,40 +249,40 @@ int arguments_handler(int argc, char ** argv,unsigned int *size, unsigned int *k
 	{
 		switch (argv[args][1]) {
 			// comon part
-			case 'v' : *verification = true;break;
-			case 'e' : *verification = true; *export_results= true;break;
-			case 'o' : *print_output = true;break;
-			case 't' : *print_timing = true;break;
-			case 'c' : *csv_format   = true;break;
-			case 'g' : *export_results_gpu = true;break;
-			case 'q' : *print_input = true;break;
-			case 'd' : args +=1; *gpu = atoi(argv[args]);break;
+			case 'v' : arguments_parameters->verification = true;break;
+			case 'e' : arguments_parameters->verification = true; arguments_parameters->export_results= true;break;
+			case 'o' : arguments_parameters->print_output = true;break;
+			case 't' : arguments_parameters->print_timing = true;break;
+			case 'c' : arguments_parameters->csv_format   = true;break;
+			case 'C' : arguments_parameters->csv_format_timestamp = true;break;
+			case 'g' : arguments_parameters->export_results_gpu = true;break;
+			case 'q' : arguments_parameters->print_input = true;break;
+			case 'd' : args +=1; arguments_parameters->gpu = atoi(argv[args]);break;
 			// specific
 			case 'i' : args +=1;
-					   strcpy(input_file_A,argv[args]);
+					   strcpy(arguments_parameters->input_file_A,argv[args]);
 					   args +=1;
-					   strcpy(input_file_B,argv[args]);
+					   strcpy(arguments_parameters->input_file_B,argv[args]);
 					   break;
-			case 'x' : *validation_timing = true;break;
-			case 'f' : *mute_messages = true;break;
+			case 'f' : arguments_parameters->mute_messages = true;break;
 					   args +=1;
-					   strcpy(input_file_B,argv[args]);
+					   strcpy(arguments_parameters->input_file_B,argv[args]);
 					   break;
-			case 's' : args +=1; *size = atoi(argv[args]);break;
-			case 'k' : args +=1; *kernel_size = atoi(argv[args]);break;
+			case 's' : args +=1; arguments_parameters->size = atoi(argv[args]);break;
+			case 'k' : args +=1; arguments_parameters->kernel_size = atoi(argv[args]);break;
 			default: print_usage(argv[0]); return ERROR_ARGUMENTS;
 		}
 
 	}
-	if ( *size <= 0){
+	if ( arguments_parameters->size <= 0){
 		printf("-s need to be set\n\n");
 		print_usage(argv[0]);
 		return ERROR_ARGUMENTS;
 	}
-	if (*mute_messages){
-		*csv_format = false;
+	if (arguments_parameters->mute_messages){
+		arguments_parameters->csv_format = false;
 	}
-	if ( *kernel_size <= 0){
+	if ( arguments_parameters->kernel_size <= 0){
 		printf("-k need to be set\n\n");
 		print_usage(argv[0]);
 		return ERROR_ARGUMENTS;

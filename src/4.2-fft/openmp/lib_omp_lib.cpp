@@ -35,7 +35,9 @@ void execute_kernel(GraficObject *device_object, int64_t size)
 	// Start compute timer
 	const double start_wtime = omp_get_wtime();
 
-    	// FFTW implementation
+	// FFTW implementation
+	fftw_init_threads();
+    fftw_plan_with_nthreads(omp_get_num_threads());
 	fftw_plan plan;
 	fftw_complex *in, *out;
 
@@ -43,9 +45,9 @@ void execute_kernel(GraficObject *device_object, int64_t size)
 	out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * size);
 	
 	for(int i = 0; i < size; ++i) {
-                in[i][0] = device_object->d_B[i*2];
-                in[i][1] = device_object->d_B[i*2+1];
-        }
+		in[i][0] = device_object->d_B[i*2];
+		in[i][1] = device_object->d_B[i*2+1];
+	}
 
 	plan = fftw_plan_dft_1d(size,in,out,FFTW_FORWARD, FFTW_ESTIMATE);
 	fftw_execute(plan);
@@ -71,17 +73,20 @@ void copy_memory_to_host(GraficObject *device_object, bench_t* h_B, int64_t size
 }
 
 
-float get_elapsed_time(GraficObject *device_object, bool csv_format)
+float get_elapsed_time(GraficObject *device_object, bool csv_format, bool csv_format_timestamp, long int current_time)
 {
-	if (csv_format)
+	if (csv_format_timestamp){
+        printf("%.10f;%.10f;%.10f;%ld;\n",(bench_t) 0, device_object->elapsed_time , (bench_t) 0, current_time);
+    }
+    else if (csv_format)
 	{
         printf("%.10f;%.10f;%.10f;\n", (bench_t) 0, device_object->elapsed_time * 1000.f, (bench_t) 0);
     } 
 	else
 	{
-		printf("Elapsed time Host->Device: %.10f miliseconds\n", (bench_t) 0);
-		printf("Elapsed time kernel: %.10f miliseconds\n", device_object->elapsed_time * 1000.f);
-		printf("Elapsed time Device->Host: %.10f miliseconds\n", (bench_t) 0);
+		printf("Elapsed time Host->Device: %.10f milliseconds\n", (bench_t) 0);
+		printf("Elapsed time kernel: %.10f milliseconds\n", device_object->elapsed_time * 1000.f);
+		printf("Elapsed time Device->Host: %.10f milliseconds\n", (bench_t) 0);
     }
 	return device_object->elapsed_time * 1000.f;
 }
