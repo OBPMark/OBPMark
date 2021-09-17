@@ -19,6 +19,31 @@ typedef float bench_t;
 typedef double bench_t;
 #endif
 
+
+
+#ifdef FLOAT
+#ifdef BIGENDIAN
+// bigendian version
+union
+	{
+		float f;
+		struct
+		{
+			unsigned char a,b,c,d;
+		}binary_values;
+	} binary_float;
+#else
+// littelendian version
+union
+	{
+		float f;
+		struct
+		{
+			unsigned char d,c,b,a;
+		}binary_values;
+	} binary_float;
+#endif
+#elif DOUBLE
 #ifdef BIGENDIAN
 // bigendian version
 union
@@ -40,6 +65,7 @@ union
 		}binary_values;
 	} binary_float;
 #endif
+#endif
 
 struct BenchmarkParameters{
 	int size = 0;
@@ -52,7 +78,8 @@ struct BenchmarkParameters{
 	bool csv_format = false;
 	bool mute_messages = false;
 	bool csv_format_timestamp = false;
-	char input_file[100] = "";
+	char input_file_A[100] = "";
+	char input_file_B[100] = "";
 	char output_file[100] = "";
 };
 

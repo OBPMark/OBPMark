@@ -53,7 +53,7 @@ struct BenchmarkParameters{
 	bool csv_format = false;
 	bool mute_messages = false;
 	bool csv_format_timestamp = false;
-	int kernel_size = 3;
+	int kernel_size = -1;
 	char input_file_A[100] = "";
 	char input_file_B[100] = "";
 	char output_file[100] = "";

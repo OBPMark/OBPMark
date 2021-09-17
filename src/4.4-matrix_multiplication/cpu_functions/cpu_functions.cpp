@@ -135,10 +135,12 @@ void print_double_hexadecimal_values(const char* filename, bench_t* float_vector
 		fprintf(output_file, "%02x", binary_float.binary_values.b );
 		fprintf(output_file, "%02x", binary_float.binary_values.c );
 		fprintf(output_file, "%02x", binary_float.binary_values.d );
+		#ifdef DOUBLE
 		fprintf(output_file, "%02x", binary_float.binary_values.e );
 		fprintf(output_file, "%02x", binary_float.binary_values.f );
 		fprintf(output_file, "%02x", binary_float.binary_values.g );
 		fprintf(output_file, "%02x", binary_float.binary_values.h );
+		#endif
 		fprintf(output_file, "\n"); 
   	}
   	fclose(output_file);	
@@ -174,6 +176,7 @@ void get_double_hexadecimal_values(const char* filename, bench_t* float_vector, 
 		binary_float.binary_values.d = (char)strtol(temp, &ptr, 16);
 		temp[0] = line[8];
 		temp[1] = line[9];
+		#ifdef DOUBLE
 		binary_float.binary_values.e = (char)strtol(temp, &ptr, 16);
 		temp[0] = line[10];
 		temp[1] = line[11];
@@ -184,7 +187,7 @@ void get_double_hexadecimal_values(const char* filename, bench_t* float_vector, 
 		temp[0] = line[14];
 		temp[1] = line[15];
 		binary_float.binary_values.h = (char)strtol(temp, &ptr, 16);
-
+		#endif
 		float_vector[i] = binary_float.f;
 		}
 	}

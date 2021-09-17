@@ -127,27 +127,27 @@ int main(int argc, char *argv[]){
 	///////////////////////////////////////////////////////////////////////////////////////////////
 
 	// base object init
-	GraficObject *conv_benck = (GraficObject *)malloc(sizeof(GraficObject));
+	GraficObject *conv_bench = (GraficObject *)malloc(sizeof(GraficObject));
 	// init devices
 	char device[100] = "";
-	init(conv_benck, 0,arguments_parameters->gpu, device);
+	init(conv_bench, 0,arguments_parameters->gpu, device);
 	if (!arguments_parameters->csv_format_timestamp && !arguments_parameters->csv_format && !arguments_parameters->mute_messages ){
 		printf("Using device: %s\n", device);
 	}
 	
 	// init memory
-	device_memory_init(conv_benck, arguments_parameters->size * arguments_parameters->size, arguments_parameters->size * arguments_parameters->size, size_k);
+	device_memory_init(conv_bench, arguments_parameters->size * arguments_parameters->size, arguments_parameters->size * arguments_parameters->size, size_k);
 	// copy memory to device
-	copy_memory_to_device(conv_benck, A, kernel, arguments_parameters->size * arguments_parameters->size, size_k);
+	copy_memory_to_device(conv_bench, A, kernel, arguments_parameters->size * arguments_parameters->size, size_k);
 	// execute kernel
-	execute_kernel(conv_benck, arguments_parameters->size, arguments_parameters->size, arguments_parameters->size, arguments_parameters->kernel_size);
+	execute_kernel(conv_bench, arguments_parameters->size, arguments_parameters->size, arguments_parameters->size, arguments_parameters->kernel_size);
 	// copy memory to host
-	copy_memory_to_host(conv_benck, d_B, size_matrix);
+	copy_memory_to_host(conv_bench, d_B, size_matrix);
 
 	// get time
 	if (arguments_parameters->print_timing || arguments_parameters->csv_format || arguments_parameters->csv_format_timestamp)
 	{
-		get_elapsed_time(conv_benck, arguments_parameters->csv_format, arguments_parameters->csv_format_timestamp, get_timestamp());
+		get_elapsed_time(conv_bench, arguments_parameters->csv_format, arguments_parameters->csv_format_timestamp, get_timestamp());
 	}
 	if (arguments_parameters->print_output)
 	{
@@ -221,9 +221,10 @@ int main(int argc, char *argv[]){
 	// CLEAN MEMORY
 	///////////////////////////////////////////////////////////////////////////////////////////////
 	// clean device memory
-	clean(conv_benck);
+	clean(conv_bench);
 	// free object memory 
-	free(conv_benck);
+	free(arguments_parameters);
+	free(conv_bench);
 	free(A);
 	free(kernel);
 	free(h_B);
@@ -253,8 +254,22 @@ void print_usage(const char * appName)
 	printf(" -h: print help information\n");
 }
 
+void init_arguments(BenchmarkParameters* arguments_parameters){
+	arguments_parameters->size = 0;
+	arguments_parameters->gpu = 0;
+	arguments_parameters->verification = false;
+	arguments_parameters->export_results = false;
+	arguments_parameters->export_results_gpu = false;
+	arguments_parameters->print_output = false;
+	arguments_parameters->print_input = false;
+	arguments_parameters->print_timing = false;
+	arguments_parameters->csv_format = false;
+	arguments_parameters->mute_messages = false;
+	arguments_parameters->csv_format_timestamp = false;
+}
 
 int arguments_handler(int argc, char ** argv, BenchmarkParameters* arguments_parameters){
+	init_arguments(arguments_parameters);
 	if (argc == 1){
 		printf("-s need to be set\n\n");
 		print_usage(argv[0]);

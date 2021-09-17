@@ -16,40 +16,17 @@ void matrix_multiplication(const bench_t* A, const bench_t* B, bench_t* C,const 
 
 
 void matrix_convolution(const bench_t* A, bench_t* kernel, bench_t* B,const int size, const int kernel_size){
-//loop for the image
-	int kernel_rad = kernel_size / 2;
-	for (int x = 0; x < size; ++x)
+	//loop for the image
+	const unsigned int kernel_rad = kernel_size / 2;
+	const unsigned int output_size = size + kernel_size - 1;
+	for(unsigned int i = 0; i < output_size; ++i)
 	{
-		for (int y = 0; y < size; ++y)
-		{	
-			bench_t sum = 0;
-			//loop over the kernel
-			for(int i = -kernel_rad; i <= kernel_rad; ++i) // loop over kernel_rad  -1 to 1 in kernel_size 3 
-			{
-				for(int j = -kernel_rad; j <= kernel_rad; ++j){
-					// get value
-					bench_t value = 0;
-					
-					if (i + x < 0 || j + y < 0)
-					{
-						value = 0;
-						//printf("ENTRO %d %d\n", i + x , j + y);
-					}
-					else if ( i + x > size - 1 || j + y > size - 1)
-					{
-						value = 0;
-						//printf("ENTRO UPPER%d %d\n", i + x , j + y);
-					}
-					else
-					{
-						value = A[(x + i)*size+(y + j)];
-					}
-					//printf("ACHIVED position  %d %d value %f\n", (x + i) , (y + j), value);
-					sum += value * kernel[(i+kernel_rad)* kernel_size + (j+kernel_rad)];
-				}
-			}
-			
-			B[x*size+y ] = sum;
+		for (unsigned int j = 0; j < kernel_size; ++j)
+		{		 
+			if (i +(j - kernel_size + 1) >= 0 && i +(j - kernel_size +1)<  size)
+    		{	
+    			B[i] += kernel[kernel_size - j - 1] * A[i +(j - kernel_size + 1) ];
+    		}
 		}
 	}
 
@@ -61,23 +38,16 @@ long int get_timestamp(){
 	return (long int) msecs_time;
 }
 void vector_convolution(const bench_t* A, bench_t* kernel, bench_t* B,const int size, const int kernel_size){
-	int kernel_radious = kernel_size/2;
-	int output_size = size + kernel_size - 1;
-	for(int i = 0;i < output_size;++i)
+	const unsigned int kernel_rad = kernel_size / 2;
+	const unsigned int output_size = size + kernel_size - 1;
+	for(unsigned int i = 0; i < output_size; ++i)
 	{
-  		
-		for (int j = 0; j< kernel_size; ++j){
-			 
+		for (unsigned int j = 0; j < kernel_size; ++j)
+		{		 
 			if (i +(j - kernel_size + 1) >= 0 && i +(j - kernel_size +1)<  size)
     		{	
-    			
     			B[i] += kernel[kernel_size - j - 1] * A[i +(j - kernel_size + 1) ];
     		}
-    		else
-    		{
-    			B[i] += 0;
-    		}
-
 		}
 	}
 }
