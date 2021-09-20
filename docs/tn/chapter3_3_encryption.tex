@@ -1,0 +1,22 @@
+\section{Benchmark \#3: Standard Encryption}
+In the "Standard Encryption Algorithms" the throughput of the standard encryption algorithms shall be measured.
+
+\subsection{Benchmark \#3.1: AES Encryption}
+The "AES Encryption" benchmark shall implement the standard Advanced Encryption Standard (AES) encryption algortihm as per [INSERT REF] and [INSERT CCSDS REF].\\
+\\
+An overview of the benchmark profiles is shown in Table \ref{tab:aes_profiles}\\
+
+\begin{table}[!h]
+\centering
+\begin{tabular}{|l|l|l|l|l|l|l|}
+    \hline
+    Profile ID  & Data Length     & Data type   & Key length    & File Set      \\ \hline 
+    \hline
+    01	        & TBD	          & TBD	        & 128-bit       & TBA           \\ \hline
+    02	        & TBD	          & TBD	        & 256-bit       & TBA           \\ \hline
+\end{tabular}
+\caption{AES Encryption test profiles.}
+\label{tab:aes_profiles}
+\end{table}
+
+For each file in the file sets, the files shall be individually encrypted and the timing per file shall be measured.

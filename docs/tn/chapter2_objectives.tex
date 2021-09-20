@@ -1,0 +1,107 @@
+\chapter{Background and Objectives}
+\section{Background}
+In the past, computational benchmarking of on-board processing performance for space applications have often done on a case-to-case basis, taking into account only a small sub-set of devices / types of devices and specific application cases. While there are commercially available benchmark software for embedded systems, these are usually only targeting CPUs using synthetic algorithms – and are not generally suitable for implementation in highly parallel processors (GPUs, DSPs, etc.) and/or hardware implementations (i.e. ASICs and FPGAs) which are commonplace in space applications.
+\\ \\
+In the field of processing in on-board spacecraft systems, there are a number of classes of applications which are reoccurring over multiple missions. These applications and their algorithms are often driving the overall computational performance requirements of the mission, e.g. in the case of image processing and compression, radar processing, radio signal processing and encryption. In each of the application classes, there are certain metrics for performance – such as e.g. number of pixels processed per second in image processing applications – which are well-known and easily understandable by the designers and users of such systems. 
+
+This document intends to define a set of benchmarks covering the typical classes of applications commonly found on-board spacecraft. The benchmark suite is intended to be publicly available for easy comparison of the performance of different systems, and in extension to help quickly help down-select possible solutions for a given application case.
+\\ \\
+
+
+\section{Benchmark Objectives}
+The objective of these benchmarks are:
+
+\begin{itemize}
+    \item To promote a standard set of benchmarks, as to enable a method of comparing end-user performance of different devices and systems – such as both RHBD and COTS processors, FPGAs and ASICs.
+    \item To better understand limitations of different types of devices and systems.
+    \item To quickly decide on division task in hardware and software for implementations in heterogeneous systems.
+    \item To allow ESA to quickly provide recommendations for processing systems in future missions, through identifying key parameters together with the project teams.
+    \item Benchmark standard on-board processing functions, so that implementers will have the possibility for reusing the invested work in real-world use cases.
+\end{itemize}
+
+\section{Benchmark Requirements}
+The following requirements were considered when defining the benchmarks: 
+
+\begin{itemize}
+    \item Coverage:
+    \begin{itemize}
+        \item[] ...shall cover common OBP applications: image processing, compression, radar processing, encryption, common building blocks (for radar, radiometry, SDR, etc) and machine learning.
+        \item[] ...shall allow to add future benchmarks (through version update).
+    \end{itemize}
+    
+    \item Comparable:
+    \begin{itemize}
+        \item[] ...shall provide comparable results for: overall performance, performance / power, absolute power. 
+        \item[] ...shall provide all necessary configuration parameters and test data.
+    \end{itemize}
+    
+    \item Portable:
+    \begin{itemize}
+        \item[] ...shall be written in standard C. 
+        \item[] ...shall support standard parallelization schemes: OpenMP, OpenCL and CUDA.
+        \item[] ...shall be possible to port to FPGA implementations*.
+    \end{itemize}
+    
+    \item Openness:
+    \begin{itemize}
+        \item[] ...shall be openly available (open-source license, open repository).
+        \item[] ...shall be open for community response/feedback.
+        \item[] ...shall be open for community contributions (porting etc.).
+    \end{itemize}
+\end{itemize}
+
+\section{Detailed Description}
+\subsection{Target Platforms}
+The applications examples in this document have been specified without a specific processing architecture or device in mind. However, the intention is to allow implementations in a multitude of device types, i.e. CPUs, DSPs, FPGAs, ASICs, GPUs, many-core devices, stochastic arrays, etc. – as well as heterogeneous system. That is, systems that consists of more than one device type, such as combined CPU and FPGA systems, where part of the processing is done in software in CPU and part is done in logic in the FPGA. 
+
+\subsection{Optimization}
+One important aspect of the applications is the parallelisation scheme applied on the algorithm to allow efficient and full resource utilization of devices with parallel capabilities, such as multi- and many-core processors, as well as multiple DSP blocks in FPGAs. This document does – at the moment – not make any attempt to suggest the parallelisation schemes for the algorithms, as these will be significantly dependant on the type of device benchmarked. It is therefore up to the implementer to find the most suited parallelisation scheme for their device – and document the approach with the benchmark results. 
+
+However, example parallelized implementations in common parallelization frameworks are provided as part of the code-base. These can be run as-is, or optimized for specific targets.
+
+In a similar manner, in the case of multi- and many-core devices, the performance is often dependent of the use of intermediate software framework for task and data parallelisation. Different parallelisation frameworks for the same device may give significantly different results. It is therefore recommended to include also any used software frameworks and libraries with the benchmark results.
+
+In the case of software devices, there is usually significant gain in manual assembly optimization of the kernels part of the processing chains – especially for VLIW architectures and cores with vectorization modules. The type level of software tools, i.e. use of assembly, compiler optimization flags, etc., should also be reported together with the benchmark results.
+
+Overall, it is recommended to also document the implementation effort for the target device or devices when reporting benchmark results. It may be that a certain device gives better performance than another, but with the penalty of a larger effort in implementation. Such information is certainly very useful when considering the overall effort for the implementation of a processing algorithm in a certain system. 
+In the case of FPGAs, it should also be considered that not all logic resources may be available in when the FPGA is integrated in a processing system, as dedicated data, control and memory interfaces will also be necessary to be included in the design. Hence, it is recommended to include with the benchmark results information regarding the overall FPGA system design and resources utilization (including any applied TMR strategy in the design)
+
+One important aspect for space applications is the power consumption of a processing system. It may be that very good results can be achieved with a certain set of devices, but that additional effort is required to remove the heat dissipated to be able to operate the system. Conditionings regarding the temperature environment and power dissipation is therefor also considered important parameters. 
+
+Finally, another important aspect of systems on-board spacecraft is the radiation hardening and fault-tolerance. In the case the used device gives options of switching off fault-mitigation techniques this should be listed with the benchmark results and the power dissipation.
+
+\subsection{Implementation Coverage}
+The implementation effort to cover all benchmarks listed in this document can significant, particular in the case of FPGAs. However, it is not the intent that all benchmarks need to be implemented to report on the performance for a particular application case. In fact, some of the benchmarks have intentionally been split to allow reporting of the performance of a specific task – such as the standardized compression methods. 
+
+\subsection{Comparison to Other Benchmarks}
+% FIXME add comparisons to commercially available benchmark suites
+
+\subsubsection{GPU4S Benchmarks}
+The GPU4S Benchmarks were developed for the purposed of evaluating highly parallel processors, such as GPUs for the use in space applications. The include implementations of multiple optimized kernels for the execution of GPUs and other processors, capable of executing parallel code using standard frameworks such as OpenMP, OpenCL and/or CUDA. 
+
+The GPU4S Benchmarks are closely related to OBPMark in that some algorithmic building blocks are shared between the two benchmark suites. Specifically implementations of optimized kernels for e.g. FFT and FIR filtering from GPU4S are reused in OBPMark.
+
+Other benchmarks in OBPMark are mainly targeting multi-stage algorithms, which reuse the kernel implementations from the GPU4S benchmark suite. 
+
+\subsubsection{ESA NGDSP Software Benchmarks}
+A set of benchmarks for DSPs on-board spacecraft were previously defined in 2008 in the “Next Generation Space Digital Signal Processor Software Benchmark” (“NGDSP benchmarks”) document \ref{rd:ngdsp} which was mainly intended for the selection of DSP devices and architectures. It also included aspects related to I/O data transfer rate and acquisition from mixed signal data converters. This document succeeds the NGDSP benchmarks, focusing only on the digital processing aspects. 
+
+Wherever possible, benchmark elements and reporting parameters have been reused from the NGDSP benchmark, to be able to retain results from previous benchmarks at best effort. See section Annex X: Comparison to “NGDSP Software Benchmarks” (2008) for a side to side comparison between the two benchmark suites.
+
+Note that with the introduction of of OBPMark, the use of NGDSP Software Benchmarks is no longer recommended.
+
+\subsubsection{NASA NAS Parallel Benchmarks}
+% FIXME ref: https://www.nas.nasa.gov/publications/npb.html
+The NAS Parallel Benchmarks (NPB) from NASA [INSERT REF] are intendend for the evaluation of the parallel performance of supercomputers. The benchmarks are taken from applications in the field of computational fluid dynamics (CFD). The application cases of NPB are not commonly used in on-board processing applications -- which is the target of OBPMark. 
+
+While both benchmarks share e.g. an implementation of FFT (Fast Fourier Transform), there is little other overlap between the benchmarks.
+
+\subsubsection{MLPerf}
+% FIXME reference: https://mlperf.org/
+MLPerf is a set of benchmark aimed at the computational performance evaluation of machine learning (ML) tasks. [INSERT REF] The benchmarks were initiated by researchers at Baidu, Google, Hardward University, Stanford University and the University of California Berkeley. 
+
+MLPerf includes both benchmarks for training and inference of ML models.
+
+While both MLPerf and OBPMark include benchmarks for ML inference, including task such as image classification and object detection, the inference models used in MLPerf are not targeted at space applications. Instead in MLPerf image data sets such as ImageNet and COCO, which both target general visual object recognition for large network.
+
+The ML inference computational benchmarks of OBPMark are targetting specific applications related to space imaging and Earth Observation that are suited (both in terms of overall complexity and memory footprint) for execution on space hardware.

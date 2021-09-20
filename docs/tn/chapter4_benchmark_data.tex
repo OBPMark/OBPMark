@@ -1,0 +1,154 @@
+\chapter{Benchmark Input and Verification Data}
+In the following sections the input, output (verification) as well as auxiliary benchmark data file sets are outlined.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Input Data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+
+\section{Input Data}
+Input files and images, as well as reference result files can be found on the following address:
+
+The full list of input and reference files is included below.
+
+\subsection{Benchmark \#1.1 Data}
+
+\subsubsection{Benchmark \#1.1 Input Data}
+
+An overview of the input files to be used for Benchmark \#1.1 is shown in Table \ref{tab:bm1_1_input_data}. All files are image data files.
+
+\begin{table}[!h]
+%    \centering
+    \begin{tabular}{|l|l|c|c|c|c|c|}
+        \hline
+        File Set                & File Name                 & Image Width   & Image Height  & Bit-depth     & Byte order    \\ \hline
+        \hline
+        image\_proc\_01	        & frame\_0\_1024\_1024.bin     & 1024          & 1024          & 16            & LE            \\ \hline
+        image\_proc\_01	        & frame\_1\_1024\_1024.bin     & 1024          & 1024          & 16            & LE            \\ \hline
+        image\_proc\_01	        & frame\_2\_1024\_1024.bin     & 1024          & 1024          & 16            & LE            \\ \hline
+        image\_proc\_01	        & frame\_3\_1024\_1024.bin     & 1024          & 1024          & 16            & LE            \\ \hline
+        image\_proc\_01	        & frame\_4\_1024\_1024.bin     & 1024          & 1024          & 16            & LE            \\ \hline
+        image\_proc\_01	        & frame\_5\_1024\_1024.bin     & 1024          & 1024          & 16            & LE            \\ \hline
+        image\_proc\_01	        & frame\_6\_1024\_1024.bin     & 1024          & 1024          & 16            & LE            \\ \hline
+        image\_proc\_01	        & frame\_7\_1024\_1024.bin     & 1024          & 1024          & 16            & LE            \\ \hline
+        \hline
+        image\_proc\_02	        & frame\_0\_2048\_2048.bin     & 2048          & 2048          & 16            & LE            \\ \hline
+        image\_proc\_02	        & frame\_1\_2048\_2048.bin     & 2048          & 2048          & 16            & LE            \\ \hline
+        image\_proc\_02	        & frame\_2\_2048\_2048.bin     & 2048          & 2048          & 16            & LE            \\ \hline
+        image\_proc\_02	        & frame\_3\_2048\_2048.bin     & 2048          & 2048          & 16            & LE            \\ \hline
+        image\_proc\_02	        & frame\_4\_2048\_2048.bin     & 2048          & 2048          & 16            & LE            \\ \hline
+        image\_proc\_02	        & frame\_5\_2048\_2048.bin     & 2048          & 2048          & 16            & LE            \\ \hline
+        image\_proc\_02	        & frame\_6\_2048\_2048.bin     & 2048          & 2048          & 16            & LE            \\ \hline
+        image\_proc\_02	        & frame\_7\_2048\_2048.bin     & 2048          & 2048          & 16            & LE            \\ \hline
+        \hline
+        image\_proc\_03	        & frame\_0\_4096\_4096.bin     & 4096          & 4096          & 16            & LE            \\ \hline
+        image\_proc\_03	        & frame\_1\_4096\_4096.bin     & 4096          & 4096          & 16            & LE            \\ \hline
+        image\_proc\_03	        & frame\_2\_4096\_4096.bin     & 4096          & 4096          & 16            & LE            \\ \hline
+        image\_proc\_03	        & frame\_3\_4096\_4096.bin     & 4096          & 4096          & 16            & LE            \\ \hline
+        image\_proc\_03	        & frame\_4\_4096\_4096.bin     & 4096          & 4096          & 16            & LE            \\ \hline
+        image\_proc\_03	        & frame\_5\_4096\_4096.bin     & 4096          & 4096          & 16            & LE            \\ \hline
+        image\_proc\_03	        & frame\_6\_4096\_4096.bin     & 4096          & 4096          & 16            & LE            \\ \hline
+        image\_proc\_03	        & frame\_7\_4096\_4096.bin     & 4096          & 4096          & 16            & LE            \\ \hline
+    \end{tabular}
+    \caption{List of Benchmark \#1.1 input data.}
+    \label{tab:bm1_1_input_data}
+\end{table}
+
+\subsubsection{Benchmark \#1.1 Auxiliary Data}
+
+An overview of the auxiliary data to be used for Benchmark \#1.1 is shown in Table \ref{tab:bm1_1_aux_data}.
+
+\begin{table}[!h]
+    \centering
+    \begin{tabular}{|l|l|l|c|c|c|c|c|}
+        \hline
+        Function    & File Set              & File Name                 & Width     & Height    & Bit-depth     & Byte order    \\ \hline
+        \hline
+        Offsets     & image\_proc\_01	    & offsets\_1024\_1024.bin     & 1024      & 1024      & 16            & LE            \\ \hline
+        Offsets     & image\_proc\_02	    & offsets\_2048\_2048.bin     & 2048      & 2048      & 16            & LE            \\ \hline
+        Offsets     & image\_proc\_03	    & offsets\_4096\_4096.bin     & 4096      & 4096      & 16            & LE            \\ \hline
+        \hline
+        Gains       & image\_proc\_01	    & gains\_1024\_1024.bin       & 1024      & 1024      & 16            & LE            \\ \hline
+        Gains       & image\_proc\_02	    & gains\_2048\_2048.bin       & 2048      & 2048      & 16            & LE            \\ \hline
+        Gains       & image\_proc\_03	    & gains\_4096\_4096.bin       & 4096      & 4096      & 16            & LE            \\ \hline
+        \hline
+        Bad pixels  & image\_proc\_01	    & bad\_pixels\_1024\_1024.bin  & 1024      & 1024      & 16            & LE            \\ \hline
+        Bad pixels  & image\_proc\_02	    & bad\_pixels\_2048\_2048.bin  & 2048      & 2048      & 16            & LE            \\ \hline
+        Bad pixels  & image\_proc\_03	    & bad\_pixels\_4096\_4096.bin  & 4096      & 4096      & 16            & LE            \\ \hline
+    \end{tabular}
+    \caption{List of Benchmark \#1.1 auxiliary data.}
+    \label{tab:bm1_1_aux_data}
+\end{table}
+
+\subsubsection{Benchmark #1.1 Verification Data}
+
+An overview of the verification data to be used for Benchmark #1.1 is shown in \ref{tab:bm1_1_verif_data}.
+
+\begin{table}[!h]
+%    \centering
+    \begin{tabular}{|l|l|c|c|c|c|c|}
+        \hline
+        File Set                & File Name         & Image Width   & Image Height  & Bit-depth     & Byte order    \\ \hline
+        \hline
+        image\_proc\_01	        & image\_01.bin     & 512           & 512           & 24            & LE            \\ \hline
+        \hline
+        image\_proc\_02	        & image\_02.bin     & 1024          & 1024          & 24            & LE            \\ \hline
+        \hline
+        image\_proc\_03	        & image\_03.bin     & 2048          & 2048          & 24            & LE            \\ \hline
+    \end{tabular}
+    \caption{List of Benchmark \#.1 verification data.}
+    \label{tab:bm1_1_verif_data}
+\end{table}
+
+%%%%%%%%%%%%%%%%%%%%% BENCHMARK #1.2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
+\newpage
+\subsection{Benchmark \#1.2 Data}
+
+\subsubsection{Benchmark \#1.2 Input Data}
+
+\begin{table}[!h]
+%    \centering
+    \begin{tabular}{|l|l|l|l|l|}
+        \hline
+        ID\#        & Image Width   & Image Height  & Bit-depth     & File Set    \\
+        \hline
+        1	        & 1024 TBC      & 1024 TBC      & TBA           & radar\_proc\_01 \\
+        \hline
+        2	        & 2048 TBC      & 2048 TBC      & TBA           & radar\_proc\_02 \\
+        \hline
+        3	        & 4096 TBC      & 4096 TBC      & TBA           & radar\_proc\_03 \\
+        \hline
+    \end{tabular}
+    \caption{"Radar Image Processing" Benchmark test configurations.}
+    \label{tab:bm1_2_file_sets}
+\end{table}
+
+\subsubsection{Benchmark \#1.2 Auxiliary Data}
+TBA.
+
+\subsubsection{Benchmark \#1.2 Verification Data}
+TBA.
+
+\subsection{Benchmark \#2 Data}
+
+The filesets to be used for the compression benchmarks are listed in Table \ref{tab:compression_file_sets}
+
+\begin{table}[!h]
+    \centering
+    \begin{tabular}{|l|l|l|l|l|l|}
+        \hline
+        File Set Name	 & Data length	& Width	    & Height	    & Spectral channels	    & Bit depth   \\ \hline
+        \hline
+        TBD         & 1048576	    & 1024	        & 1024	        & 1	                    & 14        \\ \hline
+        TBD         &               &               &               &                       &           \\ \hline
+        TBD         &               &               &               &                       &           \\ \hline
+    \end{tabular}
+    \caption{List of images used for Benchmark \#2 benchmarks.}
+    \label{tab:compression_file_sets}
+\end{table}
+
+\subsection{Benchmark \#3 Data}
+TBA.
+
+\subsection{Benchmark \#4 Data}
+TBA.
+
+\subsection{Benchmark \#5 Data}
+TBA.

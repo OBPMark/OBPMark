@@ -1,0 +1,266 @@
+\section{Benchmark \#1: Image Processing}
+In this section, application-level image processing benchmarks are defined, based on typical on-board image processing functions. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Benchmark #1.1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Benchmark \#1.1: Image Calibration and Correction}
+This benchmark is intended to represent typical on-board processing tasks necessary for panchromatic imaging instruments in scientific remote sensing applications. Frames are pre-processed individually, then co-registered and summed to create a final image output. 
+
+A set of test images and reference outputs are provided in the benchmark suite. 
+
+\subsubsection{Test Profiles}
+
+In the test profiles, the following parameters differ in the input data:
+
+\begin{itemize}
+    \item Input image width (\# of samples)
+    \item Input image height (\# of samples)
+    \item Input image bit-depth (\# of bits)
+\end{itemize}
+
+The test profiles are shown in Table \ref{tab:bm1_1_tests}.
+
+\begin{table}[!h]
+%    \centering
+    \begin{tabular}{|c|c|c|c|c|c|}
+        \hline
+        ID\#        & Image Width           & Image Height          & Bit-depth         & Frames per image              & File Set          \\ \hline
+        \hline
+        1	        & 1024	                & 1024	                & 16	            & 8	                            & image\_proc\_01   \\ \hline
+        2	        & 2048	                & 2048	                & 16	            & 8	                            & image\_proc\_02   \\ \hline
+        3	        & 4096	                & 4096	                & 16	            & 8	                            & image\_proc\_03   \\ \hline
+    \end{tabular}
+    \caption{"2D Image Processing" Benchmark test configurations.}
+    \label{tab:bm1_1_tests}
+\end{table}
+
+\subsubsection{Processing Steps}
+The following stages shall be performed for each frame in a series:
+
+\begin{enumerate}
+    \item Image offset correction
+    \item Bad pixel correction
+    \item Radiation scrubbing 
+    \item Gain correction 
+    \item Spatial binning 
+    \item Temporal binning
+\end{enumerate}
+
+\subsubsection{Image Offset Correction}
+For each frame a configurable reference offset value is subtracted from the value of each pixel:
+
+\[J_{x,y} = I_{x,y} - c_{x,y}\]
+
+Where \(I_(x,y)\) is the pixel value at position \((x,y)\) prior to the processing step, \(J_(x,y)\) is the value of the processed pixel at position \((x,y)\) and \(c_(x,y)\) is the specific value of the offset for pixel \((x,y)\). The offset value is unique per pixel position and shall be stored as an integer value map with the same size and bit-depth as the raw frames. 
+
+\subsubsection{Bad Pixel Correction}
+For each frame a correction shall be made for pixels marked as bad (deficient). The state of each pixel (good/bad) shall be defined in a configurable look-up table (\(M\)). In case the pixel is marked as bad, it shall be replaced with by the output of function \(F\). \\
+
+\begin{center}
+\begin{tabular}{l}
+If \(M_{x,y} = 1\), then \(J_{x,y} = F(I_{x,y}, x, y)\) \\
+If \(M_{x,y} = 0\), then \(J_{x,y} = I_{x,y}\) \\
+\end{tabular}
+\end{center}
+
+The function \(F(I_{x,y})\) depends whether or not the pixel is on the edge of the image or not, i.e. by the values of \(x\) and \(y\), and if the neighbouring pixels are also bad pixels or not and is defined below as the neighbourhood replacement function.
+
+\subsubsection{Mean 3x3 Neighbourhood Replacement Function}
+The neighbourhood replacement function is used both for the bad pixel correction and the radiation scrubbing steps.
+
+The average of all good pixels in the 3x3 neighbourhood shall be calculated and used as the replacement value. If the pixel is on the left or right edge of the frame, the neighbourhood is 2x3 in size. If the pixel is on the top or bottom edges of the frame, the neighbourhood is 3x2 in size. If the pixel is in any of the four corners of the frame, the neighbourhood size is 2x2 pixels. 
+
+The variables are initialised to: \\
+
+\begin{center}
+\begin{tabular}{l}
+\(S = 0\)\\
+\(N = 0\)\\
+\end{tabular}
+\end{center}
+
+Then for each of the pixels in the neighbourhood, the following operations shall be done: 
+
+\begin{center}
+\begin{tabular}{l}
+If \(M_{x,y} == 1\) then \(S = S + I_{x,y}\) and \(N = N + 1\) \\
+\end{tabular}
+\end{center}
+
+Finally the mean is calculated as: 
+\begin{center}
+\(F_{x,y} = \frac{S}{N}\)
+\end{center}
+
+\subsubsection{Radiation Scrubbing}
+For each frame, each pixel shall be screened for radiation upsets, and if detected, scrubbed. 
+
+Each pixel shall be compared to a constant multiplied with the average of its temporal neighbours in the +/- 2 non-scrubbed frames. The average shall be calculated as follows:
+
+\[\^I = \frac{I_{(x,y),t-2} + I_{(x,y),t-1} + I_{(x,y),t+1} + I_{(x,y),t+2}}{4}\]
+
+Then for each pixel, the value is compared to the average (multiplied by a constant), and if the current pixel value is larger the pixel shall be marked for scrubbing in a look-up table, \(R_{x,y})\):
+
+\begin{center}
+\begin{tabular}{l}
+If \(I_{x,y} > C*\^I_{x,y}\) then \(R_{x,y} = 1\) \\
+If \(I_{x,y} < C*\^I_{x,y}\) then \(R_{x,y} = 0\) \\
+\end{tabular}
+\end{center}
+
+Once all the pixels have been marked in the look-up table, the frame shall be scrubbed, i.e. all marked pixels shall be replace via the replacement function: 
+
+\begin{center}
+\begin{tabular}{l}
+If \(R_{x,y} = 1\), then \(J_{x,y} = F(I_{x,y}, x, y)\) \\
+If \(R_{x,y} = 0\), then \(J_{x,y} = I_{x,y}\) \\
+\end{tabular}
+\end{center}
+
+Note that the scrubbing stage is identical to that of the pixel replacement function \(F\) in the "Bad Pixel Correction" step. 
+
+\subsubsection{Spatial Binning}
+For each frame, blocks of 2x2 pixels shall be summed to generate a new frame with size equivalent to one quarter of the original frame. 
+
+\[J_{\^x, \^y} = I_{x, y} + I_{x+1, y} + I_{x, y+1} + I_{x+1, y+1}\]
+
+Not that the output image will be have a smaller spatial size than the input image.  However, the number of bits per pixel will due to the summation. E.g. for a 14-bit input image, the output binned image will be 16-bit, as \(4 *(2^14) = 2^16\).
+
+\subsubsection{Temporal Binning}
+For each set of frames, an image shall be generated by summing the values (pixel by pixel) of each frame in the frame. For instance over a set of eight (8) frames:
+
+\[y_{i} = \sum\limits_{t=0}^{8}x_{i,t}\]
+
+Note that the number of bits per pixel in the output frame will be larger than the number of bits per pixel in the input frames, depending on the number of summed frames. E.g. for a 14 bit input image binning 8 frames, the output image will have a bit depth of 17 bits (as \(8*2^14 = 2^17\)).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Benchmark #1.2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\subsection{Benchmark \#1.2 Radar Image Processing}
+
+This benchmark is intended to cover the generation of images from raw radar data. It follows the range-Doppler algorithm.
+
+A set of test images and reference outputs are provided in the benchmark suite. 
+
+\subsubsection{Test Profiles}
+
+In the test profiles, the following parameters differ in the input data:
+
+\begin{itemize}
+    \item Input data width (\# of samples)
+    \item Input data height (\# of samples)
+    \item Input data bit-depth (\# of bits)
+\end{itemize}
+
+The test profiles are shown in Table \ref{tab:bm1_2_tests}.
+
+% FIXME update with proper data.
+
+\begin{table}[!h]
+%    \centering
+    \begin{tabular}{|l|l|l|l|l|}
+        \hline
+        ID\#        & Image Width   & Image Height  & Bit-depth     & File Set    \\
+        \hline
+        1	        & 1024 TBC      & 1024 TBC      & TBA           & radar\_proc\_01 \\
+        \hline
+        2	        & 2048 TBC      & 2048 TBC      & TBA           & radar\_proc\_02 \\
+        \hline
+        3	        & 4096 TBC      & 4096 TBC      & TBA           & radar\_proc\_03 \\
+        \hline
+    \end{tabular}
+    \caption{"Radar Image Processing" Benchmark test configurations.}
+    \label{tab:bm1_2_tests}
+\end{table}
+
+\subsubsection{Processing Steps}
+The following stages shall be performed for each frame in a series:
+
+\begin{enumerate}
+    \item Range Compression
+    \begin{enumerate}
+        \item Range FFT 
+        \item Range Matched Filter Multiply
+        \item Range Inverse FFT
+        \item TBD Range Dependent Gain Correction
+    \end{enumerate}
+    \item Corner turn (matrix transpose)
+    \item Azimuth Compression 
+    \begin{enumerate}
+        \item Azimuth FFT 
+        \item Range Cell Migration Correction (RCMC)
+        \item Azimuth Matched Filter Multiply
+        \item Azimuth Inverse FFT
+    \end{enumerate}
+    \item Multilook (spatial binning)
+\end{enumerate}
+
+Samples are received in a 2D matrix \(I_{i,j}\). 
+
+"Azimuth" (or along-track direction) is the flight direction of the spacecraft platform.
+
+"Range" (or "slant range") is the line-of-sight direction, perpendicular to the flight direction of the spacecraft.
+
+\subsubsection{Range FFT}
+The raw data will be transformed from time domain to frequency domain through Discrete Fourier Transforms (DFT), using FFT (Fast Fourier Transform). 
+
+\begin{center}
+\(J_{m,n} = FFT(I_{i,j}) \)
+\end{center}
+\\
+The FFT algorithm for complex numbers is defined in Section \ref{section:fft}.
+
+\subsubsection{Range Matched Filter Multiply}
+The output of the FFT, each line (i.e. along range) is multiplied with the range matched filter. 
+
+A single filter is used. The length of the filter is TBD.
+
+\subsubsection{Range Inverse FFT}
+After filter along range, the data is transformed back to time domain from frequency domain through an inverse FFT. 
+
+\begin{center}
+\(J_{m,n} = iFFT(I_{i,j}) \)
+\end{center}
+\\
+The inverse FFT algorithm for complex numbers is defined in Section \ref{section:fft}.
+
+\subsubsection{Range Dependent Gain Correction}
+TBD.
+
+\subsubsection{Corner Turn (matrix transpose)}
+The data shall be "turned" using matrix transpose: 
+
+\[J_{i,j} = I_{j,i} \]
+
+\subsubsection{Azimuth FFT}
+After transpose, the data shall again be transformed from time domain to frequency domain through FFT.
+
+\begin{center}
+\(J_{m,n} = FFT(I_{i,j}) \)
+\end{center}
+\\
+In FFT algorithm is defined in Section \ref{section:fft}.
+
+\subsubsection{Range Cell Migration Correction (RCMC)}
+Range-dependent interpolation. TBA.
+
+\subsubsection{Azimuth Matched Filter Multiply}
+Data after Azimuth FFT shall be multiplied with azimuth matched filter.
+
+The  filter is dependent on the range. The length of the filter is dependent on the range dimension. TBD. 
+
+
+\subsubsection{Azimuth Inverse FFT}
+After the RCMC, the data is again transformed into time (spatial) domain through the use an inverse FFT.
+
+\begin{center}
+\(J_{m,n} = iFFT(I_{i,j}) \)
+\end{center}
+\\
+The inverse FFT algorithm is defined in Section \ref{section:fft}.
+
+\subsubsection{Multilook}
+In the multilook stage, several looks over range and azimuth will be summed, to convert the image to ground range. 
+
+Along range four (4) looks shall be summed, and along azimuth twenty (20) looks shall be summed. 
+
+\[J_{\^x, \^y} = \sum\limits_{y=0}^{19} \sum\limits_{x=0}^{3} I_{x, y}\]

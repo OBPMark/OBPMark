@@ -1,0 +1,56 @@
+\chapter{Implementation and Testing Guidelines}
+
+\section{Implementation and Porting}
+
+An implementer intending to port OBPMark to a new target is recommended to start from one of the existing OBPMark source code implementations, available at the official OBPMark repository.
+
+OBPMark benchmarks are provided in several formats source code formats: 
+
+\begin{itemize}
+    \item Sequential C
+    \item Parallel OpenMP
+    \item Parallel OpenCL
+    \item Parallel CUDA
+\end{itemize}
+
+At the moment, no HDL source code are provided for FPGA implementation.
+\newline
+
+Single core systems should target the sequential C source code implementations. 
+
+For multi- and manycore systems that are have bindings to any of the three standard parallel code execution frameworks (OpenMP, OpenCL and CUDA), the respective code base is the most appropriate starting point. 
+
+It is necessary to configure the number of cores in the target, and other parameters related to memory, to achieve accurate results. 
+
+For systems that are not compliant with any of the frameworks (OpenMP, OpenCL or CUDA), the starting point can still be the one of the parallel implementations for a guideline in the suggested parallelisation schemes of the algorithms. 
+\newline
+
+Regarding vendor-specific micro-architecture optimizations, e.g. SIMD vector or dedicated DSP-type instructions, these are currently not provided as part of the OBPMark source code (note: they may become part in the future). An implementer targeting a processor which has such instructions is recommended to adapt the C source code version (sequential or parallel) kernel functions of each benchmark with intrinsic function calls to dedicated instructions that may increase the efficiency of the implementation. 
+
+In case further optimization is required, a complete replacement of the processing kernel functions with optimized assembly level code is recommended. 
+
+In either case, when providing the test results, all optimizations and changes to the parallelisation scheme shall be reported.
+
+\section{Verification Guidelines}
+For each of the benchmarks both input and verification data is provided.
+
+After any modification to the source code, for optimizations etc., the implementer shall verify the correctness of the new implementation by comparing the output files of the benchmarks with the respective verification data files provided. 
+
+The verification shall be done by byte comparison between the two files. In case there is any discrepancy between the two files during verification, any benchmark performance results are considered void. 
+
+Verification does not have to be done on the DUT, but can be done offline on e.g. a controller PC. 
+
+\section{Testing Guidelines}
+
+TBA.
+
+Number of iterations for execution. TBA. 
+
+Verification guideline. TBA.
+
+\subsection{Power Measurements}
+Power shall be measured either by using internal power/current sensors in the DUT, or by actively measuring the current to the DUT through external measurement equipment during the test.
+
+External measurements are considered more accurate and are preferred. 
+
+More TBA.
