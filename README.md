@@ -2,16 +2,33 @@
 Contact: OBPMark@esa.int
 Website: OBPMark.org
   
+## What is OBPMark?
+OBPMark (On-Board Processing Benchmarks) is a set of computational performance benchmarks developed specifically for spacecraft on-board data processing applications, such as: image and radar processing, data and image compressions, signal processing and machine learning.
+
+The development of OBPMark was driven by the lack of openly available and representative benchmarks for space applications.
+
+OBPMark consists of three main components:
+
+- A technical note describing the benchmarks, their implementation and result reporting.
+- Reference implementations in C (sequential) and standard parallelisation schemes, such as OpenMP, OpenCL and CUDA.
+- A list of known published performance benchmark results.
+
+OBPMark has been developed in cooperation by the European Space Agency (ESA) and Barcelona Supercomputing Center (BSC).
+The OBPMark definition and implementation has been made available partially through funding from the ESA “General Studies Programme (GSP)”.
+
+OBPMark is openly available, and contributions from the community are warmly welcome.
+
+# Contributors 
 Authors/Chairs:  
-David Steenari, European Space Agency (ESA)  
-Dr. Leonidas Kosmidis, Barcelona Supercomputing Center (BSC)  
+- David Steenari, European Space Agency (ESA)  
+- Dr. Leonidas Kosmidis, Barcelona Supercomputing Center (BSC)  
   
 Contributors:  
-Alvaro Jover-Alvarez, Universitat Politècnica de Catalunya and Barcelona Supercomputing Center (UPC/BSC) -- implementation of OpenMP versions. 
-Ivan Rodriguez Ferrandez, Universitat Politècnica de Catalunya and Barcelona Supercomputing Center (UPC/BSC) -- implementation of OpenCL / CUDA versions.  
-  
-The OBPMark definition and implementation has partially been made available through the ESA "General Studies Programme (GSP)".  
-  
+- Alvaro Jover-Alvarez, Universitat Politècnica de Catalunya and Barcelona Supercomputing Center (UPC/BSC):
+	- Implementation of OpenMP versions. 
+- Ivan Rodriguez Ferrandez, Universitat Politècnica de Catalunya and Barcelona Supercomputing Center (UPC/BSC):
+	- Implementation of OpenCL / CUDA versions.  
+
 ## PUBLIC BETA VERSION NOTICE
 Please note that OBPMark is currently in "Public Beta" while the implementations and verifications of the benchmarks are being completed.
 
