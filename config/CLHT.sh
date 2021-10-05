@@ -5,8 +5,8 @@ for fi in $(find . -type f -name "*.cl"); do
     dir=$(dirname "$fi")
     # Override emplace file content
     echo "" > ${dir}/GEN_$filename.hcl
-    # Iterate line by line detecting tokens
-    while read s || [ -n "$s" ]; do
+    # Iterate line by line detecting tokens -r option includes backward slashes
+    while read -r s || [ -n "$s" ]; do
         if [[ $s != "" ]]; then
             if [[ $s == "#htvar "* ]]; then
                 # Add variable when token is found
@@ -30,7 +30,12 @@ for fi in $(find . -type f -name "*.cl"); do
                 # Add macro when token is found
                 echo ";" >> ${dir}/GEN_$filename.hcl
             else 
-                echo "$s" | sed 's/^.\{1,\}$/"&\\n"/' >> ${dir}/GEN_$filename.hcl
+                # Replacing \ token with \\
+                backslashes=$(echo "$s" | sed 's|\\|\\\\|g')
+                # Replacing " token with \" 
+                quotations=$(echo "$backslashes" | sed 's|"|\\"|g')
+                # Matches the entire line and appends quotes and \n accordingly
+                echo "$quotations" | sed 's/^.*$/"&\\n"/' >> ${dir}/GEN_$filename.hcl
             fi
         fi  
     done < $fi

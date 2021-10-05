@@ -110,7 +110,7 @@ opencl_conf:
 	mkdir -p $(OPENCL_TARGET)
 
 opencl_processing.o: $(OPENCL_SRC)/processing.c
-	/bin/bash $(OPENCL_SRC)/CLHT.sh # FIXME is this header tool generic? place somewhere else? 
+	/bin/bash $(CONFIG_PATH)/CLHT.sh
 	$(CC) $(OPFLAGS) -DOPENCL -c $(OPENCL_SRC)/processing.c  -o $(OPENCL_TARGET)/opencl_processing.o
 
 main_opencl: opencl_processing.o
