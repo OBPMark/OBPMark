@@ -8,7 +8,7 @@
 #ifndef IMAGE_FILE_UTIL_H_
 #define IMAGE_FILE_UTIL_H_
 
-#include "image_util.h"
+#include "obpmark_image.h"
 
 int write_frame(char filename[], void **f, unsigned int width, unsigned int height, int data_width);
 int write_frame8(char filename[], frame8_t *frame);

@@ -8,7 +8,7 @@
 #ifndef IMAGE_MEM_UTIL_H_
 #define IMAGE_MEM_UTIL_H_
 
-#include "image_util.h"
+#include "obpmark_image.h"
 
 /* Allocation functions */
 
@@ -38,20 +38,12 @@ int framefp_alloc(
 
 /* Free functions */
 
-void frame8_free(
-	frame8_t *frame
-	);
+void frame8_free(frame8_t *frame);
 
-void frame16_free(
-	frame16_t *frame
-	);
+void frame16_free(frame16_t *frame);
 
-void frame32_free(
-	frame32_t *frame
-	);
+void frame32_free(frame32_t *frame);
 
-void framefp_free(
-	framefp_t *frame
-	);
+void framefp_free(framefp_t *frame);
 
 #endif // IMAGE_MEM_UTIL_H_

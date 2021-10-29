@@ -21,6 +21,7 @@ int frame8_alloc(
 	frame->w = f_width;
 	frame->h = f_height;
 
+#ifdef OBPMARK_FRAME_DATA_2D
 	frame->f = (uint8_t**)malloc(sizeof(uint8_t*)*frame->w);
 	if(!frame->f) return 0;
 
@@ -28,6 +29,9 @@ int frame8_alloc(
 		frame->f[x] = (uint8_t*)calloc(frame->h, sizeof(uint8_t));
 		if(!frame->f[x]) return 0;
 	}
+#else
+	frame->f = (uint8_t*)calloc((frame->w * frame->h), sizeof(uint8_t));
+#endif
 	
 	return 1;
 }
@@ -43,6 +47,7 @@ int frame16_alloc(
 	frame->w = f_width;
 	frame->h = f_height;
 
+#ifdef OBPMARK_FRAME_DATA_2D
 	frame->f = (uint16_t**)malloc(sizeof(uint16_t*)*frame->w);
 	if(!frame->f) return 0;
 
@@ -50,6 +55,9 @@ int frame16_alloc(
 		frame->f[x] = (uint16_t*)calloc(frame->h, sizeof(uint16_t));
 		if(!frame->f[x]) return 0;
 	}
+#else
+	frame->f = (uint16_t*)calloc((frame->w * frame->h), sizeof(uint16_t));
+#endif
 	
 	return 1;
 }
@@ -65,6 +73,7 @@ int frame32_alloc(
 	frame->w = f_width;
 	frame->h = f_height;
 
+#ifdef OBPMARK_FRAME_DATA_2D
 	frame->f = (uint32_t**)malloc(sizeof(uint32_t*)*frame->w);
 	if(!frame->f) return 0;
 
@@ -72,6 +81,9 @@ int frame32_alloc(
 		frame->f[x] = (uint32_t*)calloc(frame->h, sizeof(uint32_t));
 		if(!frame->f[x]) return 0;
 	}
+#else
+	frame->f = (uint32_t*)calloc((frame->w * frame->h), sizeof(uint32_t));
+#endif
 	
 	return 1;
 }
@@ -87,6 +99,7 @@ int framefp_alloc(
 	frame->w = f_width;
 	frame->h = f_height;
 
+#ifdef OBPMARK_FRAME_DATA_2D
 	frame->f = (float**)malloc(sizeof(float*)*frame->w);
 	if(!frame->f) return 0;
 
@@ -94,60 +107,63 @@ int framefp_alloc(
 		frame->f[x] = (float*)calloc(frame->h, sizeof(float));
 		if(!frame->f[x]) return 0;
 	}
+#else
+	frame->f = (float*)calloc((frame->w * frame->h), sizeof(float));
+#endif
 	
 	return 1;
 }
 
 /* Free functions */
 
-void frame8_free(
-	frame8_t *frame
-	)
+void frame8_free(frame8_t *frame)
 {
 	unsigned int x;
 
+#ifdef OBPMARK_FRAME_DATA_2D
 	for(x=0; x<frame->w; x++) {
 		free(frame->f[x]);
 	}
+#endif
 	free(frame->f);
 }
 
 
-void frame16_free(
-	frame16_t *frame
-	)
+void frame16_free(frame16_t *frame)
 {
 	unsigned int x;
 
+#ifdef OBPMARK_FRAME_DATA_2D
 	for(x=0; x<frame->w; x++) {
 		free(frame->f[x]);
 	}
+#endif
 	free(frame->f);
 }
 
 
-void frame32_free(
-	frame32_t *frame
-	)
+void frame32_free(frame32_t *frame)
 {
 	unsigned int x;
 
+#ifdef OBPMARK_FRAME_DATA_2D
 	for(x=0; x<frame->w; x++) {
 		free(frame->f[x]);
 	}
+#endif
 	free(frame->f);
 }
 
 
-void framefp_free(
-	framefp_t *frame
-	)
+void framefp_free(framefp_t *frame)
 {
 	unsigned int x;
 
+#ifdef OBPMARK_FRAME_DATA_2D
 	for(x=0; x<frame->w; x++) {
 		free(frame->f[x]);
 	}
+#endif
 	free(frame->f);
 }
 

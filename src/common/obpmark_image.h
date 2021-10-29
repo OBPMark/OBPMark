@@ -20,7 +20,7 @@
 /* Settting for 1D vs 2D buffers for storing and indexing frames */ 
 #ifdef OBPMARK_FRAME_DATA_2D
 	/* 2D buffers */
-	#define PIXEL(frame,x,y) ((frame)->f[x][y]). 
+	#define PIXEL(frame,x,y) ((frame)->f[x][y]) 
 #else
 	/* 1D buffers */
 	#define PIXEL(frame,x,y) ((frame)->f[y*(frame)->w + x])
