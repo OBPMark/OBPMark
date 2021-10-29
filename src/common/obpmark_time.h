@@ -1,13 +1,13 @@
 /**
  * \brief OBPMark common functions for timing
- * \file timing.h
+ * \file obpmark_time.h
  * \author David Steenari
  * 
  * To enable timing measurements, define "OBPMARK_TIMING 1". 
  * To enable verbose timing measurements, define "OBPMARK_TIMING 2". 
  */
-#ifndef OBPMARK_TIMING_H_
-#define OBPMARK_TIMING_H_
+#ifndef OBPMARK_TIME_H_
+#define OBPMARK_TIME_H_
 
 // FIXME temporary placement
 #define OBPMARK_TIMING 2
@@ -32,4 +32,4 @@
 	#define T_STOP(t_timer)
 #endif
 
-#endif // OBPMARK_TIMING_H_
+#endif // OBPMARK_TIME_H_

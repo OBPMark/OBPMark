@@ -138,7 +138,6 @@ void f_mask_replace(
 void f_scrub(
 	frame16_t *frame,
 	frame16_t *fs,
-	frame8_t *scrub_mask,
 	unsigned int num_frames,
 	unsigned int num_neighbours
 	)
@@ -165,18 +164,12 @@ void f_scrub(
 			mean = sum / (2*num_neighbours); 
 			thr = 2*mean; 
 
-			/* Compare with threshold and mark result in scrubbing mask */
+			/* If above threshold, replace with mean of temporal neighbours */
 			if(PIXEL(frame,x,y) > thr) {
-				PIXEL(scrub_mask,x,y) = 1; 
-			}
-			else {
-				PIXEL(scrub_mask,x,y) = 0;
+				PIXEL(frame,x,y) = mean; 
 			}
 		}
 	}
-
-	/* Scrub the frame using the generated mask */
-	f_mask_replace(frame, scrub_mask);
 }
 
 

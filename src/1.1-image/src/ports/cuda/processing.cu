@@ -1,4 +1,11 @@
+/**
+ * \file processing.c
+ * \brief Benchmark #1.1 CUDA implementation.
+ * \author Ivan Rodriguez (BSC)
+ */
+#include "benchmark.h"
 #include "benchmark_library.h"
+#include "device.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // KERNELS

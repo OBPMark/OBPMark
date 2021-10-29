@@ -8,8 +8,8 @@
 #ifndef OBPMARK_IMAGE_KERNELS_H_
 #define OBPMARK_IMAGE_KERNELS_H_
 
-#include <stdint.h>
-#include "../../common/image_util.h"
+#include "obpmark.h"
+#include "obpmark_image.h"
 
 /* Functions */
 
@@ -52,7 +52,6 @@ void f_mask_replace(
 void f_scrub(
         frame16_t *frame,
         frame16_t *fs,
-        frame8_t *scrub_mask,
         unsigned int num_frames,
         unsigned int num_neighbours
 	);
