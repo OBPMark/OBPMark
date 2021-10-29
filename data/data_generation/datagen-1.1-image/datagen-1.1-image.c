@@ -246,6 +246,10 @@ int benchmark1_1_data_gen(
 	for(i=1; i<num_frames; i++)
 	{
 		gen_frame(&fs[i], &fs[0]);
+		// add fix offsets (offset)
+		// devide by gains (gains)
+		// saturate all bad pixels (bad_pixels) 
+		add_rad_hits(); // FIXME parameters 
 	}
 
 
