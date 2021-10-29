@@ -8,7 +8,6 @@
 #include "processing.h"
 #include "obpmark.h"
 #include "obpmark_time.h"
-#include "image_kernels.h"
 
 void proc_image_frame(image_data_t *p, image_time_t *t, frame16_t *frame, unsigned int frame_i)
 {

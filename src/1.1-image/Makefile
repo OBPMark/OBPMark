@@ -78,16 +78,13 @@ cpu_util_data_rand.o: cpu_conf $(SRC_FOLDER)/util_data_rand.c
 cpu_util_arg.o: cpu_conf $(SRC_FOLDER)/util_arg.c
 	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/util_arg.c -o $(SEQ_TARGET)/cpu_util_arg.o
 
-cpu_image_kernels.o: cpu_conf $(SEQ_SRC)/image_kernels.c
-	$(CC) $(CFLAGS) -c $(SEQ_SRC)/image_kernels.c -o $(SEQ_TARGET)/cpu_image_kernels.o
-
 cpu_processing.o: cpu_conf $(SEQ_SRC)/processing.c
 	$(CC) $(CFLAGS) -c $(SEQ_SRC)/processing.c -o $(SEQ_TARGET)/cpu_processing.o
 
 cpu_device.o: cpu_conf $(SEQ_SRC)/device.c
 	$(CC) $(CFLAGS) -c $(SEQ_SRC)/device.c -o $(SEQ_TARGET)/cpu_device.o
 
-main_cpu: cpu_conf cpu_util_data_rand.o cpu_util_arg.o cpu_image_kernels.o cpu_processing.o cpu_device.o
+main_cpu: cpu_conf cpu_util_data_rand.o cpu_util_arg.o cpu_processing.o cpu_device.o
 	mkdir -p $(BIN_PATH) 
 	$(CC) $(CFLAGS) $(SRC_FOLDER)/main.c $(SEQ_TARGET)/cpu_processing.o -o $(SEQ_EXEC)
 
