@@ -8,13 +8,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "image_util.h"
+#define OBPMARK_FRAME_DATA_2D // FIXME there is a bug in image_mem_util... it currently only works with 2D data... fix there. 
+#include "obpmark_image.h"
 #include "image_mem_util.h"
 #include "image_file_util.h"
 
 void gen_offsets(frame16_t *offsets);
 void gen_gains(frame16_t *gains);
 void gen_bad_pixels(frame8_t *bad_pixels);
+
+unsigned int add_offsets(frame16_t *frame, frame16_t *offsets); 
+unsigned int add_gains(frame16_t *frame, frame16_t *gains);
+unsigned int add_rad_hits(frame16_t *frame, unsigned int rad_num);
+unsigned int add_bad_pixels(frame16_t *frame, frame8_t *bad_pixels, unsigned int x_offset, unsigned int y_offset);
 
 void gen_base_frame(frame16_t *base_frame);
 void gen_frame(frame16_t *frame, frame16_t *base_frame);
@@ -68,9 +74,34 @@ void gen_bad_pixels(frame8_t *bad_pixels)
 	}
 }
 
-/* Radiation and bad pixels */
+/* Functions for adding detector effects to the data */
 
-unsigned int add_rad_hits(frame16_t* frame, unsigned int rad_num)
+unsigned int add_offsets(frame16_t *frame, frame16_t *offsets)
+{
+	unsigned int x,y; 
+	for(x=0; x<offsets->w; x++)
+	{
+		for(y=0; y<offsets->h; y++)
+		{
+			PIXEL(frame,x,y) = PIXEL(frame,x,y) + PIXEL(offsets,x,y);
+		}
+	}
+}
+
+unsigned int add_gains(frame16_t *frame, frame16_t *gains)
+{
+	unsigned int x,y; 
+	for(x=0; x<gains->w; x++)
+	{
+		for(y=0; y<gains->h; y++)
+		{
+			// FIXME Q15 should be used....
+			PIXEL(frame,x,y) = PIXEL(frame,x,y) / PIXEL(gains,x,y);
+		}
+	}
+}
+
+unsigned int add_rad_hits(frame16_t *frame, unsigned int rad_num)
 {
 	unsigned int x,y;
 	unsigned int rad_prob = (frame->w*frame->h)*rad_num;
@@ -91,7 +122,7 @@ unsigned int add_rad_hits(frame16_t* frame, unsigned int rad_num)
 	return rad_count;
 }
 
-unsigned int add_bad_pixels(frame16_t* frame, frame8_t *bad_pixels, unsigned int x_offset, unsigned int y_offset)
+unsigned int add_bad_pixels(frame16_t *frame, frame8_t *bad_pixels, unsigned int x_offset, unsigned int y_offset)
 {
 	unsigned int x,y;
 	unsigned int x2,y2;
@@ -103,7 +134,7 @@ unsigned int add_bad_pixels(frame16_t* frame, frame8_t *bad_pixels, unsigned int
 		for(y=y_offset; y<(frame->h - y_offset); y++)
 		{
 			y2 = y - y_offset;
-			if(bad_pixels->f[x2][y2] == 1)
+			if(PIXEL(bad_pixels,x2,y2) == 1)
 			{
 				/* Saturate pixel (note: not always the case) */
 				PIXEL(frame,x,y) = 65535;
@@ -241,15 +272,19 @@ int benchmark1_1_data_gen(
 
 	/* Generate frame data */
 	printf("Generating frame data...\n");
-	// FIXME add offsets, gains and bad pixels
 	gen_base_frame(&fs[0]);
 	for(i=1; i<num_frames; i++)
 	{
+		/* Generate frame */
 		gen_frame(&fs[i], &fs[0]);
-		// add fix offsets (offset)
-		// devide by gains (gains)
-		// saturate all bad pixels (bad_pixels) 
-		add_rad_hits(); // FIXME parameters 
+	
+		/* Add static detector effects (same for all frames) */
+		add_offsets(&fs[i], &offsets);
+		add_gains(&fs[i], &gains);
+		add_bad_pixels(&fs[i], &bad_pixels, 0, 0); // FIXME check offsets
+
+		/* Add radiation effects (different per frame) */
+		add_rad_hits(&fs[i], 100); // FIXME check rad_num
 	}
 
 
