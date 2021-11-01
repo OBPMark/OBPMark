@@ -8,153 +8,132 @@
 
 #include "obpmark.h"
 #include "benchmark.h"
+#include "obpmark_image.h"
 
 /* Typedefs */
-
-/* CUDA verion */
 #ifdef CUDA
-struct DeviceObject{
-	int* image_input;
-	int* processing_image;
-	int* processing_image_error_free;
-	int* spatial_reduction_image;
-	int* image_output;
-	int* correlation_table;
-	int* gain_correlation_map;
-	bool* bad_pixel_map;
-	// timing GPU computation
-	cudaEvent_t *start_memory_copy_device;
-	cudaEvent_t *stop_memory_copy_device;
-	cudaEvent_t *start_memory_copy_host;
-	cudaEvent_t *stop_memory_copy_host;
-	cudaEvent_t *start;
-	cudaEvent_t *stop;
-};
-
-/* OpenCL version */
+/* CUDA version */
 #elif OPENCL
-struct DeviceObject{
-	cl::Context *context;
-	cl::CommandQueue *queue;
-	cl::Device default_device;
-	cl::Program* program;
-	// buffers
-	cl::Buffer *image_input;
-	cl::Buffer *processing_image;
-	cl::Buffer *processing_image_error_free;
-	cl::Buffer *spatial_reduction_image;
-	cl::Buffer *image_output;
-	cl::Buffer *correlation_table;
-	cl::Buffer *gain_correlation_map;
-	cl::Buffer *bad_pixel_map;
-	// timing GPU computation
-	cl::Event *memory_copy_device_a;
-	cl::Event *memory_copy_device_b;
-	cl::Event *memory_copy_device_c;
-	cl::Event *memory_copy_host;
-	struct timespec start;
-	struct timespec end;
-};
-
-/* OpenMP version */
+/* OPENCL version */
 #elif OPENMP
-struct DeviceObject
-{
-	int* image_input;
-	int* processing_image;
-	int* processing_image_error_free;
-	int* spatial_reduction_image;
-	int* image_output;
-	int* correlation_table;
-	int* gain_correlation_map;
-	bool* bad_pixel_map;
-	float elapsed_time;
-};
-
-/* HIP version */
+/* OPENMP version */
 #elif HIP
-// TODO HIP version 
-
+/* HIP version */
 #else
 /* Sequential C version */
-struct DeviceObject
+struct image_data_t
 {
-	int* image_input;
-	int* processing_image;
-	int* processing_image_error_free;
-	int* spatial_reduction_image;
-	int* image_output;
-	int* correlation_table;
-	int* gain_correlation_map;
-	bool* bad_pixel_map;
-	struct timespec start;
-	struct timespec end;
-};
-#endif
+	frame16_t *frames;
+	unsigned int num_frames; 
+	unsigned int num_neigh; 
 
+	frame16_t offsets;
+	frame16_t gains; 
+	frame8_t bad_pixels;
+
+	frame8_t scrub_mask;
+
+	frame32_t binned_frame; 
+	frame32_t image;
+
+	frame16_t image_output;
+};
+
+typedef struct {
+	time_t t_test;
+	time_t *t_frame;
+	// detailed timing
+	time_t *t_offset;
+	time_t *t_badpixel;
+	time_t *t_scrub;
+	time_t *t_gain;
+	time_t *t_binning;
+	time_t *t_coadd;
+
+} image_time_t; 
+#endif
 /* Functions */
 // FIXME add brief function descriptions 
 
+/**
+ * \brief Basic init function to initialize  the target device.
+ */
 void init(
-	DeviceObject *device_object,
+	image_data_t *image_data,
+	image_time_t *t,
 	char *device_name
 	);
 
+/**
+ * \brief Advance init function to initialize the target device. This is meant to be use when more that one device need to be selected of the same type.
+ */
 void init(
-	DeviceObject *device_object,
+	image_data_t *image_data,
+	image_time_t *t,
 	int platform,
 	int device,
 	char *device_name
 	);
 
+/**
+ * \brief This function take cares of the initialization of the memory in the target device.
+ */
 bool device_memory_init(
-	DeviceObject *device_object,
-	unsigned int size_image,
-	unsigned int size_reduction_image
-	);
-
-void copy_memory_to_device(
-	DeviceObject *device_object,
-	int *correlation_table,
-	int *gain_correlation_map,
-	bool *bad_pixel_map, 
-	unsigned int size_image
-	);
-
-void copy_frame_to_device(
-	DeviceObject *device_object,
-	int *input_data, 
-	unsigned int size_image, 
-	unsigned int frame
-	);
-
-void process_full_frame_list(
-	DeviceObject *device_object,
-	int* input_data,
-	unsigned int frames,
-	unsigned int size_image,
+	image_data_t *image_data,
+	frame16_t* input_frames, 
+	frame16_t* output_image, 
+	frame16_t* offset_map, 
+	frame8_t* bad_pixel_map, 
+	frame16_t* gain_map,
 	unsigned int w_size,
 	unsigned int h_size
 	);
 
-void process_image(
-	DeviceObject *device_object,
-	unsigned int w_size,
-	unsigned int h_size,
-	unsigned int frame
+/**
+ * \brief This function is responsible for the copy of the memory from the host device to the target device
+ */
+void copy_memory_to_device(
+	image_data_t *image_data,
+	image_time_t *t,
+	frame16_t *input_frames,
+	frame16_t *correlation_table,
+	frame16_t *gain_correlation_map,
+	frame8_t *bad_pixel_map
 	);
 
+/**
+ * \brief Main processing function that call the benchmark code.
+ */
+void process_benchmark(
+	image_data_t *image_data,
+	image_time_t *t
+	);
+
+/**
+ * \brief Function to copy the result from the device memory to the host memory.
+ */
 void copy_memory_to_host(
-	DeviceObject *device_object,
-	int *output_image,
-	unsigned int size_image
+	image_data_t *image_data,
+	image_time_t *t,
+	frame16_t *output_image
 	);
 
+/**
+ * \brief Function that summarize the execution time of the benchmark.
+ */
 float get_elapsed_time(
-	DeviceObject *device_object,
+	image_data_t *image_data, 
+	image_time_t *t, 
 	bool csv_format
 	);
 
-void clean(DeviceObject *device_object);
+
+/**
+ * \brief Function to clean the memory in the device. 
+ */
+void clean(
+	image_data_t *device_object,
+	image_time_t *t
+	);
 
 #endif // DEVICE_H_

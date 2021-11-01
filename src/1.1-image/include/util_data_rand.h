@@ -19,14 +19,13 @@
 #define BENCHMARK_RAND_SEED	21121993
 
 void benchmark_gen_rand_data(
-	unsigned int bitsize,
-	
-	int *input_frames,
-	int *output_image, 
 
-	int *offset_map, 
-	bool *bad_pixel_map,
-	int *gain_map, 
+	frame16_t *input_frames,
+	frame16_t *output_frames, 
+	
+	frame16_t *offset_map,
+	frame8_t *bad_pixel_map,
+	frame16_t *gain_map,
 
 	unsigned int w_size,
 	unsigned int h_size,

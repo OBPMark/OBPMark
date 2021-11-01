@@ -25,7 +25,7 @@
 		#define T_STOP_VERBOSE(t_timer)	T_STOP(t_timer) 
 	#else
 		#define T_START_VERBOSE(t_timer)
-		#define T_STOP_VERBOSE(t_timer
+		#define T_STOP_VERBOSE(t_timer)
 	#endif
 #else
 	#define T_START(t_timer)

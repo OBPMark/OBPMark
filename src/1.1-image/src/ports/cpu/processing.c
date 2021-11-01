@@ -11,7 +11,8 @@
 
 void proc_image_frame(image_data_t *p, image_time_t *t, frame16_t *frame, unsigned int frame_i)
 {
-	/* [I]: Bias offset correction */
+	/* [I]: Bias offset correction */ 
+	
 	T_START_VERBOSE(t->t_offset[frame_i]);
 	f_offset(frame, &p->offsets);
 	T_STOP_VERBOSE(t->t_offset[frame_i]);
@@ -33,21 +34,24 @@ void proc_image_frame(image_data_t *p, image_time_t *t, frame16_t *frame, unsign
 	T_STOP_VERBOSE(t->t_gain[frame_i]);
 
 	/* [V]: Spatial binning */
+	
 	T_START_VERBOSE(t->t_binning[frame_i]);
 	f_2x2_bin(frame, &p->binned_frame);
 	T_STOP_VERBOSE(t->t_binning[frame_i]);
+
 	
 	/* [VI]: Co-adding frames */
 	T_START_VERBOSE(t->t_coadd[frame_i]);
 	f_coadd(&p->image, &p->binned_frame);
 	T_STOP_VERBOSE(t->t_coadd[frame_i]);
+
 }
 
-void proc_image_all(image_data_t *p, image_time_t *t)
+/*void proc_image_all(image_data_t *p, image_time_t *t)
 {
 	unsigned int frame_i;
 	
-	/* Loop through each frames and perform pre-processing. */
+	/* Loop through each frames and perform pre-processing. *//*
 	T_START(t->t_test);
 	for(frame_i=0; frame_i<p->num_frames; frame_i++)
 	{
@@ -59,7 +63,7 @@ void proc_image_all(image_data_t *p, image_time_t *t)
 
 	}
 	T_STOP(t->t_test);
-}
+}*/
 
 
 /* Kernel functions */
@@ -164,7 +168,9 @@ uint32_t f_neighbour_masked_sum(
 	}
 
 	/* Calculate mean of summed good pixels */
-	mean = sum / n_sum;
+	// FIXME why n_sum could be 0
+	mean =  n_sum == 0 ? 0 : sum / n_sum;
+	// mean = sum / n_sum
 
 	return mean;
 }
@@ -216,7 +222,9 @@ void f_scrub(
 				sum += PIXEL(&fs[i+num_neighbours+1],x,y);
 			}
 			/* Calculate mean and threshold */
-			mean = sum / (2*num_neighbours); 
+			// FIXME why n_sum could be 0
+			mean =  num_neighbours == 0 ? 0 : sum / (2*num_neighbours);
+			//mean = sum / (2*num_neighbours); 
 			thr = 2*mean; 
 
 			/* If above threshold, replace with mean of temporal neighbours */
@@ -242,11 +250,10 @@ void f_2x2_bin(
 		y2 = 0;
 		for(y=0; y<frame->h; y+=2)
 		{
-			PIXEL(binned_frame,x2,y2)	= PIXEL(frame,x,y)	+ PIXEL(frame,(x+1),y)
-							+ PIXEL(frame,x,(y+1))	+ PIXEL(frame,(x+1),(y+1));
-			y2 += 1;
+			PIXEL(binned_frame,x2,y2)	= PIXEL(frame,x,y)+ PIXEL(frame,(x+1),y) + PIXEL(frame,x,(y+1))	+ PIXEL(frame,(x+1),(y+1));
+			++y2;
 		}
-		x2 += 1;
+		++x2;
 	}
 }
 

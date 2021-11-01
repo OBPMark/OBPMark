@@ -11,19 +11,19 @@
 #include "obpmark.h"
 
 #include "benchmark.h"
+#
 #include "device.h"
 
 #define BENCHMARK_RAND_SEED	21121993
 
 void benchmark_gen_rand_data(
-	unsigned int bitsize, 
 
-	int *input_frames,
-	int *output_frames, 
+	frame16_t *input_frames,
+	frame16_t *output_frames, 
 	
-	int *offset_map,
-	bool *bad_pixel_map,
-	int *gain_map,
+	frame16_t *offset_map,
+	frame8_t *bad_pixel_map,
+	frame16_t *gain_map,
 
 	unsigned int w_size,
 	unsigned int h_size,
@@ -38,22 +38,12 @@ void benchmark_gen_rand_data(
 
 	/* Initialize srad seed */
 	srand(BENCHMARK_RAND_SEED);
-
-	// selection of the 14 or 16 bits
-	if(bitsize == MAXIMUNBITSIZE) {
-		// UP TO 16 bits
-		randnumber = 65535;
-	}
-	else if(bitsize == MINIMUNBITSIZE) {
-		// UP TO 14 bits
-		randnumber = 16383;
-	}
-	else {
-		// DEFAULT 16 bits
-		randnumber = 65535;
-	}
-
+	// DEFAULT 16 bits
+	randnumber = 65535;
+	
 	/* Input frame */
+	input_frames->w = w_size;
+	input_frames->h = h_size;
 	for(frame_position=0; frame_position < num_frames; frame_position++)
 	{
 		for(w_position=0; w_position < w_size; w_position++)
@@ -61,39 +51,46 @@ void benchmark_gen_rand_data(
 			for(h_position=0; h_position < h_size; h_position++)
 			{
 				// Fill with random data
-				input_frames[((h_position * h_size) + w_position) + (frame_position * h_size * w_size)] = (int)rand() % randnumber;
+				// FIXME think how to do this with pixels or allow for 2D matrix
+				PIXEL(&input_frames[frame_position], w_position,h_position) = (uint16_t)rand() % randnumber;
 
 			}
 		}
 	}
 
 	// offset correlation init 
+	offset_map->w = w_size;
+	offset_map->h = h_size;
 	for(w_position=0; w_position < w_size; w_position++)
 	{
 		for(h_position=0; h_position < h_size; h_position++)
 		{
 			// Fill with random data
-			offset_map[((h_position * h_size) + w_position)] = (int)rand() % randnumber;
+			PIXEL(offset_map, w_position,h_position) =  (uint16_t)rand() % randnumber;
 		}
 	}
 
 	// gain correction table
+	gain_map->w = w_size;
+	gain_map->h = h_size;
 	for(w_position=0; w_position < w_size; w_position++)
 	{
 		for(h_position=0; h_position < h_size; h_position++)
 		{
 			// Fill with random data
-			gain_map[((h_position * h_size) + w_position)] = (int)rand() % randnumber;
+			PIXEL(gain_map, w_position,h_position) =  (uint16_t)rand() % randnumber;
 		}
 	}
 
 	// bad pixel correction
+	bad_pixel_map->w = w_size;
+	bad_pixel_map->h = h_size;
 	for(w_position=0; w_position < w_size; w_position++)
 	{
 		for(h_position=0; h_position < h_size; h_position++)
 		{
 			// Fill with random data
-			bad_pixel_map[((h_position * h_size) + w_position)] = (rand() % MAXNUMBERBADPIXEL) < BADPIXELTHRESHOLD;
+			PIXEL(bad_pixel_map, w_position,h_position) =  (uint8_t)rand() % randnumber;
 		}
 	}
 

@@ -9,10 +9,11 @@
 #define PROCESSING_H_
 
 #include "obpmark.h"
+#include "device.h"
 #include "obpmark_image.h" 
 #include "obpmark_time.h"
 
-typedef struct {
+/*typedef struct {
 	frame16_t *frames;
 	unsigned int num_frames; 
 	unsigned int num_neigh; 
@@ -25,9 +26,9 @@ typedef struct {
 
 	frame32_t binned_frame; 
 	frame32_t image;
-} image_data_t;
+} image_data_t;*/
 
-typedef struct {
+/*typedef struct {
 	time_t t_test;
 	time_t *t_frame;
 
@@ -39,7 +40,7 @@ typedef struct {
 	time_t *t_binning;
 	time_t *t_coadd;
 #endif
-} image_time_t; 
+} image_time_t; */
 
 
 /** 

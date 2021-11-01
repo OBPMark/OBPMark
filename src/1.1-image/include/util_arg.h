@@ -24,7 +24,6 @@ int arguments_handler(
 	unsigned int *w_size,
 	unsigned int *h_size,
 	unsigned int *frames,
-	unsigned int *bitsize,
 	bool *csv_mode,
 	bool *print_output
 	);

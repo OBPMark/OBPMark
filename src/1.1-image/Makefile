@@ -86,7 +86,7 @@ cpu_device.o: cpu_conf $(SEQ_SRC)/device.c
 
 main_cpu: cpu_conf cpu_util_data_rand.o cpu_util_arg.o cpu_processing.o cpu_device.o
 	mkdir -p $(BIN_PATH) 
-	$(CC) $(CFLAGS) $(SRC_FOLDER)/main.c $(SEQ_TARGET)/cpu_processing.o -o $(SEQ_EXEC)
+	$(CC) $(CFLAGS) $(SRC_FOLDER)/main.c $(SEQ_TARGET)/cpu_device.o $(SEQ_TARGET)/cpu_processing.o $(SEQ_TARGET)/cpu_util_data_rand.o $(SEQ_TARGET)/cpu_util_arg.o -o $(SEQ_EXEC)
 
 ##################################### OPENMP #################################
 # Shortcuts

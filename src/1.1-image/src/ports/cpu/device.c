@@ -6,72 +6,149 @@
 #include "device.h"
 #include "processing.h"
 
-void init(DeviceObject *device_object, char* device_name)
+void init(
+	image_data_t *image_data,
+	image_time_t *t,
+	char *device_name
+	)
 {
-    init(device_object, 0,0, device_name);
+    init(image_data,t, 0,0, device_name);
 }
 
 
-void init(DeviceObject *device_object, int platform ,int device, char* device_name)
+
+void init(
+	image_data_t *image_data,
+	image_time_t *t,
+	int platform,
+	int device,
+	char *device_name
+	)
 {
     // TBD Feature: device name. -- Bulky generic platform implementation
 	strcpy(device_name,"Generic device");
+
+	/* Time object init */
+	t->t_frame =  (time_t*)malloc(sizeof(time_t) * image_data->num_frames); 
+	t->t_offset =  (time_t*)malloc(sizeof(time_t) * image_data->num_frames); 
+	t->t_badpixel =  (time_t*)malloc(sizeof(time_t) * image_data->num_frames); 
+	t->t_scrub =  (time_t*)malloc(sizeof(time_t) * image_data->num_frames); 
+	t->t_gain =  (time_t*)malloc(sizeof(time_t) * image_data->num_frames); 
+	t->t_binning =  (time_t*)malloc(sizeof(time_t) * image_data->num_frames); 
+	t->t_coadd =  (time_t*)malloc(sizeof(time_t) * image_data->num_frames); 
 }
 
 
-bool device_memory_init(DeviceObject *device_object, unsigned int size_image, unsigned int size_reduction_image)
-{
-    device_object->image_output = (int*) malloc (size_reduction_image * sizeof(int));
-    device_object->processing_image = (int*) malloc (size_image * sizeof(int));
-    device_object->processing_image_error_free = (int*) malloc (size_image * sizeof(int));
+bool device_memory_init(
+	image_data_t* image_data,
+	frame16_t* input_frames, 
+	frame16_t* output_image, 
+	frame16_t* offset_map, 
+	frame8_t* bad_pixel_map, 
+	frame16_t* gain_map,
+	unsigned int w_size,
+	unsigned int h_size
+	)
+{	
+	unsigned int frame_i;
+
+	/* image_data_t memory allocation */
+	image_data->frames = (frame16_t*)malloc(sizeof(frame16_t)* image_data->num_frames);
+	for(frame_i=0; frame_i < image_data->num_frames; frame_i++)
+	{
+		image_data->frames[frame_i].f = (uint16_t*)malloc(input_frames->h * input_frames->w * sizeof(uint16_t));
+	}
+	image_data->offsets.f = (uint16_t*)malloc(sizeof(uint16_t) * offset_map->h * offset_map->w);
+	image_data->gains.f = (uint16_t*)malloc(gain_map->h * gain_map->w * sizeof(uint16_t));
+	image_data->bad_pixels.f = (uint8_t*)malloc(bad_pixel_map->h * bad_pixel_map->w * sizeof(uint8_t));
+	image_data->image_output.f = (uint16_t*)malloc(output_image->h * output_image->w * sizeof(uint16_t));
+	image_data->binned_frame.f = (uint32_t*)malloc(h_size *w_size * sizeof(uint32_t));
+	
+	
+
     return true;
 }
 
-
-void copy_memory_to_device(DeviceObject *device_object, int* correlation_table, int* gain_correlation_map, bool* bad_pixel_map , unsigned int size_image)
-{
-    device_object->correlation_table = correlation_table;
-    device_object->gain_correlation_map = gain_correlation_map;
-    device_object->bad_pixel_map = bad_pixel_map;
-}
-
-
-void copy_frame_to_device(DeviceObject *device_object, int* input_data, unsigned int size_image, unsigned int frame)
+void copy_memory_to_device(
+	image_data_t *image_data,
+	image_time_t *t,
+	frame16_t *input_frames,
+	frame16_t *correlation_table,
+	frame16_t *gain_correlation_map,
+	frame8_t *bad_pixel_map
+	)
 {
     
-    //for (unsigned int position = 0; position < 1; ++position)
-    //{
-        //device_object->image_input[0] = input_data[0 + (frame * size_image)] ;
-    //}
-    device_object->image_input = input_data + (frame * size_image) ;
+	unsigned int frame_i;
+
+	/* image_data_t memory allocation */
+	for(frame_i=0; frame_i < image_data->num_frames; frame_i++)
+	{
+		memcpy(image_data->frames[frame_i].f, input_frames[frame_i].f, sizeof(uint16_t) * input_frames[frame_i].h * input_frames[frame_i].w);
+		image_data->frames[frame_i].h = input_frames[frame_i].h;
+		image_data->frames[frame_i].w = input_frames[frame_i].w;
+	}
+	
+	
+	memcpy(image_data->offsets.f, correlation_table->f, sizeof(uint16_t) * correlation_table->h * correlation_table->w);
+	image_data->offsets.h = correlation_table->h;
+	image_data->offsets.w = correlation_table->w;
+
+    memcpy(image_data->gains.f, gain_correlation_map->f, sizeof(uint16_t) * gain_correlation_map->h * gain_correlation_map->w);
+	image_data->gains.h = gain_correlation_map->h;
+	image_data->gains.w = gain_correlation_map->w;
+
+    memcpy(image_data->bad_pixels.f, bad_pixel_map->f, sizeof(uint8_t) * bad_pixel_map->h * bad_pixel_map->w);
+	image_data->bad_pixels.h = bad_pixel_map->h;
+	image_data->bad_pixels.w = bad_pixel_map->w;
+}
+
+
+void process_benchmark(
+	image_data_t *image_data,
+	image_time_t *t
+	)
+{    
     
+    unsigned int frame_i;
+	
+	/* Loop through each frames and perform pre-processing. */
+	T_START(t->t_test);
+	for(frame_i=0; frame_i < image_data->num_frames; frame_i++)
+	{
+		T_START(t->t_frame[frame_i]);
+		// FIXME fix for 2D frames 
+		/* add offset to the frame data  ONLY FOR 1D */
+		proc_image_frame(image_data, t, &image_data->frames[frame_i], frame_i);
+		T_STOP(t->t_frame[frame_i]);
+
+		// FIXME radiation correction frame handling to be implemented
+
+	}
+	T_STOP(t->t_test);
+
 }
 
-void process_full_frame_list (DeviceObject *device_object,int* input_frames,unsigned int frames, unsigned int size_frame,unsigned int w_size, unsigned int h_size){
-    // Start timer
-    clock_gettime(CLOCK_MONOTONIC_RAW, &device_object->start);
-   
-   for (unsigned int frame = 0; frame < frames; ++frame )
-    {
-        // copy image
-        copy_frame_to_device(device_object, input_frames, size_frame, frame);
-        // process image
-        process_image(device_object, w_size, h_size, frame);
-    }
-
-    // End timer
-    clock_gettime(CLOCK_MONOTONIC_RAW, &device_object->end);
-}
-
-void copy_memory_to_host(DeviceObject *device_object, int* output_image, unsigned int size_image)
+void copy_memory_to_host(
+	image_data_t *image_data,
+	image_time_t *t,
+	frame16_t *output_image
+	)
 {
-    memcpy(output_image, &device_object->image_output[0], sizeof(int) * size_image);
+    memcpy(output_image->f, &image_data->image_output.f, sizeof(uint16_t) * image_data->image_output.h * image_data->image_output.w);
+	output_image->h = image_data->image_output.h;
+	output_image->w = image_data->image_output.w;
 }
 
 
-float get_elapsed_time(DeviceObject *device_object, bool csv_format)
+float get_elapsed_time(
+	image_data_t *image_data, 
+	image_time_t *t, 
+	bool csv_format
+	)
 {
-    float elapsed =  (device_object->end.tv_sec - device_object->start.tv_sec) * 1000 + (device_object->end.tv_nsec - device_object->start.tv_nsec) / 1000000;
+    // FIXME with new time format
+	/*float elapsed =  (device_object->end.tv_sec - device_object->start.tv_sec) * 1000 + (device_object->end.tv_nsec - device_object->start.tv_nsec) / 1000000;
     if (csv_format)
 	{
         printf("%.10f;%.10f;%.10f;\n", (float) 0, elapsed, (float) 0);
@@ -82,13 +159,38 @@ float get_elapsed_time(DeviceObject *device_object, bool csv_format)
 		printf("Elapsed time kernel: %.10f miliseconds\n", elapsed);
 		printf("Elapsed time Device->Host: %.10f miliseconds\n", (float) 0);
     }
-	return elapsed;
+	return elapsed;*/
 }
 
 
-void clean(DeviceObject *device_object)
+void clean(
+	image_data_t *image_data,
+	image_time_t *t
+	)
 {
-	free(device_object->image_output);
-    free(device_object->processing_image_error_free);
-    free(device_object->processing_image);
+	unsigned int frame_i;
+
+	/* Clean time */
+	free(t->t_frame);
+	free(t->t_offset);
+	free(t->t_badpixel);
+	free(t->t_scrub);
+	free(t->t_gain);
+	free(t->t_binning);
+	free(t->t_coadd);
+	free(t);
+
+	for(frame_i=0; frame_i < image_data->num_frames; frame_i++)
+	{
+		free(image_data->frames[frame_i].f);
+	}
+	free(image_data->frames);
+	free(image_data->offsets.f);
+	free(image_data->gains.f);
+	free(image_data->bad_pixels.f);
+	free(image_data->scrub_mask.f);
+	free(image_data->binned_frame.f);
+    free(image_data->image.f);
+    free(image_data->image_output.f);
+	free(image_data);
 }
