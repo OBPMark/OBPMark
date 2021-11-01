@@ -41,8 +41,7 @@ void init(
 
 bool device_memory_init(
 	image_data_t* image_data,
-	frame16_t* input_frames, 
-	frame16_t* output_image, 
+	frame16_t* input_frames,
 	frame16_t* offset_map, 
 	frame8_t* bad_pixel_map, 
 	frame16_t* gain_map,
@@ -61,8 +60,14 @@ bool device_memory_init(
 	image_data->offsets.f = (uint16_t*)malloc(sizeof(uint16_t) * offset_map->h * offset_map->w);
 	image_data->gains.f = (uint16_t*)malloc(gain_map->h * gain_map->w * sizeof(uint16_t));
 	image_data->bad_pixels.f = (uint8_t*)malloc(bad_pixel_map->h * bad_pixel_map->w * sizeof(uint8_t));
-	image_data->image_output.f = (uint16_t*)malloc(output_image->h * output_image->w * sizeof(uint16_t));
-	image_data->binned_frame.f = (uint32_t*)malloc(h_size *w_size * sizeof(uint32_t));
+
+	image_data->image_output.f = (uint32_t*)malloc(w_size * h_size * sizeof(uint32_t));
+	image_data->image_output.w = w_size;
+	image_data->image_output.h = h_size;
+
+	image_data->binned_frame.f = (uint32_t*)malloc(h_size * w_size * sizeof(uint32_t));
+	image_data->binned_frame.w = w_size;
+	image_data->binned_frame.h = h_size;
 	
 	
 
@@ -111,14 +116,13 @@ void process_benchmark(
 {    
     
     unsigned int frame_i;
+	static unsigned int offset_neighbours = 2;
 	
 	/* Loop through each frames and perform pre-processing. */
 	T_START(t->t_test);
-	for(frame_i=0; frame_i < image_data->num_frames; frame_i++)
+	for(frame_i=offset_neighbours; frame_i < image_data->num_frames - offset_neighbours; frame_i++)
 	{
 		T_START(t->t_frame[frame_i]);
-		// FIXME fix for 2D frames 
-		/* add offset to the frame data  ONLY FOR 1D */
 		proc_image_frame(image_data, t, &image_data->frames[frame_i], frame_i);
 		T_STOP(t->t_frame[frame_i]);
 
@@ -132,10 +136,10 @@ void process_benchmark(
 void copy_memory_to_host(
 	image_data_t *image_data,
 	image_time_t *t,
-	frame16_t *output_image
+	frame32_t *output_image
 	)
 {
-    memcpy(output_image->f, &image_data->image_output.f, sizeof(uint16_t) * image_data->image_output.h * image_data->image_output.w);
+    memcpy(output_image->f, image_data->image_output.f, sizeof(uint32_t) * image_data->image_output.h * image_data->image_output.w);
 	output_image->h = image_data->image_output.h;
 	output_image->w = image_data->image_output.w;
 }
@@ -190,7 +194,6 @@ void clean(
 	free(image_data->bad_pixels.f);
 	free(image_data->scrub_mask.f);
 	free(image_data->binned_frame.f);
-    free(image_data->image.f);
     free(image_data->image_output.f);
 	free(image_data);
 }

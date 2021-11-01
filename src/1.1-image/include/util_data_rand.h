@@ -21,7 +21,7 @@
 void benchmark_gen_rand_data(
 
 	frame16_t *input_frames,
-	frame16_t *output_frames, 
+	frame32_t *output_frames, 
 	
 	frame16_t *offset_map,
 	frame8_t *bad_pixel_map,

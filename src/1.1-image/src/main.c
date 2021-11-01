@@ -15,7 +15,7 @@
 #include "util_arg.h"
 #include "util_data_rand.h"
 
-void print_output_result(frame16_t *output_image)
+void print_output_result(frame32_t *output_image)
 {
 	unsigned int h_position; 
 	unsigned int w_position;
@@ -35,7 +35,7 @@ void print_output_result(frame16_t *output_image)
 
 void init_benchmark(
 	frame16_t *input_frames,
-	frame16_t *output_image,
+	frame32_t *output_image,
 
 	frame16_t *offset_map,
 	frame8_t *bad_pixel_map, 
@@ -63,7 +63,7 @@ void init_benchmark(
 	}
 
 	/* Initialize memory on the device and copy data */
-	device_memory_init(image_data, input_frames, output_image, offset_map, bad_pixel_map, gain_map, w_size/2, h_size/2);
+	device_memory_init(image_data, input_frames, offset_map, bad_pixel_map, gain_map, w_size/2, h_size/2);
 	copy_memory_to_device(image_data, t, input_frames, offset_map, gain_map, bad_pixel_map);
 
 	/* Run the benchmark, by processing the full frame list */
@@ -93,8 +93,8 @@ int main(int argc, char **argv)
 	unsigned int w_size = 0;
 	unsigned int h_size = 0; 
 	unsigned int num_frames = 0; 
+	unsigned int num_processing_frames = 0;
 
-	unsigned int size_frame_list;
 	unsigned int size_frame;
 	unsigned int mem_size_frame;
 	unsigned int mem_size_bad_map;
@@ -103,31 +103,33 @@ int main(int argc, char **argv)
 
 	unsigned int frame_i;
 
-	// FIXME these should use a stdint type. Also why are they 32-bit? Should be 16-bit. 
+	static unsigned int number_neighbours = 4;
+
 	frame16_t *input_frames;
-	frame16_t *output_image;
+	frame32_t *output_image;
 
 	frame16_t *offset_map;  
 	frame8_t *bad_pixel_map; 
 	frame16_t *gain_map;
 
 	/* Command line argument handling */
-	ret = arguments_handler(argc, argv, &w_size, &h_size, &num_frames, &csv_mode, &print_output);
+	ret = arguments_handler(argc, argv, &w_size, &h_size, &num_processing_frames, &csv_mode, &print_output);
 	if(ret == ARG_ERROR) {
 		exit(-1);
 	}
 	
+	/* Assign the number of frame + the for extra neighbours */
+	num_frames = num_processing_frames + number_neighbours;
 	/* Assign frame sizes */
-	size_frame_list		= w_size * h_size * num_frames;
-	size_frame		= w_size * h_size;
-	mem_size_frame		= size_frame * sizeof(uint16_t);
-	mem_size_bad_map	= size_frame * sizeof(uint8_t);
-	size_reduction_image	= (w_size/2) * (h_size/2);
-	mem_size_reduction_image = size_reduction_image* sizeof(uint16_t);
+	size_frame		         = w_size * h_size;
+	mem_size_frame		     = size_frame * sizeof(uint16_t);
+	mem_size_bad_map	     = size_frame * sizeof(uint8_t);
+	size_reduction_image	 = (w_size/2) * (h_size/2);
+	mem_size_reduction_image = size_reduction_image* sizeof(uint32_t);
 
 	/* Allocate memory for frames */
 	input_frames = (frame16_t*)malloc(sizeof(frame16_t)* num_frames);
-	output_image = (frame16_t*)malloc(sizeof(frame16_t));
+	output_image = (frame32_t*)malloc(sizeof(frame32_t));
 	/* Init internal frame data input*/
 	// FIXME create 2D memory reservation
 	for(frame_i=0; frame_i < num_frames; frame_i++)
@@ -136,9 +138,10 @@ int main(int argc, char **argv)
 	}
 	
 	// FIXME create 2D memory reservation
-	output_image->f = (uint16_t*)malloc(mem_size_reduction_image);
+	output_image->f = (uint32_t*)malloc(mem_size_reduction_image);
 
 	/* Allocate memory for calibration and correction data */
+	// FIXME create 2D memory reservation
 	offset_map = (frame16_t*)malloc(sizeof(frame16_t));
 	offset_map->f = (uint16_t*)malloc(mem_size_frame);
 	// FIXME create 2D memory reservation

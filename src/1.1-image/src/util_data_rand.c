@@ -19,7 +19,7 @@
 void benchmark_gen_rand_data(
 
 	frame16_t *input_frames,
-	frame16_t *output_frames, 
+	frame32_t *output_frames, 
 	
 	frame16_t *offset_map,
 	frame8_t *bad_pixel_map,
@@ -42,20 +42,23 @@ void benchmark_gen_rand_data(
 	randnumber = 65535;
 	
 	/* Input frame */
-	input_frames->w = w_size;
-	input_frames->h = h_size;
+
 	for(frame_position=0; frame_position < num_frames; frame_position++)
 	{
+		input_frames[frame_position].w = w_size;
+		input_frames[frame_position].h = h_size;
 		for(w_position=0; w_position < w_size; w_position++)
 		{
 			for(h_position=0; h_position < h_size; h_position++)
 			{
 				// Fill with random data
-				// FIXME think how to do this with pixels or allow for 2D matrix
+				// FIXME not filing with values
 				PIXEL(&input_frames[frame_position], w_position,h_position) = (uint16_t)rand() % randnumber;
+				
 
 			}
 		}
+		
 	}
 
 	// offset correlation init 
@@ -90,7 +93,7 @@ void benchmark_gen_rand_data(
 		for(h_position=0; h_position < h_size; h_position++)
 		{
 			// Fill with random data
-			PIXEL(bad_pixel_map, w_position,h_position) =  (uint8_t)rand() % randnumber;
+			PIXEL(bad_pixel_map, w_position,h_position) =  ((uint8_t)rand() % randnumber) & 0x01;
 		}
 	}
 

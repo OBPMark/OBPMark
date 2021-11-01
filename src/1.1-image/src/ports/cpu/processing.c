@@ -11,8 +11,8 @@
 
 void proc_image_frame(image_data_t *p, image_time_t *t, frame16_t *frame, unsigned int frame_i)
 {
-	/* [I]: Bias offset correction */ 
 	
+	/* [I]: Bias offset correction */ 
 	T_START_VERBOSE(t->t_offset[frame_i]);
 	f_offset(frame, &p->offsets);
 	T_STOP_VERBOSE(t->t_offset[frame_i]);
@@ -24,8 +24,7 @@ void proc_image_frame(image_data_t *p, image_time_t *t, frame16_t *frame, unsign
 
 	/* [III]: Radiation scrubbing */
 	T_START_VERBOSE(t->t_scrub[frame_i]);
-	// FIXME neighbour reference is not correct.
-	f_scrub(frame, p->frames, p->num_frames, p->num_neigh);
+	f_scrub(frame, p->frames, frame_i);
 	T_STOP_VERBOSE(t->t_scrub[frame_i]);
 
 	/* [IV]: Gain correction */
@@ -34,7 +33,6 @@ void proc_image_frame(image_data_t *p, image_time_t *t, frame16_t *frame, unsign
 	T_STOP_VERBOSE(t->t_gain[frame_i]);
 
 	/* [V]: Spatial binning */
-	
 	T_START_VERBOSE(t->t_binning[frame_i]);
 	f_2x2_bin(frame, &p->binned_frame);
 	T_STOP_VERBOSE(t->t_binning[frame_i]);
@@ -42,7 +40,7 @@ void proc_image_frame(image_data_t *p, image_time_t *t, frame16_t *frame, unsign
 	
 	/* [VI]: Co-adding frames */
 	T_START_VERBOSE(t->t_coadd[frame_i]);
-	f_coadd(&p->image, &p->binned_frame);
+	f_coadd(&p->image_output, &p->binned_frame);
 	T_STOP_VERBOSE(t->t_coadd[frame_i]);
 
 }
@@ -111,8 +109,7 @@ void f_gain(
 	{
 		for(y=0; y<frame->h; y++)
 		{
-			// FIXME Q15 multiplication
-			PIXEL(frame,x,y) = (uint16_t)(PIXEL(frame,x,y) * PIXEL(gains,x,y));
+			PIXEL(frame,x,y) = (uint16_t)((uint32_t)(PIXEL(frame,x,y)) * (uint32_t)(PIXEL(gains,x,y)) >> 16);
 		}
 	}
 }
@@ -168,9 +165,7 @@ uint32_t f_neighbour_masked_sum(
 	}
 
 	/* Calculate mean of summed good pixels */
-	// FIXME why n_sum could be 0
-	mean =  n_sum == 0 ? 0 : sum / n_sum;
-	// mean = sum / n_sum
+	mean = n_sum == 0 ? 0 : sum / n_sum;
 
 	return mean;
 }
@@ -190,7 +185,7 @@ void f_mask_replace(
 			if(PIXEL(mask,x,y) == 1)
 			{
 				/* Replace pixel value */
-				PIXEL(frame,x,y) = f_neighbour_masked_sum(frame,mask, x,y);
+				PIXEL(frame,x,y) = (uint16_t)f_neighbour_masked_sum(frame,mask, x,y);
 			}
 		}
 	}
@@ -199,14 +194,14 @@ void f_mask_replace(
 void f_scrub(
 	frame16_t *frame,
 	frame16_t *fs,
-	unsigned int num_frames,
-	unsigned int num_neighbours
+	unsigned int frame_i
 	)
 {
-	unsigned int x,y,i;
+	unsigned int x,y;
+	static unsigned int num_neighbour = 4;
 	
 	uint32_t sum;
-	float mean;
+	uint32_t mean;
 	uint32_t thr;
 
 	/* Generate scrubbing mask */
@@ -214,22 +209,14 @@ void f_scrub(
 	{
 		for(y=0; y<frame->h; y++)
 		{
-			/* Sum temporal neighbours */
-			sum = 0;
-			for(i=0;i<num_neighbours; i++)
-			{
-				sum += PIXEL(&fs[i],x,y);
-				sum += PIXEL(&fs[i+num_neighbours+1],x,y);
-			}
+			/* Sum temporal neighbours between -2 to + 2 without actual */ // FIXME unroll by 4
+			sum = PIXEL(&fs[frame_i-2],x,y) + PIXEL(&fs[frame_i-1],x,y) +  PIXEL(&fs[frame_i+1],x,y) + PIXEL(&fs[frame_i+2],x,y);
 			/* Calculate mean and threshold */
-			// FIXME why n_sum could be 0
-			mean =  num_neighbours == 0 ? 0 : sum / (2*num_neighbours);
-			//mean = sum / (2*num_neighbours); 
+			mean = sum / (num_neighbour); 
 			thr = 2*mean; 
-
 			/* If above threshold, replace with mean of temporal neighbours */
 			if(PIXEL(frame,x,y) > thr) {
-				PIXEL(frame,x,y) = mean; 
+				PIXEL(frame,x,y) = (uint16_t)mean; 
 			}
 		}
 	}

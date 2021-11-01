@@ -25,7 +25,6 @@ struct image_data_t
 {
 	frame16_t *frames;
 	unsigned int num_frames; 
-	unsigned int num_neigh; 
 
 	frame16_t offsets;
 	frame16_t gains; 
@@ -34,9 +33,8 @@ struct image_data_t
 	frame8_t scrub_mask;
 
 	frame32_t binned_frame; 
-	frame32_t image;
 
-	frame16_t image_output;
+	frame32_t image_output; 
 };
 
 typedef struct {
@@ -80,8 +78,7 @@ void init(
  */
 bool device_memory_init(
 	image_data_t *image_data,
-	frame16_t* input_frames, 
-	frame16_t* output_image, 
+	frame16_t* input_frames,
 	frame16_t* offset_map, 
 	frame8_t* bad_pixel_map, 
 	frame16_t* gain_map,
@@ -115,7 +112,7 @@ void process_benchmark(
 void copy_memory_to_host(
 	image_data_t *image_data,
 	image_time_t *t,
-	frame16_t *output_image
+	frame32_t *output_image
 	);
 
 /**

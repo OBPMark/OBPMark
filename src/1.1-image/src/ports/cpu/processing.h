@@ -94,8 +94,7 @@ void f_mask_replace(
 void f_scrub(
         frame16_t *frame,
         frame16_t *fs,
-        unsigned int num_frames,
-        unsigned int num_neighbours
+        unsigned int frame_i
 	);
 
 /** 
