@@ -11,6 +11,9 @@ BUILD_PATH 	:= ../../$(BUILD_FOLDER)/3.1-aes_encryption
 BIN_PATH 	:= ../../$(BIN_FOLDER)/3.1-aes_encryption
 EXEC_PATH	:= $(BIN_PATH)/$(EXEC_NAME)
 
+# List of main and util files common for all builds
+MAIN_FILES := $(SRC_FOLDER)/main.cpp $(SRC_FOLDER)/util_arg.c $(SRC_FOLDER)/util_file.c
+
 # - Sequential - 
 SEQ_TARGET	:= $(BUILD_PATH)/$(SEQ_FOLDER)
 SEQ_EXEC	:= $(EXEC_PATH)_$(SEQ_NAME)
@@ -57,6 +60,7 @@ endif
 all:  
 	@echo "error: must specify target: cpu, openmp, opencl, cuda, hip"
 
+
 ################################### SEQUENTIAL ################################
 # Shortcuts
 .PHONY: CPU
@@ -68,12 +72,15 @@ cpu: main_cpu
 cpu_conf:
 	mkdir -p $(SEQ_TARGET)
 
-cpu_aes.o: cpu_conf $(SEQ_SRC)/aes.c
-	$(CC) $(CFLAGS) -c $(SEQ_SRC)/aes.c -o $(SEQ_TARGET)/cpu_aes.o
+cpu_processing.o: cpu_conf $(SEQ_SRC)/processing.c
+	$(CC) $(CFLAGS) -c $(SEQ_SRC)/processing.c -o $(SEQ_TARGET)/cpu_processing.o
 
-main_cpu: cpu_conf cpu_aes.o
+cpu_device.o: cpu_conf $(SEQ_SRC)/device.c
+	$(CC) $(CFLAGS) -c $(SEQ_SRC)/device.c -o $(SEQ_TARGET)/cpu_device.o
+
+main_cpu: cpu_conf cpu_processing.o cpu_device.o
 	mkdir -p $(BIN_PATH) 
-	$(CC) $(CFLAGS) $(SRC_FOLDER)/main.cpp $(SEQ_TARGET)/cpu_aes.o -o $(SEQ_EXEC)
+	$(CC) $(CFLAGS) $(MAIN_FILES) $(SEQ_TARGET)/cpu_device.o $(SEQ_TARGET)/cpu_processing.o -o $(SEQ_EXEC)
 
 ##################################### OPENMP #################################
 # Shortcuts
@@ -89,12 +96,12 @@ openmp_conf:
 	mkdir -p $(OPENMP_TARGET)
 	export OMP_NUM_THREADS # FIXME this could probably be deleted, test first 
 
-openmp_aes.o: openmp_conf $(OPENMP_SRC)/aes.c
-	$(CC) $(CFLAGS) $(OMPFLAGS) -DOPENMP -c $(OPENMP_SRC)/aes.c  -o $(OPENMP_TARGET)/openmp_aes.o # FIXME -DOPENMP should be variable above, check others below as well
+openmp_processing.o: openmp_conf $(OPENMP_SRC)/processing.c
+	$(CC) $(CFLAGS) $(OMPFLAGS) -DOPENMP -c $(OPENMP_SRC)/processing.c  -o $(OPENMP_TARGET)/openmp_processing.o # FIXME -DOPENMP should be variable above, check others below as well
 
-main_openmp: openmp_conf openmp_aes.o
+main_openmp: openmp_conf openmp_processing.o
 	mkdir -p $(BIN_PATH) 
-	$(CC) $(CFLAGS) $(OMPFLAGS) $(SRC_FOLDER)/main.cpp  -DOPENMP $(OPENMP_TARGET)/openmp_aes.o -o $(OPENMP_EXEC)
+	$(CC) $(CFLAGS) $(OMPFLAGS) $(SRC_FOLDER)/main.cpp  -DOPENMP $(OPENMP_TARGET)/openmp_processing.o -o $(OPENMP_EXEC)
 
 ##################################### OPENCL #################################
 # Shortcuts
@@ -109,13 +116,13 @@ opencl: main_opencl
 opencl_conf:
 	mkdir -p $(OPENCL_TARGET)
 
-opencl_aes.o: $(OPENCL_SRC)/aes.c
+opencl_processing.o: $(OPENCL_SRC)/processing.c
 	/bin/bash $(OPENCL_SRC)/CLHT.sh # FIXME is this header tool generic? place somewhere else? 
-	$(CC) $(OPFLAGS) -DOPENCL -c $(OPENCL_SRC)/aes.c  -o $(OPENCL_TARGET)/opencl_aes.o
+	$(CC) $(OPFLAGS) -DOPENCL -c $(OPENCL_SRC)/processing.c  -o $(OPENCL_TARGET)/opencl_processing.o
 
-main_opencl: opencl_aes.o
+main_opencl: opencl_processing.o
 	mkdir -p $(BIN_PATH) 
-	$(CC) $(CFLAGS) $(OPFLAGS) $(SRC_FOLDER)/main.cpp  -DOPENCL $(OPENCL_TARGET)/opencl_aes.o -o $(OPENCL_EXEC)
+	$(CC) $(CFLAGS) $(OPFLAGS) $(SRC_FOLDER)/main.cpp  -DOPENCL $(OPENCL_TARGET)/opencl_processing.o -o $(OPENCL_EXEC)
 
 ###################################### CUDA ##################################
 # Shortcuts
@@ -130,12 +137,12 @@ cuda: main_cuda
 cuda_conf:
 	mkdir -p $(CUDA_TARGET)
 
-cuda_aes.o: cuda_conf $(CUDA_SRC)/aes.cu
-	$(NVCC) $(NVCCFLAGS) -DCUDA -c $(CUDA_SRC)/aes.cu  -o $(CUDA_TARGET)/cuda_aes.o
+cuda_processing.o: cuda_conf $(CUDA_SRC)/processing.cu
+	$(NVCC) $(NVCCFLAGS) -DCUDA -c $(CUDA_SRC)/processing.cu  -o $(CUDA_TARGET)/cuda_processing.o
 
-main_cuda: cuda_conf cuda_aes.o
+main_cuda: cuda_conf cuda_processing.o
 	mkdir -p $(BIN_PATH) 
-	$(CC) $(CFLAGS) $(CUFLAGS) $(SRC_FOLDER)/main.cpp -DCUDA $(CUDA_TARGET)/cuda_aes.o -o $(CUDA_EXEC)
+	$(CC) $(CFLAGS) $(CUFLAGS) $(SRC_FOLDER)/main.cpp -DCUDA $(CUDA_TARGET)/cuda_processing.o -o $(CUDA_EXEC)
 
 ###################################### HIP ###################################
 # Shortcuts

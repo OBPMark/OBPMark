@@ -7,17 +7,48 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <errno.h>
+#include <cstring>
 
-#include "aes.h"
+
+#include "device.h"
+#include "util_arg.h"
+#include "util_file.h"
 
 #define EXIT_SUCCESS	0
-#define ERROR_ARGUMENTS	-1
-#define ERROR_FILELOAD	-2
+#define ERROR_ARGUMENTS -1
 
-#define OK_ARGUMENTS 	0
+/* x to the power (i-1) being powers of x (x is denoted as {02}) in the field GF(2^8) - rcon[0] is not used
+    x^76543210 (if larger modulo ( x8 + x4 + x3 + x +1) 
+x^0 = 00000001
+x^1 = 00000010
+x^2 = 00000100
+...
+x^7 = 10000000
+x^8 = 00011011 = 100000000 ^ 100011011
+x^9 = 00110110 = 00011011*10 */
 
+#define RCON_INIT \
+        {0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36}
 
-int arguments_handler(int argc, char **argv, unsigned int *num_iter, unsigned int *key_size, unsigned int *data_length, char *data_filepath, bool *csv_mode, bool *print_output);
+#define SBOX_INIT  \
+        {0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76, \
+         0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0, \
+         0xb7, 0xfd, 0x93, 0x26, 0x36, 0x3f, 0xf7, 0xcc, 0x34, 0xa5, 0xe5, 0xf1, 0x71, 0xd8, 0x31, 0x15, \
+         0x04, 0xc7, 0x23, 0xc3, 0x18, 0x96, 0x05, 0x9a, 0x07, 0x12, 0x80, 0xe2, 0xeb, 0x27, 0xb2, 0x75, \
+         0x09, 0x83, 0x2c, 0x1a, 0x1b, 0x6e, 0x5a, 0xa0, 0x52, 0x3b, 0xd6, 0xb3, 0x29, 0xe3, 0x2f, 0x84, \
+         0x53, 0xd1, 0x00, 0xed, 0x20, 0xfc, 0xb1, 0x5b, 0x6a, 0xcb, 0xbe, 0x39, 0x4a, 0x4c, 0x58, 0xcf, \
+         0xd0, 0xef, 0xaa, 0xfb, 0x43, 0x4d, 0x33, 0x85, 0x45, 0xf9, 0x02, 0x7f, 0x50, 0x3c, 0x9f, 0xa8, \
+         0x51, 0xa3, 0x40, 0x8f, 0x92, 0x9d, 0x38, 0xf5, 0xbc, 0xb6, 0xda, 0x21, 0x10, 0xff, 0xf3, 0xd2, \
+         0xcd, 0x0c, 0x13, 0xec, 0x5f, 0x97, 0x44, 0x17, 0xc4, 0xa7, 0x7e, 0x3d, 0x64, 0x5d, 0x19, 0x73, \
+         0x60, 0x81, 0x4f, 0xdc, 0x22, 0x2a, 0x90, 0x88, 0x46, 0xee, 0xb8, 0x14, 0xde, 0x5e, 0x0b, 0xdb, \
+         0xe0, 0x32, 0x3a, 0x0a, 0x49, 0x06, 0x24, 0x5c, 0xc2, 0xd3, 0xac, 0x62, 0x91, 0x95, 0xe4, 0x79, \
+         0xe7, 0xc8, 0x37, 0x6d, 0x8d, 0xd5, 0x4e, 0xa9, 0x6c, 0x56, 0xf4, 0xea, 0x65, 0x7a, 0xae, 0x08, \
+         0xba, 0x78, 0x25, 0x2e, 0x1c, 0xa6, 0xb4, 0xc6, 0xe8, 0xdd, 0x74, 0x1f, 0x4b, 0xbd, 0x8b, 0x8a, \
+         0x70, 0x3e, 0xb5, 0x66, 0x48, 0x03, 0xf6, 0x0e, 0x61, 0x35, 0x57, 0xb9, 0x86, 0xc1, 0x1d, 0x9e, \
+         0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf, \
+         0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16 };
+
 
 // FIXME temporarly placement, move to other file 
 int obpmark_aes(unsigned int key_size, uint8_t *data_buf, size_t buf_length)
@@ -34,31 +65,56 @@ int obpmark_aes(unsigned int key_size, uint8_t *data_buf, size_t buf_length)
 
 int exec_benchmark_aes(unsigned int num_iter, unsigned int key_size, unsigned int data_length, const char *data_filepath)
 {
-	int ret;
-	FILE *fdata;
-	uint8_t *data_buf; 
-	size_t buf_length = 0;
+    int ret;
+    uint8_t *data_buf = (uint8_t*) malloc(sizeof(uint8_t)*data_length);
 
-	fdata = fopen(data_filepath, "rb");
-	if(!fdata) {
-		return ERROR_FILELOAD;
-	}
-	
-	// FIXME add file reading 
-	data_buf = 0; 
+    uint8_t input[16];// = {0x32, 0x43, 0xf6, 0xa8, 0x88, 0x5a, 0x30, 0x8d, 0x31, 0x31, 0x98, 0xa2, 0xe0, 0x37, 0x07, 0x34};
+    for(int i=0; i<16; i++) input[i] = i*0x11;
+    uint8_t key[(key_size/32)*4]; // = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
+    for(int i= 0; i<((key_size/32)*4); i++) key[i] = i;
+    uint8_t out[16];
+    //uint8_t key[24] = {0x8e, 0x73, 0xb0, 0xf7, 0xda, 0x0e, 0x64, 0x52, 0xc8, 0x10, 0xf3, 0x2b, 0x80, 0x90, 0x79, 0xe5, 0x62, 0xf8, 0xea, 0xd2, 0x52, 0x2c, 0x6b, 0x7b};
+    //uint8_t key[32] = {0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81, 0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4};
+    //ret = get_file_data(data_filepath, data_length, data_buf);
+    //if(ret < 0) return ret;
 
-	// FIXME should be in separate file for automation "scripting"
-	// FIXME file loading etc. functions should be separate from raw processing
+    uint8_t sbox[256] = SBOX_INIT;
+	uint8_t rcon[11] = RCON_INIT;
+    //AES_KeyExpansion(key_size, key, expanded_key, sbox);
+    //AES_encrypt(key, key_size, input, 16, out);
 
-	for(int i=0; i<num_iter; i++)
-	{
-		ret = obpmark_aes(key_size, data_buf, buf_length);  
-		if(ret != EXIT_SUCCESS) {
-			return ret;
-		}
-	}
-	
-	return EXIT_SUCCESS;
+    AES_time_t *t = (AES_time_t *)malloc(sizeof(AES_time_t));
+    AES_data_t *AES_data =  (AES_data_t*) malloc(sizeof(AES_data_t));
+    char device[100] = "";
+    init(AES_data, t, device);
+
+    //if(!csv_mode) 
+    printf("Using device: %s\n", device);
+
+    /* Initialize memory on the device and copy data */
+    device_memory_init(AES_data, key_size, data_length);
+    copy_memory_to_device(AES_data, key, input, sbox, rcon);
+
+    /* Run the benchmark, by processing the full frame list */
+    process_benchmark(AES_data, t);
+
+    /* Copy data back from device */
+    copy_memory_to_host(AES_data, out);
+    puts("output:");
+    for(int i = 0; i<data_length; i++) printf("%02x",out[i]);
+    printf("\n");
+
+    /* Get benchmark times */
+//    get_elapsed_time(image_data, t, csv_mode);
+//    if(print_output)
+//    {
+//        print_output_result(output_image);
+//    }
+
+    /* Clean and free device object */
+    clean(AES_data, t);
+
+    return EXIT_SUCCESS;
 }
 
 int main(int argc, char **argv)
@@ -68,8 +124,9 @@ int main(int argc, char **argv)
 	char *data_filepath = NULL; 
 	bool csv_mode = false, print_output = false;
 
+    
 	/* Command line arguments processing */
-	ret = arguments_handler(argc, argv, &num_iter, &key_size, &data_length, data_filepath, &csv_mode, &print_output);
+	ret = arguments_handler(argc, argv, &num_iter, &key_size, &data_length, &data_filepath, &csv_mode, &print_output);
 	if(ret == ERROR_ARGUMENTS) {
 		return ERROR_ARGUMENTS;
 	}
@@ -83,74 +140,3 @@ int main(int argc, char **argv)
 	return EXIT_SUCCESS;
 }
 
-void print_usage(const char *app_name)
-{
-	printf("Usage: %s -i <num_iter> -k <key_size> -l <data_length> <data_file>\n", app_name);
-	printf(" data_file : path to file to encrypt\n");
-	printf(" -i num_iter : number of iterations to execute\n");
-	printf(" -k key_size : encryption key size\n");
-	printf(" -l data_length : length of file to read in number of bytes (set to 0 to read full file)\n");
-	printf(" -c : print time in CSV\n");
-	printf(" -o : print output\n");
-}
-
-int arguments_handler(int argc, char **argv, unsigned int *num_iter, unsigned int *key_size, unsigned int *data_length, char *data_filepath, bool *csv_mode, bool *print_output)
-{
-	if(argc < 4) {
-		print_usage(argv[0]);
-		return ERROR_ARGUMENTS;
-	}
-	
-	for(unsigned int args = 1; args < argc; ++args)
-	{
-		if(argv[args][0] != '-') {
-			return ERROR_ARGUMENTS;
-		}
-
-		switch (argv[args][1]) {
-			case 'i' : args +=1; *num_iter = atoi(argv[args]); break;
-			case 'k' : args +=1; *key_size = atoi(argv[args]); break;
-			case 'l' : args +=1; *data_length = atoi(argv[args]); break;
-			case 'c' : *csv_mode = true; break;
-			case 'o' : *print_output = true; break;
-			default: print_usage(argv[0]); return ERROR_ARGUMENTS;
-		}
-
-	}
-
-	switch(*key_size) {
-		case 128:
-		case 192:
-		case 256:
-			break; 
-		default:
-			printf("error: key_size must be 128, 192 or 256\n");
-			print_usage(argv[0]);
-			return ERROR_ARGUMENTS;
-	}
-	// FIXME add other checks
-
-	// FIXME cleanup
-	/*if(*w_size < MINIMUNWSIZE) {
-		printf("-w need to be set and bigger than or equal to %d\n\n", MINIMUNWSIZE);
-		print_usage(argv[0]);
-		return ERROR_ARGUMENTS;
-	}
-	if(*h_size < MINIMUNHSIZE) {
-		printf("-h need to be set and bigger than or equal to %d\n\n", MINIMUNHSIZE);
-		print_usage(argv[0]);
-		return ERROR_ARGUMENTS;
-	}
-	if(*frames < MINIMUNFRAMES) {
-		printf("-f need to be set and bigger than or equal to %d\n\n", MINIMUNFRAMES);
-		print_usage(argv[0]);
-		return ERROR_ARGUMENTS;
-	}
-	if(*bitsize != MINIMUNBITSIZE && *bitsize != MAXIMUNBITSIZE) {
-		printf("-b need to be set and be %d or %d\n\n", MINIMUNBITSIZE, MAXIMUNBITSIZE);
-		print_usage(argv[0]);
-		return ERROR_ARGUMENTS;
-	}*/
-
-	return OK_ARGUMENTS;
-}
