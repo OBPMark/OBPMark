@@ -16,12 +16,11 @@
 
 /* Internal function declarations */
 
-void AES_KeyExpansion(AES_key_t *key, uint32_t *expanded_key, uint8_t *sbox);
 void AES_AddRoundKey(STATE_PARAM, ROUNDKEY_PARAM, unsigned int Nb, unsigned int round_number);
 void AES_SubBytes(STATE_PARAM, uint8_t *sbox);
 void AES_ShiftRows(STATE_PARAM);
 void AES_MixColumns(STATE_PARAM);
-void AES_encrypt_state(STATE_PARAM, uint8_t *sbox, ROUNDKEY_PARAM, unsigned int num_rounds);
+void AES_encrypt_state(STATE_PARAM, unsigned int Nb, uint8_t *sbox, ROUNDKEY_PARAM, unsigned int num_rounds);
 
 
 void printState(STATE_PARAM, int Nb){
@@ -244,23 +243,9 @@ void AES_encrypt_state(STATE_PARAM, unsigned int Nb, uint8_t *sbox, ROUNDKEY_PAR
 
 // FIXME there are more optimized ways of implementing this, e.g. using 32-bit variables for row lookup, and combining steps
 // FIXME both x86 and ARM-v8 have specific instructions for implementing an AES round
-void AES_encrypt(AES_data_t *AES_data)
+void AES_encrypt(AES_data_t *AES_data, AES_time_t *t)
 {
     uint8_t *state = AES_data->input_text;
-
-    AES_KeyExpansion(AES_data->key, (uint32_t*) AES_data->expanded_key, AES_data->sbox, AES_data->rcon);
-    
-
-//	while(1) // FIXME exit criteria 
-//	{
-		/* Extract data from buffer to state */
-		// FIXME extract data from buf into state
-//		for(int i=0; i<4; i++) {
-//			for(int j=0; j<4; j++) {
-//				state[i][j] = data[x]; // FIXME what about end of file? not multiple of 16?
-//				x++;
-//			}
-//		}
 
 		/* Operations per state */
 		AES_encrypt_state((uint8_t (*)[4]) state, AES_data->key->Nb, AES_data->sbox, AES_data->expanded_key, AES_data->key->Nr);

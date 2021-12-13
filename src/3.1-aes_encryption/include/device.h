@@ -7,8 +7,8 @@
 #define DEVICE_H_
 
 #include "obpmark.h"
+#include "obpmark_time.h"
 #include "benchmark.h"
-#include "obpmark_image.h"
 
 /* Typedefs */
 #ifdef CUDA
@@ -53,14 +53,10 @@ struct AES_data_t
 
 typedef struct {
 	time_t t_test;
-	time_t *t_frame;
+	time_t t_block;
 	// detailed timing
-	time_t *t_offset;
-	time_t *t_badpixel;
-	time_t *t_scrub;
-	time_t *t_gain;
-	time_t *t_binning;
-	time_t *t_coadd;
+	time_t t_key_expand;
+	time_t t_encrypt;
 
 } AES_time_t; 
 
@@ -127,11 +123,11 @@ void copy_memory_to_host(
 /**
  * \brief Function that summarize the execution time of the benchmark.
  */
-//float get_elapsed_time(
+float get_elapsed_time(
 //	image_data_t *image_data, 
-//	image_time_t *t, 
-//	bool csv_format
-//	);
+	AES_time_t *t, 
+	bool csv_format
+	);
 
 
 /**

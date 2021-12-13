@@ -50,38 +50,19 @@ x^9 = 00110110 = 00011011*10 */
          0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16 };
 
 
-// FIXME temporarly placement, move to other file 
-int obpmark_aes(unsigned int key_size, uint8_t *data_buf, size_t buf_length)
-{
-	uint8_t *out_buf; 
-
-	/* Encrypt */
-	// FIXME start timer 
-	//AES_encrypt(); // FIXME parameters
-	// FIXME end timer
-
-	return 0;
-}
-
 int exec_benchmark_aes(unsigned int num_iter, unsigned int key_size, unsigned int data_length, const char *data_filepath)
 {
     int ret;
     uint8_t *data_buf = (uint8_t*) malloc(sizeof(uint8_t)*data_length);
 
-    uint8_t input[16];// = {0x32, 0x43, 0xf6, 0xa8, 0x88, 0x5a, 0x30, 0x8d, 0x31, 0x31, 0x98, 0xa2, 0xe0, 0x37, 0x07, 0x34};
+    uint8_t input[16];
     for(int i=0; i<16; i++) input[i] = i*0x11;
-    uint8_t key[(key_size/32)*4]; // = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
+    uint8_t key[(key_size/32)*4];
     for(int i= 0; i<((key_size/32)*4); i++) key[i] = i;
     uint8_t out[16];
-    //uint8_t key[24] = {0x8e, 0x73, 0xb0, 0xf7, 0xda, 0x0e, 0x64, 0x52, 0xc8, 0x10, 0xf3, 0x2b, 0x80, 0x90, 0x79, 0xe5, 0x62, 0xf8, 0xea, 0xd2, 0x52, 0x2c, 0x6b, 0x7b};
-    //uint8_t key[32] = {0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81, 0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4};
-    //ret = get_file_data(data_filepath, data_length, data_buf);
-    //if(ret < 0) return ret;
 
     uint8_t sbox[256] = SBOX_INIT;
 	uint8_t rcon[11] = RCON_INIT;
-    //AES_KeyExpansion(key_size, key, expanded_key, sbox);
-    //AES_encrypt(key, key_size, input, 16, out);
 
     AES_time_t *t = (AES_time_t *)malloc(sizeof(AES_time_t));
     AES_data_t *AES_data =  (AES_data_t*) malloc(sizeof(AES_data_t));
@@ -105,7 +86,7 @@ int exec_benchmark_aes(unsigned int num_iter, unsigned int key_size, unsigned in
     printf("\n");
 
     /* Get benchmark times */
-//    get_elapsed_time(image_data, t, csv_mode);
+    get_elapsed_time(t, 0);
 //    if(print_output)
 //    {
 //        print_output_result(output_image);

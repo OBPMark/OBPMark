@@ -39,8 +39,8 @@
  * \param data_length	Length of data buffer to encrypt. 
  * \param out		OUtput buffer to store encrypted ciphertext. 
  */
-void AES_encrypt(AES_data_t *AES_data);
+void AES_encrypt(AES_data_t *AES_data, AES_time_t *t);
 
-void AES_KeyExpansion(unsigned int key_size, uint8_t *key, uint32_t *expanded_key, uint8_t *sbox);
+void AES_KeyExpansion(AES_key_t *key, uint32_t *expanded_key, uint8_t *sbox, uint8_t *rcon);
 
 #endif // OBPMARK_AES_H_
