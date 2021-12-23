@@ -89,13 +89,16 @@ void process_benchmark(
 	AES_time_t *t
 	)
 {    
+    int n_iter = AES_data->data_length/ (4*AES_data->key->Nb);
     T_START(t->t_test);
     T_START_VERBOSE(t->t_key_expand);
     AES_KeyExpansion(AES_data->key, (uint32_t*) AES_data->expanded_key, AES_data->sbox, AES_data->rcon);
     T_STOP_VERBOSE(t->t_key_expand);
     T_START_VERBOSE(t->t_encrypt);
-    //TODO do loop for each block
-    AES_encrypt(AES_data, t);
+    //TODO time each encrytp block
+    for(int i = 0; i < n_iter; i++){
+        AES_encrypt(AES_data, t, i);
+    }
     T_STOP_VERBOSE(t->t_encrypt);
     T_STOP(t->t_test);
 }

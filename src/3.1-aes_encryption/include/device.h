@@ -57,6 +57,7 @@ typedef struct {
 	// detailed timing
 	time_t t_key_expand;
 	time_t t_encrypt;
+	time_t t_block;
 
 } AES_time_t; 
 
