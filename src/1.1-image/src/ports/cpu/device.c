@@ -123,10 +123,11 @@ void process_benchmark(
 	for(frame_i=offset_neighbours; frame_i < image_data->num_frames - offset_neighbours; frame_i++)
 	{
 		T_START(t->t_frame[frame_i]);
+		/* First start the preparation of the frame, frame_i + 2, to be ready for the radiation scrubbing. */
+		prepare_image_frame(image_data, t, &image_data->frames[frame_i + 2], frame_i + 2);
+		/* Then compute the frame_i using the already calculate data from frame_i -2, frame_i -1, frame_i + 1 and frame_i + 2 */
 		proc_image_frame(image_data, t, &image_data->frames[frame_i], frame_i);
 		T_STOP(t->t_frame[frame_i]);
-
-		// FIXME radiation correction frame handling to be implemented
 
 	}
 	T_STOP(t->t_test);

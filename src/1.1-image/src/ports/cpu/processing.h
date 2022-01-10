@@ -44,14 +44,14 @@
 
 
 /** 
- * \brief Processing for a single frame.
+ * \brief Processing for a single frame. This fuction finish the processing of a single frame starting by step III Radiation Scrubbing.
  */
 void proc_image_frame(image_data_t *p, image_time_t *t, frame16_t *frame, unsigned int frame_i);
 
 /**
- * \brief Entry function for Benchmark #1.1: Image corrections and calibrations.
+ * \brief Processing for a single frame. This function starts the processing of a single frame doing step I and II.
  */
-void proc_image_all(image_data_t *p, image_time_t *t); 
+void prepare_image_frame(image_data_t *p, image_time_t *t, frame16_t *frame, unsigned int frame_i);
 
 /* Kernel functions */
 

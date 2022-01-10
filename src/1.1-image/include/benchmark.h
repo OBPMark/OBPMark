@@ -20,6 +20,7 @@
 #define MINIMUNWSIZE		1024
 #define MINIMUNHSIZE		1024
 #define MINIMUNFRAMES 		1
+#define FRAMEBUFFERSIZE     5
 
 /* Bits defines */
 #define MINIMUNBITSIZE		14

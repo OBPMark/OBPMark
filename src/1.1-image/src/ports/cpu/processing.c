@@ -9,9 +9,8 @@
 #include "obpmark.h"
 #include "obpmark_time.h"
 
-void proc_image_frame(image_data_t *p, image_time_t *t, frame16_t *frame, unsigned int frame_i)
+void prepare_image_frame(image_data_t *p, image_time_t *t, frame16_t *frame, unsigned int frame_i)
 {
-	
 	/* [I]: Bias offset correction */ 
 	T_START_VERBOSE(t->t_offset[frame_i]);
 	f_offset(frame, &p->offsets);
@@ -21,7 +20,10 @@ void proc_image_frame(image_data_t *p, image_time_t *t, frame16_t *frame, unsign
 	T_START_VERBOSE(t->t_badpixel[frame_i]);
 	f_mask_replace(frame, &p->bad_pixels);
 	T_STOP_VERBOSE(t->t_badpixel[frame_i]);
+}
 
+void proc_image_frame(image_data_t *p, image_time_t *t, frame16_t *frame, unsigned int frame_i)
+{
 	/* [III]: Radiation scrubbing */
 	T_START_VERBOSE(t->t_scrub[frame_i]);
 	f_scrub(frame, p->frames, frame_i);
