@@ -16,10 +16,11 @@ void print_usage(const char *exec_name)
 	printf(" -w size : width of the input image in pixels\n");
 	printf(" -h size : height of the input image in pixels \n");
 	printf(" -c : print time in CSV\n");
+	printf(" -t : print time in full\n");
 	printf(" -o : print output\n");
 }
 
-int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int *h_size, unsigned int *frames, bool *csv_mode, bool *print_output)
+int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int *h_size, unsigned int *frames, bool *csv_mode, bool *print_output, bool *full_time_output)
 {
 	if(argc < 3) {
 		print_usage(argv[0]);
@@ -34,6 +35,7 @@ int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int 
 			case 'f' : args +=1; *frames = atoi(argv[args]);break;
 			case 'c' : *csv_mode = true;break;
 			case 'o' : *print_output = true;break;
+			case 't' : *full_time_output = true;break;
 			default: print_usage(argv[0]); return ARG_ERROR;
 		}
 

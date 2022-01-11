@@ -118,10 +118,11 @@ void copy_memory_to_host(
 /**
  * \brief Function that summarize the execution time of the benchmark.
  */
-float get_elapsed_time(
+void get_elapsed_time(
 	image_data_t *image_data, 
 	image_time_t *t, 
-	bool csv_format
+	bool csv_format,
+	bool full_time_output
 	);
 
 

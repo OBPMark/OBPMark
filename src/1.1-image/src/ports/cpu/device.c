@@ -122,12 +122,15 @@ void process_benchmark(
 	T_START(t->t_test);
 	for(frame_i=offset_neighbours; frame_i < image_data->num_frames - offset_neighbours; frame_i++)
 	{
+		// FIXME  Verify that the new format for the timing is correct
+		
 		T_START(t->t_frame[frame_i]);
 		/* First start the preparation of the frame, frame_i + 2, to be ready for the radiation scrubbing. */
 		prepare_image_frame(image_data, t, &image_data->frames[frame_i + 2], frame_i + 2);
 		/* Then compute the frame_i using the already calculate data from frame_i -2, frame_i -1, frame_i + 1 and frame_i + 2 */
 		proc_image_frame(image_data, t, &image_data->frames[frame_i], frame_i);
 		T_STOP(t->t_frame[frame_i]);
+		
 
 	}
 	T_STOP(t->t_test);
@@ -146,25 +149,59 @@ void copy_memory_to_host(
 }
 
 
-float get_elapsed_time(
+void get_elapsed_time(
 	image_data_t *image_data, 
 	image_time_t *t, 
-	bool csv_format
+	bool csv_format,
+	bool full_time_output
 	)
-{
-    // FIXME with new time format
-	/*float elapsed =  (device_object->end.tv_sec - device_object->start.tv_sec) * 1000 + (device_object->end.tv_nsec - device_object->start.tv_nsec) / 1000000;
-    if (csv_format)
+{	
+
+	if (csv_format)
 	{
-        printf("%.10f;%.10f;%.10f;\n", (float) 0, elapsed, (float) 0);
-    } 
-	else
+		double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
+		printf("%.10f;%.10f;%.10f;\n", (float) 0, elapsed_time, (float) 0);
+	}
+	else if (full_time_output)
 	{
-		printf("Elapsed time Host->Device: %.10f miliseconds\n", (float) 0);
-		printf("Elapsed time kernel: %.10f miliseconds\n", elapsed);
-		printf("Elapsed time Device->Host: %.10f miliseconds\n", (float) 0);
-    }
-	return elapsed;*/
+		static unsigned int offset_neighbours = 2;
+		double elapsed_time_test =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
+		// print the time
+		printf("Elapsed time test: %.10f miliseconds\n", elapsed_time_test);
+		// now get each time per frame
+		printf("############################################################\n");
+		for (int i = offset_neighbours; i < image_data->num_frames - offset_neighbours; ++i)
+		{	
+			// print frame number
+			printf("Frame %d: ", i);
+			double elapsed_time_frame =   (t->t_frame[i]) / ((double)(CLOCKS_PER_SEC / 1000)); 
+			printf("Elapsed time frame %d: %.10f miliseconds\n", i, elapsed_time_frame);
+			// now get each time per each kernel
+			/* [I]: Bias offset correction */ 
+			double elapsed_time_offset =   (t->t_offset[i]) / ((double)(CLOCKS_PER_SEC / 1000));
+			printf("Elapsed time offset %d: %.10f miliseconds\n", i, elapsed_time_offset);
+			/* [II]: Bad pixel correction */
+			double elapsed_time_t_badpixel =   (t->t_badpixel[i]) / ((double)(CLOCKS_PER_SEC / 1000));
+			printf("Elapsed time badpixel %d: %.10f miliseconds\n", i, elapsed_time_t_badpixel);
+			/* [III]: Radiation scrubbing */
+			double elapsed_time_t_scrub =   (t->t_scrub[i]) / ((double)(CLOCKS_PER_SEC / 1000));
+			printf("Elapsed time radiation scrubbing %d: %.10f miliseconds\n", i, elapsed_time_t_scrub);
+			/* [IV]: Gain correction */
+			double elapsed_time_t_gain =   (t->t_gain[i]) / ((double)(CLOCKS_PER_SEC / 1000));
+			printf("Elapsed time gain %d: %.10f miliseconds\n", i, elapsed_time_t_gain);
+			/* [V]: Spatial binning */
+			double elapsed_time_t_binning =   (t->t_binning[i]) / ((double)(CLOCKS_PER_SEC / 1000));
+			printf("Elapsed time binning %d: %.10f miliseconds\n", i, elapsed_time_t_binning);
+			/* [VI]: Co-adding frames */
+			double elapsed_time_t_coadd =   (t->t_coadd[i]) / ((double)(CLOCKS_PER_SEC / 1000));
+			printf("Elapsed time coadd %d: %.10f miliseconds\n", i, elapsed_time_t_coadd);
+			// print separator
+			printf("############################################################\n");
+
+		}
+		
+		printf("\n");
+	}
 }
 
 

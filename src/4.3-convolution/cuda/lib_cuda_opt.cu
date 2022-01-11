@@ -180,7 +180,7 @@ void copy_memory_to_host(GraficObject *device_object, bench_t* h_C, int size){
     cudaEventRecord(*device_object->stop_memory_copy_host);
 }
 
-float get_elapsed_time(GraficObject *device_object, bool csv_format,bool csv_format_timestamp, long int current_time){
+void get_elapsed_time(GraficObject *device_object, bool csv_format,bool csv_format_timestamp, long int current_time){
     cudaEventSynchronize(*device_object->stop_memory_copy_host);
     float milliseconds_h_d = 0, milliseconds = 0, milliseconds_d_h = 0;
     // memory transfer time host-device

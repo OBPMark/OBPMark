@@ -237,7 +237,7 @@ void copy_memory_to_host(DeviceObject *device_object, int* output_image, unsigne
     cudaEventRecord(*device_object->stop_memory_copy_host);
 }
 
-float get_elapsed_time(DeviceObject *device_object, bool csv_format){
+void get_elapsed_time(DeviceObject *device_object, bool csv_format){
     cudaEventSynchronize(*device_object->stop_memory_copy_host);
     float milliseconds_h_d = 0, milliseconds = 0, milliseconds_d_h = 0;
     // memory transfer time host-device
@@ -254,7 +254,6 @@ float get_elapsed_time(DeviceObject *device_object, bool csv_format){
          printf("Elapsed time kernel: %.10f miliseconds\n", milliseconds);
          printf("Elapsed time Device->Host: %.10f miliseconds\n", milliseconds_d_h);
     }
-    return milliseconds;
 }
 
 

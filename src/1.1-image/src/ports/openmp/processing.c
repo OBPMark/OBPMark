@@ -154,7 +154,7 @@ void copy_memory_to_host(DeviceObject *device_object, int* output_image, unsigne
 }
 
 
-float get_elapsed_time(DeviceObject *device_object, bool csv_format)
+void get_elapsed_time(DeviceObject *device_object, bool csv_format)
 {
     if (csv_format)
 	{
@@ -166,7 +166,6 @@ float get_elapsed_time(DeviceObject *device_object, bool csv_format)
 		printf("Elapsed time kernel: %.10f miliseconds\n", device_object->elapsed_time * 1000.f);
 		printf("Elapsed time Device->Host: %.10f miliseconds\n", (float) 0);
     }
-	return device_object->elapsed_time * 1000.f;
 }
 
 

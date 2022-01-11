@@ -178,7 +178,7 @@ void copy_memory_to_host(DeviceObject *device_object, int* output_image, unsigne
 
 }
 
-float get_elapsed_time(DeviceObject *device_object, bool csv_format){
+void get_elapsed_time(DeviceObject *device_object, bool csv_format){
     device_object->memory_copy_host->wait();
     float elapsed_h_d = 0, elapsed = 0, elapsed_d_h = 0;
     elapsed_h_d = device_object->memory_copy_device_a->getProfilingInfo<CL_PROFILING_COMMAND_END>() - device_object->memory_copy_device_a->getProfilingInfo<CL_PROFILING_COMMAND_START>();
@@ -195,7 +195,6 @@ float get_elapsed_time(DeviceObject *device_object, bool csv_format){
          printf("Elapsed time kernel: %.10f miliseconds\n", elapsed );
          printf("Elapsed time Device->Host: %.10f miliseconds\n", elapsed_d_h / 1000000.0);
     }
-    return elapsed ;
 }
 
 

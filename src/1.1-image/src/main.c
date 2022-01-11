@@ -46,7 +46,8 @@ void init_benchmark(
 	unsigned int num_frames,
 	
 	bool csv_mode, 
-	bool print_output
+	bool print_output,
+	bool full_time_output
 	)
 {
 	image_time_t *t = (image_time_t *)malloc(sizeof(image_time_t));
@@ -73,7 +74,7 @@ void init_benchmark(
 	copy_memory_to_host(image_data, t, output_image);
 
 	/* Get benchmark times */
-	get_elapsed_time(image_data, t, csv_mode);
+	get_elapsed_time(image_data, t, csv_mode, full_time_output);
 	if(print_output)
 	{
 		print_output_result(output_image);
@@ -89,6 +90,7 @@ int main(int argc, char **argv)
 
 	bool csv_mode = false;
 	bool print_output = false;
+	bool full_time_output = false;
 
 	unsigned int w_size = 0;
 	unsigned int h_size = 0; 
@@ -113,7 +115,7 @@ int main(int argc, char **argv)
 	frame16_t *gain_map;
 
 	/* Command line argument handling */
-	ret = arguments_handler(argc, argv, &w_size, &h_size, &num_processing_frames, &csv_mode, &print_output);
+	ret = arguments_handler(argc, argv, &w_size, &h_size, &num_processing_frames, &csv_mode, &print_output, &full_time_output);
 	if(ret == ARG_ERROR) {
 		exit(-1);
 	}
@@ -163,7 +165,7 @@ int main(int argc, char **argv)
 		input_frames, output_image,
 		offset_map, bad_pixel_map, gain_map,
 		w_size, h_size, num_frames,
-		csv_mode, print_output
+		csv_mode, print_output,full_time_output
 		);
 
 	/* Free input data */

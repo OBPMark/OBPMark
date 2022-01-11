@@ -25,7 +25,8 @@ int arguments_handler(
 	unsigned int *h_size,
 	unsigned int *frames,
 	bool *csv_mode,
-	bool *print_output
+	bool *print_output,
+	bool *full_time_output
 	);
 
 /**
