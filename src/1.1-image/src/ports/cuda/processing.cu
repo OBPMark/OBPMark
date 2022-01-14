@@ -3,9 +3,8 @@
  * \brief Benchmark #1.1 CUDA implementation.
  * \author Ivan Rodriguez (BSC)
  */
-#include "benchmark.h"
-#include "benchmark_library.h"
-#include "device.h"
+ #include "device.h"
+ #include "processing.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // KERNELS
@@ -97,29 +96,63 @@ spatial_binning_temporal_binning(const int *processing_image, int *output_image,
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // CUDA FUNCTIONS
 ///////////////////////////////////////////////////////////////////////////////////////////////
-void init(DeviceObject *device_object, char* device_name){
-    init(device_object, 0,0, device_name);
+void init(
+	image_data_t *image_data,
+	image_time_t *t,
+	char *device_name
+	)
+{
+    init(image_data,t, 0,0, device_name);
 }
 
-void init(DeviceObject *device_object, int platform ,int device, char* device_name){
+void init(
+	image_data_t *image_data,
+	image_time_t *t,
+	int platform,
+	int device,
+	char *device_name
+	)
+{
     cudaSetDevice(device);
     cudaDeviceProp prop;
     cudaGetDeviceProperties(&prop, device);
     strcpy(device_name,prop.name);
+    // TODO verfy that these are the required events for timming
     //event create 
-    device_object->start = new cudaEvent_t;
-    device_object->stop = new cudaEvent_t;
-    device_object->start_memory_copy_device = new cudaEvent_t;
-    device_object->stop_memory_copy_device = new cudaEvent_t;
-    device_object->start_memory_copy_host = new cudaEvent_t;
-    device_object->stop_memory_copy_host= new cudaEvent_t;
-    
-    cudaEventCreate(device_object->start);
-    cudaEventCreate(device_object->stop);
-    cudaEventCreate(device_object->start_memory_copy_device);
-    cudaEventCreate(device_object->stop_memory_copy_device);
-    cudaEventCreate(device_object->start_memory_copy_host);
-    cudaEventCreate(device_object->stop_memory_copy_host);
+    t->start_test = new cudaEvent_t;
+    t->stop_test = new cudaEvent_t;
+    t->start_memory_copy_device = new cudaEvent_t;
+    t->stop_memory_copy_device = new cudaEvent_t;
+    t->start_memory_copy_host = new cudaEvent_t;
+    t->stop_memory_copy_host= new cudaEvent_t;
+    // create list of events
+    t->start_frame_list = new cudaEvent_t[image_data->num_frames];
+    t->stop_frame_list = new cudaEvent_t[image_data->num_frames];
+    t->start_frame_offset = new cudaEvent_t[image_data->num_frames];
+    t->stop_frame_offset = new cudaEvent_t[image_data->num_frames];
+    t->start_frame_badpixel = new cudaEvent_t[image_data->num_frames];
+    t->stop_frame_badpixel = new cudaEvent_t[image_data->num_frames];
+    t->start_frame_scrub = new cudaEvent_t[image_data->num_frames];
+    t->stop_frame_scrub = new cudaEvent_t[image_data->num_frames];
+    t->start_frame_gain = new cudaEvent_t[image_data->num_frames];
+    t->stop_frame_gain = new cudaEvent_t[image_data->num_frames];
+    t->start_frame_binning = new cudaEvent_t[image_data->num_frames];
+    t->stop_frame_binning = new cudaEvent_t[image_data->num_frames];
+    t->start_frame_coadd = new cudaEvent_t[image_data->num_frames];
+    t->stop_frame_coadd = new cudaEvent_t[image_data->num_frames];
+
+}
+bool device_memory_init(
+	image_data_t* image_data,
+	frame16_t* input_frames,
+	frame16_t* offset_map, 
+	frame8_t* bad_pixel_map, 
+	frame16_t* gain_map,
+	unsigned int w_size,
+	unsigned int h_size
+	)
+{	
+
 }
 
 bool device_memory_init(DeviceObject *device_object, unsigned int size_image, unsigned int size_reduction_image){

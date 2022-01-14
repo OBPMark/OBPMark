@@ -13,6 +13,46 @@
 /* Typedefs */
 #ifdef CUDA
 /* CUDA version */
+struct image_data_t
+{
+	frame16_t *frames;
+	unsigned int num_frames; 
+
+	frame16_t offsets;
+	frame16_t gains; 
+	frame8_t bad_pixels;
+
+	frame8_t scrub_mask;
+
+	frame32_t binned_frame; 
+
+	frame32_t image_output; 
+};
+
+typedef struct {
+	cudaEvent_t *start_test;
+	cudaEvent_t *stop_test;
+	cudaEvent_t *start_memory_copy_device;
+	cudaEvent_t *stop_memory_copy_device;
+	cudaEvent_t *start_memory_copy_host;
+	cudaEvent_t *stop_memory_copy_host;
+	cudaEvent_t *start_frame_list;
+	cudaEvent_t *stop_frame_list;
+	// detailed timing
+	cudaEvent_t *start_frame_offset;
+	cudaEvent_t *stop_frame_offset;
+	cudaEvent_t *start_frame_badpixel;
+	cudaEvent_t *stop_frame_badpixel;
+	cudaEvent_t *start_frame_scrub;
+	cudaEvent_t *stop_frame_scrub;
+	cudaEvent_t *start_frame_gain;
+	cudaEvent_t *stop_frame_gain;
+	cudaEvent_t *start_frame_binning;
+	cudaEvent_t *stop_frame_binning;
+	cudaEvent_t *start_frame_coadd;
+	cudaEvent_t *stop_frame_coadd;
+
+} image_time_t; 
 #elif OPENCL
 /* OPENCL version */
 #elif OPENMP
