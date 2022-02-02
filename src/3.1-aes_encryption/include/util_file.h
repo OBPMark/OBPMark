@@ -15,13 +15,6 @@
 
 /* Functions */
 
-///**
-// * \brief File open function
-// * \param file_name Char array containing the path and file_name to open
-// * \return The pointer to FILE object for the opened file, NULL if an error ocurred
-// */
-//FILE open_file(const char *file_name)
-
-int get_file_data(const char *file, unsigned int length, uint8_t *buffer);
+int get_file_data(const char *file, uint8_t *input_data, uint8_t *cypher_key, unsigned int data_length, unsigned int key_length);
 
 #endif // UTIL_FILE_H_

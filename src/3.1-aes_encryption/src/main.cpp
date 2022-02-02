@@ -14,22 +14,31 @@
 #include "device.h"
 #include "util_arg.h"
 #include "util_file.h"
+#include "util_data_rand.c"
 
 #define EXIT_SUCCESS	0
 #define ERROR_ARGUMENTS -1
 
+#define PRINT_CHAR 0
 
-int exec_benchmark_aes(unsigned int num_iter, unsigned int key_size, unsigned int data_length, const char *data_filepath)
+void print_data(uint8_t data[], unsigned int data_size){
+#if PRINT_CHAR == 0
+    printf("0x");
+#endif
+    for(int i = 0; i<data_size; i++) {
+#if PRINT_CHAR == 1
+        printf("%c",data[i]);
+#else
+        printf("%02x",data[i]);
+#endif
+    }
+    printf("\n");
+}
+
+int exec_benchmark_aes(unsigned int num_iter, unsigned int key_size, unsigned int data_length, const char *data_filepath, bool csv_mode, bool print_output)
 {
     uint8_t input[data_length];
-    //set input value
-    //FIXME Currently default value for validation
-    for(int i=0; i<data_length; i++) input[i] = i*0x11;
-    uint8_t key[(key_size/32)*4];
-    //set key value
-    //FIXME Currently default value for validation
-    for(int i= 0; i<((key_size/32)*4); i++) key[i] = i;
-
+    uint8_t key[key_size/8];
     uint8_t out[data_length];
 
     uint8_t sbox[256] = SBOX_INIT;
@@ -38,10 +47,23 @@ int exec_benchmark_aes(unsigned int num_iter, unsigned int key_size, unsigned in
     AES_time_t *t = (AES_time_t *)malloc(sizeof(AES_time_t));
     AES_data_t *AES_data =  (AES_data_t*) malloc(sizeof(AES_data_t));
     char device[100] = "";
-    init(AES_data, t, device);
 
-    //if(!csv_mode) 
-    printf("Using device: %s\n", device);
+    if(!csv_mode) printf("Using device: %s\n", device);
+
+    if(data_filepath==NULL) benchmark_gen_rand_data(input, key, data_length, key_size/8);
+    else {
+        int error = get_file_data(data_filepath, input, key, data_length, key_size/8);
+        if(error < 0) return error;
+    }
+
+    if(print_output && data_filepath==NULL){
+        printf("cypher key: ");
+        print_data(key, key_size/8);
+        printf("input text: ");
+        print_data(input, data_length);
+    }
+
+    init(AES_data, t, device);
 
     /* Initialize memory on the device and copy data */
     device_memory_init(AES_data, key_size, data_length);
@@ -52,16 +74,12 @@ int exec_benchmark_aes(unsigned int num_iter, unsigned int key_size, unsigned in
 
     /* Copy data back from device */
     copy_memory_to_host(AES_data, out);
-    puts("output:");
-    for(int i = 0; i<data_length; i++) printf("%02x",out[i]);
-    printf("\n");
 
     /* Get benchmark times */
     get_elapsed_time(t, 0);
-//    if(print_output)
-//    {
-//        print_output_result(output_image);
-//    }
+    if(print_output) 
+        printf("encrypted text: ");
+        print_data(out, data_length);
 
     /* Clean and free device object */
     clean(AES_data, t);
@@ -72,7 +90,7 @@ int exec_benchmark_aes(unsigned int num_iter, unsigned int key_size, unsigned in
 int main(int argc, char **argv)
 {
 	int ret;
-	unsigned int num_iter=0, key_size=0, data_length=0;
+	unsigned int num_iter=1, key_size=-1, data_length=-1;
 	char *data_filepath = NULL; 
 	bool csv_mode = false, print_output = false;
 
@@ -84,7 +102,7 @@ int main(int argc, char **argv)
 	}
 
 	/* Execute benchmark */
-	ret = exec_benchmark_aes(num_iter, key_size, data_length, data_filepath);
+	ret = exec_benchmark_aes(num_iter, key_size, data_length, data_filepath, csv_mode, print_output);
 	if(ret != EXIT_SUCCESS) {
 		return ret;
 	}

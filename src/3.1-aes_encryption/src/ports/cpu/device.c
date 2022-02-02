@@ -38,7 +38,7 @@ bool device_memory_init(
 {	
 	/* key configuration values initialization */
     AES_data->key = (AES_key_t*) malloc(sizeof(AES_key_t));
-	AES_data->key->size = AES_KEY128;
+	AES_data->key->size = (AES_keysize_t) key_size;
 	switch(key_size) {
 		case AES_KEY128: AES_data->key->Nk = 4; AES_data->key->Nr = 10; break;
 		case AES_KEY192: AES_data->key->Nk = 6; AES_data->key->Nr = 12; break;
@@ -74,7 +74,7 @@ void copy_memory_to_device(
 	)
 {
     /* initialize key value */
-    memcpy(AES_data->key->value, input_key, sizeof(uint8_t)*AES_data->key->size);
+    memcpy(AES_data->key->value, input_key, sizeof(uint8_t)*AES_data->key->size/8);
     /* initialize input text */
     memcpy(AES_data->input_text, input_text, sizeof(uint8_t)*AES_data->data_length);
     /* initialize sbox */
