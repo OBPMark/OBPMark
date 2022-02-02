@@ -33,7 +33,8 @@ void init(
 bool device_memory_init(
 	AES_data_t *AES_data,
     unsigned int key_size,
-    unsigned int data_size
+    unsigned int data_size,
+    unsigned int num_iter
 	)
 {	
 	/* key configuration values initialization */
@@ -52,6 +53,7 @@ bool device_memory_init(
     AES_data->input_text = (uint8_t*) malloc(sizeof(uint8_t)*data_size);
     AES_data->encrypted_text = (uint8_t*) malloc(sizeof(uint8_t)*data_size);
     AES_data->data_length = data_size;
+    AES_data->iterations = num_iter;
 
     /* allocate constant lookup tables */
     /* memory for sbox (256 uint8) */
@@ -89,17 +91,19 @@ void process_benchmark(
 	AES_time_t *t
 	)
 {    
-    int n_iter = AES_data->data_length/ (4*AES_data->key->Nb);
+    int n_blocks = AES_data->data_length/ (4*AES_data->key->Nb);
     T_START(t->t_test);
-    T_START_VERBOSE(t->t_key_expand);
-    AES_KeyExpansion(AES_data->key, (uint32_t*) AES_data->expanded_key, AES_data->sbox, AES_data->rcon);
-    T_STOP_VERBOSE(t->t_key_expand);
-    T_START_VERBOSE(t->t_encrypt);
-    //TODO time each encrytp block
-    for(int i = 0; i < n_iter; i++){
-        AES_encrypt(AES_data, t, i);
+    for (int i = 0; i < AES_data->iterations; i++){
+        T_START_VERBOSE(t->t_key_expand);
+        AES_KeyExpansion(AES_data->key, (uint32_t*) AES_data->expanded_key, AES_data->sbox, AES_data->rcon);
+        T_STOP_VERBOSE(t->t_key_expand);
+        T_START_VERBOSE(t->t_encrypt);
+        //TODO time each encrytp block
+        for(int b = 0; b < n_blocks; b++){
+            AES_encrypt(AES_data, t, b);
+        }
+        T_STOP_VERBOSE(t->t_encrypt);
     }
-    T_STOP_VERBOSE(t->t_encrypt);
     T_STOP(t->t_test);
 }
 

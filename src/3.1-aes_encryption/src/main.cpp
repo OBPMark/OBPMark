@@ -66,7 +66,7 @@ int exec_benchmark_aes(unsigned int num_iter, unsigned int key_size, unsigned in
     init(AES_data, t, device);
 
     /* Initialize memory on the device and copy data */
-    device_memory_init(AES_data, key_size, data_length);
+    device_memory_init(AES_data, key_size, data_length, num_iter);
     copy_memory_to_device(AES_data, key, input, sbox, rcon);
 
     /* Run the benchmark, by processing the full frame list */

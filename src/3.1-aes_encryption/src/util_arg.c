@@ -61,5 +61,11 @@ int arguments_handler(int argc, char **argv, unsigned int *num_iter, unsigned in
 			return ARG_ERROR;
 	}
 
+	if(*num_iter < 1){
+			printf("error: num_iter must be equal or greater than 1\n");
+			print_usage(argv[0]);
+			return ARG_ERROR;
+	}
+
 	return ARG_SUCCESS;
 }

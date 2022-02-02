@@ -165,10 +165,10 @@ void AES_encrypt_state(STATES_PARAM, NB_PARAM, SBOX_PARAM, ROUNDKEY_PARAM, unsig
 
 /* Public functions */
 
-void AES_encrypt(AES_data_t *AES_data, AES_time_t *t, int iteration)
+void AES_encrypt(AES_data_t *AES_data, AES_time_t *t, int block)
 {
-    uint8_t *initial_state = AES_data->input_text+iteration*16;
-    uint8_t *final_state = AES_data->encrypted_text+iteration*16;
+    uint8_t *initial_state = AES_data->input_text+block*16;
+    uint8_t *final_state = AES_data->encrypted_text+block*16;
 
     /* Operations per state */
     AES_encrypt_state((uint8_t (*)[4]) initial_state, (uint8_t (*)[4]) final_state, AES_data->key->Nb, AES_data->sbox, AES_data->expanded_key, AES_data->key->Nr);
