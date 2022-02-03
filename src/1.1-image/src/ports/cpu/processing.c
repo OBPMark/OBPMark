@@ -47,24 +47,6 @@ void proc_image_frame(image_data_t *p, image_time_t *t, frame16_t *frame, unsign
 
 }
 
-/*void proc_image_all(image_data_t *p, image_time_t *t)
-{
-	unsigned int frame_i;
-	
-	/* Loop through each frames and perform pre-processing. *//*
-	T_START(t->t_test);
-	for(frame_i=0; frame_i<p->num_frames; frame_i++)
-	{
-		T_START(t->t_frame[frame_i]);
-		proc_image_frame(p, t, &p->frames[frame_i], frame_i);
-		T_STOP(t->t_frame[frame_i]);
-
-		// FIXME radiation correction frame handling to be implemented
-
-	}
-	T_STOP(t->t_test);
-}*/
-
 
 /* Kernel functions */
 

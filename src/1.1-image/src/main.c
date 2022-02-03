@@ -1,7 +1,7 @@
 /**
  * \file main.c 
  * \brief Benchmark #1.1 benchmark main file.
- * \author Ivan Rodriguez (BSC)
+ * \author Ivan Rodriguez-Ferrandez (BSC)
  */
 // FIXME copy top comment+license from old code 
 // FIXME add license to all files 
@@ -21,13 +21,13 @@ void print_output_result(frame32_t *output_image)
 	unsigned int w_position;
 
 	/* Print output */
-	for(h_position=0; h_position < output_image->h/2; h_position++)
+	for(h_position=0; h_position < output_image->h; h_position++)
 	{
 		
-		for(w_position=0; w_position < output_image->w/2; w_position++)
+		for(w_position=0; w_position < output_image->w; w_position++)
 		{
 			//FIXME chaneg to the 1D and 2D version
-			printf("%hu, ", output_image->f[(h_position * (output_image->h/2) + w_position)]);
+			printf("%hu, ", output_image->f[(h_position * (output_image->h) + w_position)]);
 		}
 		printf("\n");
 	}
@@ -68,7 +68,7 @@ void init_benchmark(
 	copy_memory_to_device(image_data, t, input_frames, offset_map, gain_map, bad_pixel_map);
 
 	/* Run the benchmark, by processing the full frame list */
-	process_benchmark(image_data,t );
+	process_benchmark(image_data,t, input_frames, w_size, h_size);
 
 	/* Copy data back from device */
 	copy_memory_to_host(image_data, t, output_image);
@@ -141,6 +141,9 @@ int main(int argc, char **argv)
 	
 	// FIXME create 2D memory reservation
 	output_image->f = (uint32_t*)malloc(mem_size_reduction_image);
+	output_image->h = w_size/2;
+	output_image->w = h_size/2;
+
 
 	/* Allocate memory for calibration and correction data */
 	// FIXME create 2D memory reservation

@@ -8,11 +8,8 @@
 // FIXME ********** THIS FUNCTION NEEDS TO BE REPLACED WITH THE EXACT SAME SCRIPT AS IN THE GENERATION OF THE VERIFICATION DATA ***************
 // FIXME 
 
-#include "obpmark.h"
+#include "util_data_rand.h"
 
-#include "benchmark.h"
-#
-#include "device.h"
 
 #define BENCHMARK_RAND_SEED	21121993
 

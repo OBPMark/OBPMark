@@ -1,7 +1,7 @@
 /**
  * \file util_arg.c
  * \brief Command line argument util for Benchmark #1.1
- * \author Ivan Rodriguez (BSC)
+ * \author Ivan Rodriguez-Ferrandez (BSC)
  */
 #include "util_arg.h"
 

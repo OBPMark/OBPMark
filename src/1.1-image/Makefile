@@ -122,13 +122,13 @@ opencl: main_opencl
 opencl_conf:
 	mkdir -p $(OPENCL_TARGET)
 
-opencl_processing.o: $(OPENCL_SRC)/processing.c
+opencl_device.o: opencl_conf $(OPENCL_SRC)/device.c
 	/bin/bash $(CONFIG_PATH)/CLHT.sh
-	$(CC) $(OPFLAGS) -DOPENCL -c $(OPENCL_SRC)/processing.c  -o $(OPENCL_TARGET)/opencl_processing.o
+	$(CC) -DOPENCL $(CFLAGS) -c $(OPENCL_SRC)/device.c  -o $(OPENCL_TARGET)/device.o $(OPFLAGS)
 
-main_opencl: opencl_processing.o
+main_opencl: opencl_conf cpu_util_data_rand.o cpu_util_arg.o opencl_device.o
 	mkdir -p $(BIN_PATH) 
-	$(CC) $(CFLAGS) $(OPFLAGS) $(SRC_FOLDER)/main.c  -DOPENCL $(OPENCL_TARGET)/opencl_processing.o -o $(OPENCL_EXEC)
+	$(CC) -DOPENCL $(CFLAGS) $(SRC_FOLDER)/main.c  $(OPENCL_TARGET)/device.o $(SEQ_TARGET)/cpu_util_data_rand.o $(SEQ_TARGET)/cpu_util_arg.o  -o $(OPENCL_EXEC)  $(OPFLAGS)
 
 ###################################### CUDA ##################################
 # Shortcuts
@@ -143,12 +143,15 @@ cuda: main_cuda
 cuda_conf:
 	mkdir -p $(CUDA_TARGET)
 
-cuda_processing.o: cuda_conf $(CUDA_SRC)/processing.cu
-	$(NVCC) $(NVCCFLAGS) -DCUDA -c $(CUDA_SRC)/processing.cu  -o $(CUDA_TARGET)/cuda_processing.o
+cuda_device.o: cuda_conf $(CUDA_SRC)/device.cu
+	$(NVCC) $(NVCCFLAGS) $(CUFLAGS) -DCUDA -c $(CUDA_SRC)/device.cu -o $(CUDA_TARGET)/cuda_device.o
 
-main_cuda: cuda_conf cuda_processing.o
+cuda_processing.o: cuda_conf $(CUDA_SRC)/processing.cu
+	$(NVCC)  $(NVCCFLAGS) $(CUFLAGS) -DCUDA -c $(CUDA_SRC)/processing.cu  -o $(CUDA_TARGET)/cuda_processing.o
+
+main_cuda: cuda_conf cpu_util_data_rand.o cpu_util_arg.o  cuda_device.o cuda_processing.o 
 	mkdir -p $(BIN_PATH) 
-	$(CC) $(CFLAGS) $(CUFLAGS) $(SRC_FOLDER)/main.c -DCUDA $(CUDA_TARGET)/cuda_processing.o -o $(CUDA_EXEC)
+	$(CC)  -DCUDA $(SRC_FOLDER)/main.c  $(CUDA_TARGET)/cuda_device.o $(CUDA_TARGET)/cuda_processing.o  $(SEQ_TARGET)/cpu_util_data_rand.o $(SEQ_TARGET)/cpu_util_arg.o -o $(CUDA_EXEC) $(CFLAGS) $(CUFLAGS)
 
 ###################################### HIP ###################################
 # Shortcuts

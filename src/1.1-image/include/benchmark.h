@@ -14,6 +14,18 @@
 #include <string>
 #include <cstring>
 
+/* Device libraries */
+#ifdef CUDA
+#include <cuda_runtime.h>
+#elif OPENCL
+/* OPENCL version */
+#include <CL/cl.hpp>
+#elif OPENMP
+/* OPENMP version */
+#elif HIP
+#else
+#endif
+
 /* Defines */
 
 /* Frames defines */
@@ -29,7 +41,7 @@
 /* Device defines */
 #ifdef CUDA
 #define DEVICESELECTED		0
-#define BLOCK_SIZE_PLANE 	256
+#define BLOCK_SIZE_PLANE 	256 
 #define BLOCK_SIZE 		16
 
 #elif OPENCL

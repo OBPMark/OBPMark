@@ -14,7 +14,8 @@
 #include "obpmark.h"
 
 #include "benchmark.h"
-#include "device.h"
+
+#include "obpmark_image.h"
 
 #define BENCHMARK_RAND_SEED	21121993
 

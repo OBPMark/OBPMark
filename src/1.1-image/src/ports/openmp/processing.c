@@ -1,7 +1,7 @@
 /**
  * \file processing.c
  * \brief Benchmark #1.1 OpenMP implementation
- * \author Ivan Rodriguez (BSC)
+ * \author Ivan Rodriguez-Ferrandez (BSC)
  */ 
 #include "benchmark.h"
 #include "benchmark_openmp.h"

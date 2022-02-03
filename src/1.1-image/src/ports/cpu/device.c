@@ -1,7 +1,7 @@
 /**
  * \file device.c
  * \brief Benchmark #1.1 CPU version (sequential) device initialization. 
- * \author Ivan Rodriguez (BSC)
+ * \author Ivan Rodriguez-Ferrandez (BSC)
  */
 #include "device.h"
 #include "processing.h"
@@ -111,10 +111,15 @@ void copy_memory_to_device(
 
 void process_benchmark(
 	image_data_t *image_data,
-	image_time_t *t
+	image_time_t *t,
+	frame16_t *input_frames,
+	unsigned int width,
+    unsigned int height
 	)
 {    
     
+	/* input frame, width and height is not use in the sequential version */
+
     unsigned int frame_i;
 	static unsigned int offset_neighbours = 2;
 	
@@ -125,7 +130,7 @@ void process_benchmark(
 		// FIXME  Verify that the new format for the timing is correct
 		
 		T_START(t->t_frame[frame_i]);
-		/* First start the preparation of the frame, frame_i + 2, to be ready for the radiation scrubbing. */
+		/*  Start the preparation of the frame, frame_i + 2, to be ready for the radiation scrubbing. */
 		prepare_image_frame(image_data, t, &image_data->frames[frame_i + 2], frame_i + 2);
 		/* Then compute the frame_i using the already calculate data from frame_i -2, frame_i -1, frame_i + 1 and frame_i + 2 */
 		proc_image_frame(image_data, t, &image_data->frames[frame_i], frame_i);

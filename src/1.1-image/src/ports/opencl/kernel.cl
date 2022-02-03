@@ -1,80 +1,137 @@
 #htvar kernel_code
-void kernel image_offset_correlation_gain_correction(global const int *image_input,global const int *correlation_table,global const int *gain_correlation_map, global int *processing_image, const int size_image)
-{   
+
+void kernel
+f_offset(
+    global uint16_t *frame,
+    global const uint16_t offsets,
+    const int size
+)
+{
     unsigned int x = get_global_id(0);	
-    if (x < size_image)
+    if (x < size)
     {
-        processing_image[x] =(image_input[x] - correlation_table[x]) * gain_correlation_map[x];
+        frame[x] = frame[x] - offsets[x];
     }
 }
-void kernel bad_pixel_correlation(global int *processing_image,global int *processing_image_error_free, global const bool *bad_pixel_map, const unsigned int w_size ,const unsigned int h_size)
-{
-    unsigned int x =  get_global_id(0);
-    unsigned int y =  get_global_id(1);
 
-        if (x < w_size && y < h_size )
+void kernel
+f_mask_replace(
+    global uint16_t *frame,
+    global const uint16_t *mask,
+    const unsigned int width,
+    const unsigned int height
+    )
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+    const int kernel_rad = 1;
+    unsigned int n_sum = 0;
+    uint32_t sum = 0;
+
+    if (x < width && y < height)
     {
-        if (bad_pixel_map[y * h_size + x])
+        if (mask[y* width + x] != 0)
         {
-            if (x == 0 && y == 0)
-            {
-                // TOP left
-                processing_image_error_free[y * h_size + x ] = (processing_image[y * h_size +  (x +1)] + processing_image[(y +1) * h_size +  (x +1) ] + processing_image[(y +1) * h_size + x  ])/3;
-            }
-            else if (x == 0 && y == h_size)
-            {
-                // Top right
-                processing_image_error_free[y * h_size + x] = (processing_image[y * h_size +  (x -1)] + processing_image[(y -1) * h_size +  (x -1)] + processing_image[(y -1) * h_size + x ])/3;
-            }
-            else if(x == w_size && y == 0)
-            {
-                //Bottom left
-                processing_image_error_free[y * h_size + x ] = (processing_image[(y -1) * h_size +  x] + processing_image[(y -1) * h_size +  (x + 1)] + processing_image[y * h_size +  (x +1)])/3;
-            }
-            else if (x == w_size && y == h_size)
-            {
-                // Bottom right
-                processing_image_error_free[y * h_size + x ] = (processing_image[(y -1) * h_size +  (x -1)] + processing_image[(y -1) * h_size +  x ] + processing_image[y * h_size +  (x -1)])/3;
-            }
-            else if (y == 0)
-            {
-                // Top Edge
-                processing_image_error_free[y * h_size + x ] = (processing_image[y * h_size +  (x -1) ] + processing_image[y * h_size +  (x +1) ] + processing_image[(y +1) * h_size +  x ])/3;
-            }
-            else if (x == 0)
-            {
-                //  Left Edge
-                processing_image_error_free[y * h_size + x] = (processing_image[(y -1) * h_size +  x ] + processing_image[y * h_size +  (x +1) ] + processing_image[(y +1) * h_size +  x ])/3;
-            }
-            else if (x == w_size)
-            {
-                //  Right Edge
-                processing_image_error_free[y * h_size + x ] = (processing_image[(y -1) * h_size +  x ] + processing_image[y * h_size +  (x -1) ] + processing_image[(y +1) * h_size +  x ])/3;
-            }
-            else if (y == h_size)
-            {
-                // Bottom Edge
-                processing_image_error_free[y * h_size + x ] = (processing_image[(y -1) * h_size +  x ] + processing_image[y * h_size +  (x -1) ] + processing_image[y * h_size +  (x +1)])/3;
-            }
-            else
-            {
-                // Standart Case
-                processing_image_error_free[y * h_size + x ] = (processing_image[y * h_size +  (x -1)] + processing_image[y * h_size +  (x -1) ] + processing_image[(y +1) * h_size +  x  ] +  processing_image[(y +1) * h_size +  x  ])/4;
-            }
-        }
-        else{
-            processing_image_error_free[y * h_size + x ] = processing_image[y * h_size + x];
-        }
+            for(int i = -kernel_rad; i <= kernel_rad; ++i) // loop over kernel_rad  -1 to 1 in kernel_size 3 
+                {
+                    for(int j = -kernel_rad; j <= kernel_rad; ++j){
+                        if (!(i + x < 0 || j + y < 0) || !( i + x > height - 1 || j + y > width - 1))
+                        {
+                            if ( mask[(y + j)* width + (x + i)] == 0)
+                            {
+                                sum += frame[(x + i)*width+(y + j)];
+                                ++n_sum;
+                            }
+                            
+                        }
+                        
+                    }
+                }
+                
+            frame[y * width + x] = (uint16_t)(n_sum == 0 ? 0 : sum / n_sum);
 
+        }
+        //printf("POS s x %d y %d value %d\n", threadIdx.x, threadIdx.y, frame[y * width + x]);
     }
 }
-void kernel spatial_binning_temporal_binning(global const int *processing_image,global int *output_image, const unsigned int w_size_half ,const unsigned int h_size_half)
+
+void kernel
+f_scrub(
+    global uint16_t *frame,
+    global uint16_t *frame_i_0,
+    global uint16_t *frame_i_1,
+    global uint16_t *frame_i_2,
+    global uint16_t *frame_i_3,
+    const unsigned int width,
+    const unsigned int height
+    )
 {
-    unsigned int x =  get_global_id(0);
-    unsigned int y =  get_global_id(1);
-    if (x < w_size_half && y < h_size_half )
+    static unsigned int num_neighbour = 4;
+	
+	uint32_t sum;
+	uint32_t mean;
+	uint32_t thr;
+
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < width && y < height)
     {
-        output_image[y * h_size_half + x ] += processing_image[ (2*y)* (h_size_half*2) + (2 *x) ] + processing_image[(2*y)* (h_size_half*2) + (2 *(x+1))  ] + processing_image[(2*(y+1))* (h_size_half*2) + (2 *x) ] + processing_image[(2*(y+1))* (h_size_half*2) + (2 *(x+1)) ];
+        sum = frame_i_0[y * width + x] + frame_i_1[y * width + x] + frame_i_2[y * width + x] + frame_i_3[y * width + x];
+        /* Calculate mean and threshold */
+        mean = sum / (num_neighbour); 
+        thr = 2*mean; 
+        /* If above threshold, replace with mean of temporal neighbours */
+        if (frame[y * width + x] > thr)
+        {
+            frame[y * width + x] = (uint16_t)mean;
+        }
+    }
+
+}
+
+void kernel
+f_gain(
+    global uint16_t *frame,
+    global uint16_t *gains,
+    const unsigned int size
+    )
+{
+    int x = get_global_id(0);
+
+    if (x < size)
+    {
+        frame[x] = (uint16_t)((uint32_t)frame[x] * (uint32_t)gains[x] >> 16 );
     }
 }
+
+void kernel
+f_2x2_bin_coadd(
+    global uint16_t *frame,
+    global uint32_t *sum_frame,
+    const unsigned int width,
+    const unsigned int height,
+    const unsigned int lateral_stride
+    )
+{
+    const unsigned int stride = 2;
+    uint32_t sum = 0;
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+
+    if (i < width && j < height){
+        #pragma unroll
+        for(unsigned int x = 0; x < stride; ++x)
+        {
+            #pragma unroll
+            for(unsigned int y = 0; y < stride; ++y)
+            {
+                sum +=  frame[((j * stride) + x) * width + ((i*stride) +y)];
+                
+            }
+        }
+        sum_frame[j * lateral_stride + i ]= sum + sum_frame[j * lateral_stride + i ];
+    }
+}
+
 #htendvar

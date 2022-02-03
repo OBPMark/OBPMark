@@ -1,358 +1,279 @@
 /**
  * \file processing.c
- * \brief Benchmark #1.1 CUDA implementation.
- * \author Ivan Rodriguez (BSC)
+ * \brief Benchmark #1.1 CUDA kernel implementation.
+ * \author Ivan Rodriguez-Ferrandez (BSC)
  */
  #include "device.h"
  #include "processing.h"
-
+ #include "obpmark.h"
+ #include "obpmark_time.h"
+ 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // KERNELS
 ///////////////////////////////////////////////////////////////////////////////////////////////
-__global__ void
-image_offset_correlation_gain_correction(const int *image_input, const int *correlation_table, const int *gain_correlation_map,  int *processing_image, const int size_image)
-{
-    unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
-    if (x < size_image)
-    {
-        //processing_image[x] =image_input[x];
-        processing_image[x] =(image_input[x] - correlation_table[x]) * gain_correlation_map[x];
-    }
-}
-__global__ void
-bad_pixel_correlation(const int *processing_image, int * processing_image_error_free, const bool *bad_pixel_map, const unsigned int w_size ,const unsigned int h_size)
-{
-    unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
-    unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-    if (x < w_size && y < h_size )
+
+/*__global__
+void f_mask_replace_offset(
+	uint16_t *frame,
+	uint8_t *mask,
+    const uint16_t *offsets,
+    const unsigned int width,
+    const unsigned int height,
+    const int shared_size
+	)
+{
+    const int kernel_rad = 1;
+    unsigned int n_sum = 0;
+    uint32_t sum = 0;
+    int x0, y0;
+    extern __shared__ int data[];
+
+	int x = blockIdx.x * blockDim.x + threadIdx.x; // Should be unsigned int, but if I put unsigned I get a warning for checking against 0 in the if
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+	
+    if (x < width && y < height)
     {
-        if (bad_pixel_map[y * h_size + x])
+        // each thread load 4 values ,the corners
+        //TOP right corner
+        x0 = x - kernel_rad;
+        y0 = y - kernel_rad;
+        //printf("POS x %d y %d x0 %d y0 %d\n", threadIdx.x, threadIdx.y, x0, y0);
+        if ( x0 < 0 || y0 < 0 )
         {
-            if (x == 0 && y == 0)
-            {
-                // TOP left
-                processing_image_error_free[y * h_size + x ] = (processing_image[y * h_size +  (x +1)] + processing_image[(y +1) * h_size +  (x +1) ] + processing_image[(y +1) * h_size + x  ])/3;
-            }
-            else if (x == 0 && y == h_size)
-            {
-                // Top right
-                processing_image_error_free[y * h_size + x] = (processing_image[y * h_size +  (x -1)] + processing_image[(y -1) * h_size +  (x -1)] + processing_image[(y -1) * h_size + x ])/3;
-            }
-            else if(x == w_size && y == 0)
-            {
-                //Bottom left
-                processing_image_error_free[y * h_size + x ] = (processing_image[(y -1) * h_size +  x] + processing_image[(y -1) * h_size +  (x + 1)] + processing_image[y * h_size +  (x +1)])/3;
-            }
-            else if (x == w_size && y == h_size)
-            {
-                // Bottom right
-                processing_image_error_free[y * h_size + x ] = (processing_image[(y -1) * h_size +  (x -1)] + processing_image[(y -1) * h_size +  x ] + processing_image[y * h_size +  (x -1)])/3;
-            }
-            else if (y == 0)
-            {
-                // Top Edge
-                processing_image_error_free[y * h_size + x ] = (processing_image[y * h_size +  (x -1) ] + processing_image[y * h_size +  (x +1) ] + processing_image[(y +1) * h_size +  x ])/3;
-            }
-            else if (x == 0)
-            {
-                //  Left Edge
-                processing_image_error_free[y * h_size + x] = (processing_image[(y -1) * h_size +  x ] + processing_image[y * h_size +  (x +1) ] + processing_image[(y +1) * h_size +  x ])/3;
-            }
-            else if (x == w_size)
-            {
-                //  Right Edge
-                processing_image_error_free[y * h_size + x ] = (processing_image[(y -1) * h_size +  x ] + processing_image[y * h_size +  (x -1) ] + processing_image[(y +1) * h_size +  x ])/3;
-            }
-            else if (y == h_size)
-            {
-                // Bottom Edge
-                processing_image_error_free[y * h_size + x ] = (processing_image[(y -1) * h_size +  x ] + processing_image[y * h_size +  (x -1) ] + processing_image[y * h_size +  (x +1)])/3;
-            }
-            else
-            {
-                // Standart Case
-                processing_image_error_free[y * h_size + x ] = (processing_image[y * h_size +  (x -1)] + processing_image[y * h_size +  (x -1) ] + processing_image[(y +1) * h_size +  x  ] +  processing_image[(y +1) * h_size +  x  ])/4;
-            }
+            data[threadIdx.x * shared_size + threadIdx.y] = -1;
         }
-        else{
-            processing_image_error_free[y * h_size + x ] = processing_image[y * h_size + x];
+        else
+        {
+            //printf("POS x %d y %d x0 %d y0 %d, %d\n", threadIdx.x, threadIdx.y, x0, y0, frame[0]);
+            data[threadIdx.x * shared_size + threadIdx.y] = frame[y0 *width+x0] - offsets[y0 * width + x0];
+        } 
+            
+        //BOTTOM right corner
+        x0 = x + kernel_rad;
+        y0 = y - kernel_rad;
+        //printf("POS x %d y %d x0 %d y0 %d\n", threadIdx.x, threadIdx.y, x0, y0);
+        if ( x0 > height-1  || y0 < 0 )
+        {
+            data[(threadIdx.x + kernel_rad * 2) * shared_size + threadIdx.y] = -1;
         }
+        else
+        {
+            data[(threadIdx.x + kernel_rad * 2) * shared_size + threadIdx.y] = frame[y0 *width+x0] - offsets[y0 * width + x0];
+        } 
 
+        //TOP left corner
+        x0 = x - kernel_rad;
+        y0 = y + kernel_rad;
+        //printf("POS x %d y %d x0 %d y0 %d\n", threadIdx.x, threadIdx.y, x0, y0);
+        if ( x0 < 0  || y0 > width-1 )
+        {
+            data[threadIdx.x * shared_size + (threadIdx.y + kernel_rad * 2)] = -1;
+        }
+        else
+        {
+            data[threadIdx.x * shared_size + (threadIdx.y + kernel_rad * 2)] = frame[y0 *width+x0] - offsets[y0 * width + x0];
+        } 
+
+        //BOTTOM left corner
+        x0 = x + kernel_rad;
+        y0 = y + kernel_rad;
+        //printf("POS x %d y %d x0 %d y0 %d\n", threadIdx.x, threadIdx.y, x0, y0);
+        if ( x0 > height-1  || y0 > width-1 )
+        {
+            data[(threadIdx.x + kernel_rad * 2) * shared_size + (threadIdx.y + kernel_rad * 2)] = -1;
+        }
+        else
+        {
+            data[(threadIdx.x + kernel_rad * 2) * shared_size + (threadIdx.y + kernel_rad * 2)] = frame[y0 *width+x0] - offsets[y0 * width + x0];
+        } 
+        // finish loading data
+        __syncthreads();
+
+        unsigned int xa = kernel_rad + threadIdx.x;
+        unsigned int ya = kernel_rad + threadIdx.y;
+
+        if (mask[y* width + x] == 0)
+        {
+            // the pixel is valid store the valid data
+            frame[y* width + x] = (uint16_t)data[xa * shared_size +  ya];
+
+        }
+        else
+        {   
+            // the pixel is not valid
+            #pragma unroll
+            for(int i = -kernel_rad; i <= kernel_rad; ++i) // loop over kernel_rad  -1 to 1 in kernel_size 3 
+                {
+                    #pragma unroll
+                    for(int j = -kernel_rad; j <= kernel_rad; ++j)
+                    {   
+
+                        printf("POS s x %d y %d x0 %d y0 %d\n", threadIdx.x, threadIdx.y, (xa + i), (ya + j));
+                        if ( data[(xa + i) * shared_size +  (ya + j)] != -1 ) // check if the value is valid 
+                        {
+                            printf("POS x %d y %d x0 %d y0 %d\n", x, y, (x + j), (y + i));
+                            //if (mask[(y + i)* width + (x + j)] == 0) //  check if the value is not a bad pixel
+                            //{
+                                //sum += data[(xa + i) * shared_size +  (ya + j)];
+                                //n_sum++;
+                            //}
+                            
+                        }
+                        
+                    }
+                }
+                    
+            frame[y * width + x] = (uint16_t)(n_sum == 0 ? 0 : sum / n_sum);
+        }
+        
+    }
+		
+}*/
+
+__global__
+void f_offset(
+	uint16_t *frame,
+	const uint16_t *offsets,
+    const int size	
+	)
+{
+	unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (x < size)
+    {
+        frame[x] = frame[x] - offsets[x];
+        //printf("POS  x %d  value %d\n", x, frame[x]);
+    }
+
+}
+
+__global__
+void f_mask_replace(
+	uint16_t *frame,
+	const uint8_t *mask,
+    const unsigned int width,
+    const unsigned int height
+	)
+{
+
+    int x = blockIdx.x * blockDim.x + threadIdx.x; // Should be unsigned int, but if I put unsigned I get a warning for checking against 0 in the if
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    const int kernel_rad = 1;
+    unsigned int n_sum = 0;
+    uint32_t sum = 0;
+
+    if (x < width && y < height)
+    {
+        if (mask[y* width + x] != 0)
+        {
+            for(int i = -kernel_rad; i <= kernel_rad; ++i) // loop over kernel_rad  -1 to 1 in kernel_size 3 
+                {
+                    for(int j = -kernel_rad; j <= kernel_rad; ++j){
+                        if (!(i + x < 0 || j + y < 0) || !( i + x > height - 1 || j + y > width - 1))
+                        {
+                            if ( mask[(y + j)* width + (x + i)] == 0)
+                            {
+                                sum += frame[(x + i)*width+(y + j)];
+                                ++n_sum;
+                            }
+                            
+                        }
+                        
+                    }
+                }
+                
+            frame[y * width + x] = (uint16_t)(n_sum == 0 ? 0 : sum / n_sum);
+
+        }
+        //printf("POS s x %d y %d value %d\n", threadIdx.x, threadIdx.y, frame[y * width + x]);
     }
 }
-__global__ void
-spatial_binning_temporal_binning(const int *processing_image, int *output_image, const unsigned int w_size_half ,const unsigned int h_size_half)
+
+
+__global__
+void f_scrub(
+	uint16_t *frame,
+	uint16_t *frame_i_0,
+    uint16_t *frame_i_1,
+    uint16_t *frame_i_2,
+    uint16_t *frame_i_3,
+    const unsigned int width,
+    const unsigned int height
+	)
 {
+	static unsigned int num_neighbour = 4;
+	
+	uint32_t sum;
+	uint32_t mean;
+	uint32_t thr;
+
     unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
-    if (x < w_size_half && y < h_size_half )
+    if (x < width && y < height)
     {
-        output_image[y * h_size_half + x ] += processing_image[ (2*y)* (h_size_half*2) + (2 *x) ] + processing_image[(2*y)* (h_size_half*2) + (2 *(x+1))  ] + processing_image[(2*(y+1))* (h_size_half*2) + (2 *x) ] + processing_image[(2*(y+1))* (h_size_half*2) + (2 *(x+1)) ];
-    }
+        /* Generate scrubbing mask */
+        /* Sum temporal neighbours between -2 to + 2 without actual */ // FIXME unroll by 4
+        sum = frame_i_0[y * width + x] + frame_i_1[y * width + x] + frame_i_2[y * width + x] + frame_i_3[y * width + x];
+        //sum = fs[(y * width + x) + ((width * height) * frame_i_0)] + fs[(y * width + x) + ((width * height) * frame_i_1)] + fs[(y * width + x) + ((width * height) * frame_i_2)] + fs[(y * width + x) + ((width * height) * frame_i_3)];
+        //sum = fs[frame_i_0].f[y * width + x] + fs[frame_i_1].f[y * width + x] + fs[frame_1_2].f[y * width + x] + fs[frame_i_3].f[y * width + x];
+        /* Calculate mean and threshold */
+        mean = sum / (num_neighbour); 
+        thr = 2*mean; 
+        /* If above threshold, replace with mean of temporal neighbours */
+        if (frame[y * width + x] > thr)
+        {
+            frame[y * width + x] = (uint16_t)mean;
+        }
+    }		
+	
 }
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////
-// CUDA FUNCTIONS
-///////////////////////////////////////////////////////////////////////////////////////////////
-void init(
-	image_data_t *image_data,
-	image_time_t *t,
-	char *device_name
+__global__
+void f_gain(
+	uint16_t *frame,
+	uint16_t *gains,
+    const int size	
 	)
 {
-    init(image_data,t, 0,0, device_name);
+	unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (x < size)
+    {
+        frame[x] = (uint16_t)((uint32_t)frame[x] * (uint32_t)gains[x] >> 16 );
+    }
+
 }
 
-void init(
-	image_data_t *image_data,
-	image_time_t *t,
-	int platform,
-	int device,
-	char *device_name
+__global__
+void f_2x2_bin_coadd(
+	uint16_t *frame,
+	uint32_t *sum_frame,
+    const unsigned int width,
+    const unsigned int height,
+    const unsigned int lateral_stride
 	)
 {
-    cudaSetDevice(device);
-    cudaDeviceProp prop;
-    cudaGetDeviceProperties(&prop, device);
-    strcpy(device_name,prop.name);
-    // TODO verfy that these are the required events for timming
-    //event create 
-    t->start_test = new cudaEvent_t;
-    t->stop_test = new cudaEvent_t;
-    t->start_memory_copy_device = new cudaEvent_t;
-    t->stop_memory_copy_device = new cudaEvent_t;
-    t->start_memory_copy_host = new cudaEvent_t;
-    t->stop_memory_copy_host= new cudaEvent_t;
-    // create list of events
-    t->start_frame_list = new cudaEvent_t[image_data->num_frames];
-    t->stop_frame_list = new cudaEvent_t[image_data->num_frames];
-    t->start_frame_offset = new cudaEvent_t[image_data->num_frames];
-    t->stop_frame_offset = new cudaEvent_t[image_data->num_frames];
-    t->start_frame_badpixel = new cudaEvent_t[image_data->num_frames];
-    t->stop_frame_badpixel = new cudaEvent_t[image_data->num_frames];
-    t->start_frame_scrub = new cudaEvent_t[image_data->num_frames];
-    t->stop_frame_scrub = new cudaEvent_t[image_data->num_frames];
-    t->start_frame_gain = new cudaEvent_t[image_data->num_frames];
-    t->stop_frame_gain = new cudaEvent_t[image_data->num_frames];
-    t->start_frame_binning = new cudaEvent_t[image_data->num_frames];
-    t->stop_frame_binning = new cudaEvent_t[image_data->num_frames];
-    t->start_frame_coadd = new cudaEvent_t[image_data->num_frames];
-    t->stop_frame_coadd = new cudaEvent_t[image_data->num_frames];
-
-}
-bool device_memory_init(
-	image_data_t* image_data,
-	frame16_t* input_frames,
-	frame16_t* offset_map, 
-	frame8_t* bad_pixel_map, 
-	frame16_t* gain_map,
-	unsigned int w_size,
-	unsigned int h_size
-	)
-{	
-
-}
-
-bool device_memory_init(DeviceObject *device_object, unsigned int size_image, unsigned int size_reduction_image){
-    // Allocate input
-     cudaError_t err = cudaSuccess;
-     err = cudaMalloc((void **)&device_object->image_input, size_image * sizeof(int));
- 
-     if (err != cudaSuccess)
-     {
-         return false;
-     }
-     // Allocate procesing image 
-     err = cudaMalloc((void **)&device_object->processing_image, size_image * sizeof(int));
-     if (err != cudaSuccess)
-     {
-         return false;
-     }
-     err = cudaMalloc((void **)&device_object->processing_image_error_free, size_image * sizeof(int));
-     if (err != cudaSuccess)
-     {
-         return false;
-     }
-     err = cudaMalloc((void **)&device_object->image_output, size_reduction_image * sizeof(int));
-     if (err != cudaSuccess)
-     {
-         return false;
-     }
-     err = cudaMalloc((void **)&device_object->correlation_table, size_image * sizeof(int));
-     if (err != cudaSuccess)
-     {
-         return false;
-     }
-     err = cudaMalloc((void **)&device_object->gain_correlation_map, size_image * sizeof(int));
-     if (err != cudaSuccess)
-     {
-         return false;
-     }
-     err = cudaMalloc((void **)&device_object->bad_pixel_map, size_image * sizeof(bool));
-     if (err != cudaSuccess)
-     {
-         return false;
-     }
-     return true;
-}
-void copy_memory_to_device(DeviceObject *device_object, int* correlation_table, int* gain_correlation_map, bool* bad_pixel_map , unsigned int size_image){
-    cudaEventRecord(*device_object->start_memory_copy_device);
-    cudaError_t err = cudaMemcpy(device_object->correlation_table , correlation_table , sizeof(int) * size_image, cudaMemcpyHostToDevice);
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to copy vector correlation_table from host to device (error code %s)!\n", cudaGetErrorString(err));
-        return;
-    }
-    err = cudaMemcpy(device_object->gain_correlation_map , gain_correlation_map , sizeof(int) * size_image, cudaMemcpyHostToDevice);
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to copy vector gain_correlation_map from host to device (error code %s)!\n", cudaGetErrorString(err));
-        return;
-    }
-    err = cudaMemcpy(device_object->bad_pixel_map , bad_pixel_map , sizeof(bool) * size_image, cudaMemcpyHostToDevice);
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to copy vector bad_pixel_map from host to device (error code %s)!\n", cudaGetErrorString(err));
-        return;
-    }
-    cudaEventRecord(*device_object->stop_memory_copy_device);
-}
-void copy_frame_to_device(DeviceObject *device_object, int* input_data, unsigned int size_image, unsigned int frame){
-    // record time
-    cudaError_t err = cudaMemcpy(device_object->image_input , input_data + (frame * size_image), sizeof(int) * size_image, cudaMemcpyHostToDevice);
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to copy vector input from host to device (error code %s)!\n", cudaGetErrorString(err));
-        return;
-    }
-    // record time
-}
-
-void process_full_frame_list (DeviceObject *device_object,int* input_frames,unsigned int frames, unsigned int size_frame,unsigned int w_size, unsigned int h_size){
-    cudaEventRecord(*device_object->start);
-    for (unsigned int frame = 0; frame < frames; ++frame )
-    {
-        // copy image
-        copy_frame_to_device(device_object, input_frames, size_frame, frame);
-        // process image
-        process_image(device_object, w_size, h_size, frame);
-    }
-    cudaDeviceSynchronize();
-    cudaEventRecord(*device_object->stop);
-}
-
-void process_image(DeviceObject *device_object, unsigned int w_size, unsigned int h_size, unsigned int frame){
-    unsigned int size_image = w_size * h_size;
-    
-    // image offset correlation Gain correction
-    dim3 dimBlock, dimGrid;
-    dimBlock = dim3(BLOCK_SIZE_PLANE);
-    dimGrid = dim3(ceil(float(size_image)/dimBlock.x));
-    image_offset_correlation_gain_correction<<<dimGrid, dimBlock>>>(device_object->image_input, device_object->correlation_table,device_object->gain_correlation_map,device_object->processing_image,size_image);
-    // Bad pixel correction
-    dimBlock = dim3(BLOCK_SIZE, BLOCK_SIZE);
-    dimGrid = dim3(ceil(float(w_size)/dimBlock.x), ceil(float(h_size)/dimBlock.y));
-    bad_pixel_correlation<<<dimGrid, dimBlock>>>(device_object->processing_image, device_object->processing_image_error_free,device_object->bad_pixel_map,w_size,h_size);
-    // spatial Binning Temporal Binning
-    dimBlock = dim3(BLOCK_SIZE, BLOCK_SIZE);
-    dimGrid = dim3(ceil(float((w_size)/2)/dimBlock.x), ceil(float((h_size)/2)/dimBlock.y));
-    spatial_binning_temporal_binning<<<dimGrid, dimBlock>>>(device_object->processing_image_error_free,device_object->image_output,w_size/2,h_size/2);
-
-}
-
-
-void copy_memory_to_host(DeviceObject *device_object, int* output_image, unsigned int size_image){
-    cudaEventRecord(*device_object->start_memory_copy_host);
-    //cudaMemcpy(output_image, device_object->processing_image_error_free, size_image * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy(output_image, device_object->image_output, size_image * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaEventRecord(*device_object->stop_memory_copy_host);
-}
-
-void get_elapsed_time(DeviceObject *device_object, bool csv_format){
-    cudaEventSynchronize(*device_object->stop_memory_copy_host);
-    float milliseconds_h_d = 0, milliseconds = 0, milliseconds_d_h = 0;
-    // memory transfer time host-device
-    cudaEventElapsedTime(&milliseconds_h_d, *device_object->start_memory_copy_device, *device_object->stop_memory_copy_device);
-    // kernel time
-    cudaEventElapsedTime(&milliseconds, *device_object->start, *device_object->stop);
-    //  memory transfer time device-host
-    cudaEventElapsedTime(&milliseconds_d_h, *device_object->start_memory_copy_host, *device_object->stop_memory_copy_host);
-    
-    if (csv_format){
-         printf("%.10f;%.10f;%.10f;\n", milliseconds_h_d,milliseconds,milliseconds_d_h);
-    }else{
-         printf("Elapsed time Host->Device: %.10f miliseconds\n", milliseconds_h_d);
-         printf("Elapsed time kernel: %.10f miliseconds\n", milliseconds);
-         printf("Elapsed time Device->Host: %.10f miliseconds\n", milliseconds_d_h);
-    }
-}
-
-
-
-void clean(DeviceObject *device_object){
-    cudaError_t err = cudaSuccess;
-
-    err = cudaFree(device_object->image_input);
-
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to free device vector image_input (error code %s)!\n", cudaGetErrorString(err));
-        return;
-    }
-    
-    err = cudaFree(device_object->processing_image);
+    const unsigned int stride = 2;
+    uint32_t sum = 0;
     
 
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to free device vector processing_image (error code %s)!\n", cudaGetErrorString(err));
-        return;
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int j = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (i < width && j < height){
+        #pragma unroll
+        for(unsigned int x = 0; x < stride; ++x)
+        {
+            #pragma unroll
+            for(unsigned int y = 0; y < stride; ++y)
+            {
+                sum +=  frame[((j * stride) + x) * width + ((i*stride) +y)];
+                
+            }
+        }
+        sum_frame[j * lateral_stride + i ]= sum + sum_frame[j * lateral_stride + i ];
     }
-
-    err = cudaFree(device_object->processing_image_error_free);
-    
-
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to free device vector processing_image (error code %s)!\n", cudaGetErrorString(err));
-        return;
-    }
-    err = cudaFree(device_object->image_output);
-
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to free device vector image_output (error code %s)!\n", cudaGetErrorString(err));
-        return;
-    }
-    err = cudaFree(device_object->correlation_table);
-
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to free device vector correlation_table (error code %s)!\n", cudaGetErrorString(err));
-        return;
-    }
-    err = cudaFree(device_object->gain_correlation_map);
-
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to free device vector gain_correlation_map (error code %s)!\n", cudaGetErrorString(err));
-        return;
-    }
-    err = cudaFree(device_object->bad_pixel_map);
-
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to free device vector bad_pixel_map (error code %s)!\n", cudaGetErrorString(err));
-        return;
-    }
-
-    // delete events
-    delete device_object->start;
-    delete device_object->stop;
-    delete device_object->start_memory_copy_device;
-    delete device_object->stop_memory_copy_device;
-    delete device_object->start_memory_copy_host;
-    delete device_object->stop_memory_copy_host;
 }
+
+

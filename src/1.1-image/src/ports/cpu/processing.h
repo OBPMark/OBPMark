@@ -13,35 +13,6 @@
 #include "obpmark_image.h" 
 #include "obpmark_time.h"
 
-/*typedef struct {
-	frame16_t *frames;
-	unsigned int num_frames; 
-	unsigned int num_neigh; 
-
-	frame16_t offsets;
-	frame16_t gains; 
-	frame8_t bad_pixels;
-
-	frame8_t scrub_mask;
-
-	frame32_t binned_frame; 
-	frame32_t image;
-} image_data_t;*/
-
-/*typedef struct {
-	time_t t_test;
-	time_t *t_frame;
-
-#if (OBPMARK_TIMING > 1)
-	time_t *t_offset;
-	time_t *t_badpixel;
-	time_t *t_scrub;
-	time_t *t_gain;
-	time_t *t_binning;
-	time_t *t_coadd;
-#endif
-} image_time_t; */
-
 
 /** 
  * \brief Processing for a single frame. This fuction finish the processing of a single frame starting by step III Radiation Scrubbing.
