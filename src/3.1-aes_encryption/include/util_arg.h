@@ -21,7 +21,6 @@
 int arguments_handler(
 	int argc,
 	char **argv,
-	unsigned int *num_iter,
 	unsigned int *key_size,
 	unsigned int *data_length,
 	char **data_filepath,

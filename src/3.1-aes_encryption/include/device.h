@@ -43,7 +43,6 @@ struct AES_data_t
 	AES_key_t *key;
 	uint8_t *input_text;
 	size_t data_length;
-	unsigned int iterations;
 	uint8_t *expanded_key;
 	uint8_t *encrypted_text;
 	uint8_t *sbox;
@@ -91,8 +90,7 @@ void init(
 bool device_memory_init(
 	AES_data_t *AES_data,
     unsigned int key_size,
-    unsigned int data_size,
-    unsigned int num_iter
+    unsigned int data_size
 	);
 
 /**

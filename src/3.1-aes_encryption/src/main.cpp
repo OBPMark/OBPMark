@@ -35,7 +35,7 @@ void print_data(uint8_t data[], unsigned int data_size){
     printf("\n");
 }
 
-int exec_benchmark_aes(unsigned int num_iter, unsigned int key_size, unsigned int data_length, const char *data_filepath, bool csv_mode, bool print_output)
+int exec_benchmark_aes(unsigned int key_size, unsigned int data_length, const char *data_filepath, bool csv_mode, bool print_output)
 {
     uint8_t input[data_length];
     uint8_t key[key_size/8];
@@ -66,7 +66,7 @@ int exec_benchmark_aes(unsigned int num_iter, unsigned int key_size, unsigned in
     init(AES_data, t, device);
 
     /* Initialize memory on the device and copy data */
-    device_memory_init(AES_data, key_size, data_length, num_iter);
+    device_memory_init(AES_data, key_size, data_length);
     copy_memory_to_device(AES_data, key, input, sbox, rcon);
 
     /* Run the benchmark, by processing the full frame list */
@@ -90,19 +90,19 @@ int exec_benchmark_aes(unsigned int num_iter, unsigned int key_size, unsigned in
 int main(int argc, char **argv)
 {
 	int ret;
-	unsigned int num_iter=1, key_size=-1, data_length=-1;
+	unsigned int key_size=-1, data_length=-1;
 	char *data_filepath = NULL; 
 	bool csv_mode = false, print_output = false;
 
     
 	/* Command line arguments processing */
-	ret = arguments_handler(argc, argv, &num_iter, &key_size, &data_length, &data_filepath, &csv_mode, &print_output);
+	ret = arguments_handler(argc, argv, &key_size, &data_length, &data_filepath, &csv_mode, &print_output);
 	if(ret == ERROR_ARGUMENTS) {
 		return ERROR_ARGUMENTS;
 	}
 
 	/* Execute benchmark */
-	ret = exec_benchmark_aes(num_iter, key_size, data_length, data_filepath, csv_mode, print_output);
+	ret = exec_benchmark_aes(key_size, data_length, data_filepath, csv_mode, print_output);
 	if(ret != EXIT_SUCCESS) {
 		return ret;
 	}
