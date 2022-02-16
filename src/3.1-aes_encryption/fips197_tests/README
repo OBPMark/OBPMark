@@ -1,0 +1,4 @@
+This directory contains the verification tests shown in the Federal Information Processing Standards Publication 197 
+The same key and data files can be used for the three different configurations by adjusting the key size with -k
+
+For easier verification is recommended to have PRINT_CHAR set to 0
