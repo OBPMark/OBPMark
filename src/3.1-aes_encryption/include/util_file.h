@@ -15,6 +15,6 @@
 
 /* Functions */
 
-int get_file_data(const char *file, uint8_t *input_data, uint8_t *cypher_key, unsigned int data_length, unsigned int key_length);
+int get_file_data(const char *file, const char *key, uint8_t *input_data, uint8_t *cypher_key, unsigned int data_length, unsigned int key_length);
 
 #endif // UTIL_FILE_H_

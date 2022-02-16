@@ -35,7 +35,7 @@ void print_data(uint8_t data[], unsigned int data_size){
     printf("\n");
 }
 
-int exec_benchmark_aes(unsigned int key_size, unsigned int data_length, const char *data_filepath, bool csv_mode, bool print_output)
+int exec_benchmark_aes(unsigned int key_size, const char *key_filepath, unsigned int data_length, const char *data_filepath, bool csv_mode, bool print_output, bool print_input, bool silent)
 {
     uint8_t input[data_length];
     uint8_t key[key_size/8];
@@ -48,15 +48,15 @@ int exec_benchmark_aes(unsigned int key_size, unsigned int data_length, const ch
     AES_data_t *AES_data =  (AES_data_t*) malloc(sizeof(AES_data_t));
     char device[100] = "";
 
-    if(!csv_mode) printf("Using device: %s\n", device);
+    if(!csv_mode && !silent) printf("Using device: %s\n", device);
 
-    if(data_filepath==NULL) benchmark_gen_rand_data(input, key, data_length, key_size/8);
+    if(data_filepath==NULL || key_filepath==NULL) benchmark_gen_rand_data(input, key, data_length, key_size/8);
     else {
-        int error = get_file_data(data_filepath, input, key, data_length, key_size/8);
+        int error = get_file_data(data_filepath, key_filepath, input, key, data_length, key_size/8);
         if(error < 0) return error;
     }
 
-    if(print_output && data_filepath==NULL){
+    if(print_input){
         printf("cypher key: ");
         print_data(key, key_size/8);
         printf("input text: ");
@@ -76,10 +76,11 @@ int exec_benchmark_aes(unsigned int key_size, unsigned int data_length, const ch
     copy_memory_to_host(AES_data, out);
 
     /* Get benchmark times */
-    get_elapsed_time(t, 0);
-    if(print_output) 
-        printf("encrypted text: ");
+    if(!silent) get_elapsed_time(t, 0);
+    if(print_output) {
+        if(!silent) printf("encrypted text: ");
         print_data(out, data_length);
+    }
 
     /* Clean and free device object */
     clean(AES_data, t);
@@ -91,18 +92,19 @@ int main(int argc, char **argv)
 {
 	int ret;
 	unsigned int key_size=-1, data_length=-1;
+	char *key_filepath = NULL; 
 	char *data_filepath = NULL; 
-	bool csv_mode = false, print_output = false;
+	bool csv_mode = false, print_output = false, print_input = false, silent = false;
 
     
 	/* Command line arguments processing */
-	ret = arguments_handler(argc, argv, &key_size, &data_length, &data_filepath, &csv_mode, &print_output);
+	ret = arguments_handler(argc, argv, &key_size, &key_filepath, &data_length, &data_filepath, &csv_mode, &print_output, &print_input, &silent);
 	if(ret == ERROR_ARGUMENTS) {
 		return ERROR_ARGUMENTS;
 	}
 
 	/* Execute benchmark */
-	ret = exec_benchmark_aes(key_size, data_length, data_filepath, csv_mode, print_output);
+	ret = exec_benchmark_aes(key_size, key_filepath, data_length, data_filepath, csv_mode, print_output, print_input, silent);
 	if(ret != EXIT_SUCCESS) {
 		return ret;
 	}

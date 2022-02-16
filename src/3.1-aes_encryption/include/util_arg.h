@@ -19,14 +19,17 @@
  * \brief Command line argument handler.
  */
 int arguments_handler(
-	int argc,
-	char **argv,
-	unsigned int *key_size,
-	unsigned int *data_length,
-	char **data_filepath,
-	bool *csv_mode,
-	bool *print_output
-	);
+        int argc,
+        char **argv,
+        unsigned int *key_size,
+        char **key_filepath,
+        unsigned int *data_length,
+        char **data_filepath,
+        bool *csv_mode,
+        bool *print_output,
+        bool *print_input,
+        bool *silent
+        );
 
 /**
  * \brief Prints command line usage. 
