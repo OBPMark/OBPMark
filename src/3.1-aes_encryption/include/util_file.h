@@ -1,5 +1,5 @@
 /**
- * \file util_file.c
+ * \file util_file.h
  * \brief File reader for benchmark #3.1
  * \author Marc Solé Bonet (BSC)
  */

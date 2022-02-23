@@ -21,7 +21,7 @@ void print_usage(const char *exec_name)
 	//printf(" -c : print time in CSV\n");
 	printf(" -i : print random generated input\n");
 	printf(" -o : print output\n");
-	printf(" -s : does not print the time");
+	printf(" -s : does not print the time\n");
 }
 
 int arguments_handler(int argc, char **argv, unsigned int *key_size, char **key_filepath, unsigned int *data_length, char **data_filepath, bool *csv_mode, bool *print_output, bool *print_input, bool *silent)

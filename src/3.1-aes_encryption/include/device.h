@@ -15,12 +15,10 @@
 /* CUDA version */
 #elif OPENCL
 /* OPENCL version */
-#elif OPENMP
-/* OPENMP version */
 #elif HIP
 /* HIP version */
 #else
-/* Sequential C version */
+/* Sequential C version & OPENMP version */
 /**
  * \brief Allowed AES key lengths.
  */

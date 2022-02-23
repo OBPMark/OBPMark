@@ -12,7 +12,7 @@ BIN_PATH 	:= ../../$(BIN_FOLDER)/3.1-aes_encryption
 EXEC_PATH	:= $(BIN_PATH)/$(EXEC_NAME)
 
 # List of main and util files common for all builds
-MAIN_FILES := $(SRC_FOLDER)/main.cpp $(SRC_FOLDER)/util_arg.c $(SRC_FOLDER)/util_file.c
+MAIN_FILES := $(SRC_FOLDER)/main.cpp $(SRC_FOLDER)/util_arg.c $(SRC_FOLDER)/util_file.c $(SRC_FOLDER)/util_data_rand.c
 
 # - Sequential - 
 SEQ_TARGET	:= $(BUILD_PATH)/$(SEQ_FOLDER)
@@ -94,14 +94,17 @@ openmp: main_openmp
 
 openmp_conf:
 	mkdir -p $(OPENMP_TARGET)
-	export OMP_NUM_THREADS # FIXME this could probably be deleted, test first 
+	export OMP_NUM_THREADS=6
 
 openmp_processing.o: openmp_conf $(OPENMP_SRC)/processing.c
-	$(CC) $(CFLAGS) $(OMPFLAGS) -DOPENMP -c $(OPENMP_SRC)/processing.c  -o $(OPENMP_TARGET)/openmp_processing.o # FIXME -DOPENMP should be variable above, check others below as well
+	$(CC) $(CFLAGS) $(OMPFLAGS) -c $(OPENMP_SRC)/processing.c -o $(OPENMP_TARGET)/openmp_processing.o 
 
-main_openmp: openmp_conf openmp_processing.o
+openmp_device.o: openmp_conf $(OPENMP_SRC)/device.c
+	$(CC) $(CFLAGS) $(OMPFLAGS) -c $(OPENMP_SRC)/device.c -o $(OPENMP_TARGET)/openmp_device.o
+
+main_openmp: openmp_conf openmp_processing.o openmp_device.o
 	mkdir -p $(BIN_PATH) 
-	$(CC) $(CFLAGS) $(OMPFLAGS) $(SRC_FOLDER)/main.cpp  -DOPENMP $(OPENMP_TARGET)/openmp_processing.o -o $(OPENMP_EXEC)
+	$(CC) $(CFLAGS) $(OMPFLAGS) $(MAIN_FILES) $(OPENMP_TARGET)/openmp_device.o $(OPENMP_TARGET)/openmp_processing.o -o $(OPENMP_EXEC)
 
 ##################################### OPENCL #################################
 # Shortcuts

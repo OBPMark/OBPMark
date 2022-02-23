@@ -14,7 +14,7 @@
 #include "device.h"
 #include "util_arg.h"
 #include "util_file.h"
-#include "util_data_rand.c"
+#include "util_data_rand.h"
 
 #define EXIT_SUCCESS	0
 #define ERROR_ARGUMENTS -1
@@ -48,8 +48,6 @@ int exec_benchmark_aes(unsigned int key_size, const char *key_filepath, unsigned
     AES_data_t *AES_data =  (AES_data_t*) malloc(sizeof(AES_data_t));
     char device[100] = "";
 
-    if(!csv_mode && !silent) printf("Using device: %s\n", device);
-
     if(data_filepath==NULL || key_filepath==NULL) benchmark_gen_rand_data(input, key, data_length, key_size/8);
     else {
         int error = get_file_data(data_filepath, key_filepath, input, key, data_length, key_size/8);
@@ -64,6 +62,7 @@ int exec_benchmark_aes(unsigned int key_size, const char *key_filepath, unsigned
     }
 
     init(AES_data, t, device);
+    if(!csv_mode && !silent) printf("Using device: %s\n", device);
 
     /* Initialize memory on the device and copy data */
     device_memory_init(AES_data, key_size, data_length);
