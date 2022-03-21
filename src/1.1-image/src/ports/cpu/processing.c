@@ -78,6 +78,7 @@ void f_coadd(
 		for(y=0; y<sum_frame->h; y++)
 		{
 			PIXEL(sum_frame,x,y) += PIXEL(add_frame,x,y);
+			//PIXEL(sum_frame,x,y) = PIXEL(add_frame,x,y);
 		}
 	}
 }

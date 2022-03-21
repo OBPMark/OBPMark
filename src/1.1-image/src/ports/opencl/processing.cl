@@ -3,7 +3,7 @@
 void kernel
 f_offset(
     global uint16_t *frame,
-    global const uint16_t offsets,
+    global const uint16_t *offsets,
     const int size
 )
 {
@@ -58,33 +58,48 @@ f_mask_replace(
 void kernel
 f_scrub(
     global uint16_t *frame,
-    global uint16_t *frame_i_0,
-    global uint16_t *frame_i_1,
-    global uint16_t *frame_i_2,
-    global uint16_t *frame_i_3,
+    const unsigned int frame_i,
+    const unsigned int frame_i_0,
+    const unsigned int frame_i_1,
+    const unsigned int frame_i_2,
+    const unsigned int frame_i_3,
     const unsigned int width,
     const unsigned int height
     )
 {
-    static unsigned int num_neighbour = 4;
+    const unsigned int num_neighbour = 4;
 	
 	uint32_t sum;
 	uint32_t mean;
 	uint32_t thr;
+
+    uint16_t *frame_0;
+    uint16_t *frame_1;
+    uint16_t *frame_2;
+    uint16_t *frame_3;
+    uint16_t *frame_i_point;
 
     int x = get_global_id(0);
     int y = get_global_id(1);
 
     if (x < width && y < height)
     {
-        sum = frame_i_0[y * width + x] + frame_i_1[y * width + x] + frame_i_2[y * width + x] + frame_i_3[y * width + x];
+        /* Init Frames position */
+        frame_0 = frame + ((height * width) * frame_i_0);
+        frame_1 = frame + ((height * width) * frame_i_1);
+        frame_2 = frame + ((height * width) * frame_i_2);
+        frame_3 = frame + ((height * width) * frame_i_3);
+        frame_i_point = frame + ((height * width) * frame_i);
+
+        
+        sum = frame_0[y * width + x] + frame_1[y * width + x] + frame_2[y * width + x] + frame_3[y * width + x];
         /* Calculate mean and threshold */
         mean = sum / (num_neighbour); 
-        thr = 2*mean; 
+        //thr = 2*mean; 
         /* If above threshold, replace with mean of temporal neighbours */
         if (frame[y * width + x] > thr)
         {
-            frame[y * width + x] = (uint16_t)mean;
+            frame_i_point[y * width + x] = (uint16_t)mean;
         }
     }
 

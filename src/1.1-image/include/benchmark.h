@@ -20,6 +20,7 @@
 #elif OPENCL
 /* OPENCL version */
 #include <CL/cl.hpp>
+#include <iostream>
 #elif OPENMP
 /* OPENMP version */
 #elif HIP

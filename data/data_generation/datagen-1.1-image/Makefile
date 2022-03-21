@@ -29,19 +29,19 @@ OUTFILE = datagen-1.1-image
 ################################################################################
 
 datagen-1.1-image: $(OBJECTS)
-	$(CC) $(CFLAGS) -o $(OUTFILE) $(OBJECTS)
+	$(CC) $(CFLAGS) -DOBPMARK_FRAME_DATA_2D -o $(OUTFILE) $(OBJECTS)
 
 image_mem_util.o: $(COMMON_PATH)/image_mem_util.c $(INCLUDES)
-	$(CC) $(CFLAGS) -c $(COMMON_PATH)/image_mem_util.c
+	$(CC) $(CFLAGS) -DOBPMARK_FRAME_DATA_2D -c $(COMMON_PATH)/image_mem_util.c
 
 image_file_util.o: $(COMMON_PATH)/image_file_util.c $(INCLUDES)
-	$(CC) $(CFLAGS) -c $(COMMON_PATH)/image_file_util.c
+	$(CC) $(CFLAGS) -DOBPMARK_FRAME_DATA_2D -c $(COMMON_PATH)/image_file_util.c
 
 timing.o: $(COMMON_PATH)/timing.c $(INCLUDES)
-	$(CC) $(CFLAGS) -c $(COMMON_PATH)/timing.c
+	$(CC) $(CFLAGS) -DOBPMARK_FRAME_DATA_2D -c $(COMMON_PATH)/timing.c
 
 datagen-1.1-image.o: datagen-1.1-image.c $(INCLUDES)
-	$(CC) $(CFLAGS) -c datagen-1.1-image.c
+	$(CC) $(CFLAGS) -DOBPMARK_FRAME_DATA_2D -c datagen-1.1-image.c
 
 clean:
 	rm $(OUTFILE) $(OBJECTS)

@@ -142,7 +142,7 @@ void f_offset(
 
     if (x < size)
     {
-        frame[x] = frame[x] - offsets[x];
+        frame[x] -= offsets[x];
         //printf("POS  x %d  value %d\n", x, frame[x]);
     }
 
@@ -166,16 +166,17 @@ void f_mask_replace(
 
     if (x < width && y < height)
     {
-        if (mask[y* width + x] != 0)
+        if (mask[y* width + x] == 1)
         {
             for(int i = -kernel_rad; i <= kernel_rad; ++i) // loop over kernel_rad  -1 to 1 in kernel_size 3 
                 {
                     for(int j = -kernel_rad; j <= kernel_rad; ++j){
+                        
                         if (!(i + x < 0 || j + y < 0) || !( i + x > height - 1 || j + y > width - 1))
                         {
                             if ( mask[(y + j)* width + (x + i)] == 0)
                             {
-                                sum += frame[(x + i)*width+(y + j)];
+                                sum += frame[(y + j)*width+(x + i)]; 
                                 ++n_sum;
                             }
                             
@@ -268,7 +269,7 @@ void f_2x2_bin_coadd(
             #pragma unroll
             for(unsigned int y = 0; y < stride; ++y)
             {
-                sum +=  frame[((j * stride) + x) * width + ((i*stride) +y)];
+                sum +=  frame[((j * stride) + x) * (width * stride) + ((i*stride) +y)];
                 
             }
         }

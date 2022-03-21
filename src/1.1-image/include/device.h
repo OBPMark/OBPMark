@@ -58,11 +58,15 @@ typedef struct {
 } image_time_t; 
 #elif OPENCL
 /* OPENCL version */
+/* define the types to have the same as the cuda version */
+static const std::string type_def_kernel = "typedef short int uint16_t;\ntypedef unsigned char uint8_t;\ntypedef unsigned int uint32_t;\n";
 struct image_data_t
 {
 	cl::Context *context;
 	cl::CommandQueue *queue;
 	cl::Device default_device;
+	cl::Program* program;
+
 	cl::Buffer *frames;
 	unsigned int num_frames; 
 
@@ -82,8 +86,7 @@ typedef struct {
 	cl::Event *stop_test;
 	cl::Event *start_memory_copy_device;
 	cl::Event *stop_memory_copy_device;
-	cl::Event *start_memory_copy_host;
-	cl::Event *stop_memory_copy_host;
+	cl::Event *memory_copy_host;
 	cl::Event *start_frame_list;
 	cl::Event *stop_frame_list;
 	// detailed timing

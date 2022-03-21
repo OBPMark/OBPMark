@@ -134,7 +134,8 @@ void copy_memory_to_device(
 {
     cudaEventRecord(*t->start_memory_copy_device);
     // copy the initial frames to the device memory
-    for (int i = 0; i < FRAMEBUFFERSIZE; ++i)
+    const static uint8_t initial_frames = 5;
+    for (int i = 0; i < initial_frames; ++i)
     {
         cudaMemcpy(image_data->frames + ((input_frames[i].h * input_frames[i].w) * i) , input_frames[i].f,  input_frames[i].h * input_frames[i].w * sizeof(uint16_t) , cudaMemcpyHostToDevice);
     }

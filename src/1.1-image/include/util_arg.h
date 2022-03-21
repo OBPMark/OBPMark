@@ -26,7 +26,8 @@ int arguments_handler(
 	unsigned int *frames,
 	bool *csv_mode,
 	bool *print_output,
-	bool *full_time_output
+	bool *full_time_output,
+	bool *random_data
 	);
 
 /**

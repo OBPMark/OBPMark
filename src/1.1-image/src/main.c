@@ -14,6 +14,7 @@
 /* Optional utility headers */
 #include "util_arg.h"
 #include "util_data_rand.h"
+#include "util_data_files.h"
 
 void print_output_result(frame32_t *output_image)
 {
@@ -55,6 +56,7 @@ void init_benchmark(
 	/* Init number of frames */
 	image_data->num_frames = num_frames;
 	char device[100] = "";
+	char* output_file = (char*)"output.bin";
 
 	/* Device object init */
 	init(image_data, t, 0, DEVICESELECTED, device);
@@ -79,6 +81,12 @@ void init_benchmark(
 	{
 		print_output_result(output_image);
 	}
+	else 
+	{
+		// write the output image to a file call "output.bin"
+
+		write_frame32 (output_file, output_image);
+	}
 
 	/* Clean and free device object */
 	clean(image_data, t);
@@ -91,6 +99,9 @@ int main(int argc, char **argv)
 	bool csv_mode = false;
 	bool print_output = false;
 	bool full_time_output = false;
+	bool random_data = false;
+
+	int file_loading_output = 0;
 
 	unsigned int w_size = 0;
 	unsigned int h_size = 0; 
@@ -115,7 +126,7 @@ int main(int argc, char **argv)
 	frame16_t *gain_map;
 
 	/* Command line argument handling */
-	ret = arguments_handler(argc, argv, &w_size, &h_size, &num_processing_frames, &csv_mode, &print_output, &full_time_output);
+	ret = arguments_handler(argc, argv, &w_size, &h_size, &num_processing_frames, &csv_mode, &print_output, &full_time_output, &random_data);
 	if(ret == ARG_ERROR) {
 		exit(-1);
 	}
@@ -156,13 +167,29 @@ int main(int argc, char **argv)
 	gain_map = (frame16_t*)malloc(sizeof(frame16_t));
 	gain_map->f = (uint16_t*)malloc(mem_size_frame);
 
-	/* Generate random data */
-	benchmark_gen_rand_data(
+	if (random_data)
+	{
+		/* Generate random data */
+		benchmark_gen_rand_data(
 		input_frames, output_image,
 		offset_map, bad_pixel_map, gain_map,
 		w_size, h_size, num_frames
 		);
-
+	}
+	else
+	{
+		/* Load data from files */
+		
+		file_loading_output = load_data_from_files(
+		input_frames, output_image,
+		offset_map, bad_pixel_map, gain_map,
+		w_size, h_size, num_frames
+		);
+		if (file_loading_output == FILE_LOADING_ERROR)
+		{
+			exit(-1);
+		}
+	}
 	/* Init device and run test */
 	init_benchmark(
 		input_frames, output_image,

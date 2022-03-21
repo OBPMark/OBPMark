@@ -10,7 +10,6 @@
 
 #include "obpmark_image.h"
 
-int write_frame(char filename[], void **f, unsigned int width, unsigned int height, int data_width);
 int write_frame8(char filename[], frame8_t *frame);
 int write_frame16(char filename[], frame16_t *frame);
 int write_frame32(char filename[], frame32_t *frame);
@@ -18,5 +17,6 @@ int write_frame32(char filename[], frame32_t *frame);
 int read_frame8(char filename[], frame8_t *frame);
 int read_frame16(char filename[], frame16_t *frame);
 int read_frame32(char filename[], frame32_t *frame);
+
 
 #endif // IMAGE_FILE_UTIL_H_
