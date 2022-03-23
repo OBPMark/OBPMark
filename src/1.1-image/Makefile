@@ -15,12 +15,16 @@ EXEC_PATH	:= $(BIN_PATH)/$(EXEC_NAME)
 COMMON_PATH = ../../src/common
 
 _COMMON_INCLUDES = image_util.h image_mem_util.h image_file_util.h 
-_COMMON_SOURCES  = image_mem_util.c image_file_util.c
-COMMON_OBJECTS   = image_mem_util.o image_file_util.o
+_COMMON_SOURCES  = image_mem_util.c image_file_util.c util_data_rand.c util_arg.c util_data_files.c 
+COMMON_OBJECTS   = image_mem_util.o image_file_util.o util_data_rand.o util_arg.o util_data_files.o 
+COMMON_OBJECTS_PATH = $(COM_TARGET)/image_mem_util.o $(COM_TARGET)/image_file_util.o $(COM_TARGET)/util_data_rand.o $(COM_TARGET)/util_arg.o $(COM_TARGET)/util_data_files.o
 
 COMMON_INCLUDES = $(pathsubst %,$(COMMON_PATH)/%,$(_COMMON_INCLUDES))
 COMMON_SOURCES  = $(pathsubst %,$(COMMON_PATH)/%,$(_COMMON_SOURCES))
 ################################################################################
+
+# - Common -
+COM_TARGET	:= $(BUILD_PATH)/$(COMM_FOLDER)
 
 # - Sequential - 
 SEQ_TARGET	:= $(BUILD_PATH)/$(SEQ_FOLDER)
@@ -69,11 +73,23 @@ all: cpu openmp opencl cuda #hip
 #	@echo "error: must specify target: cpu, openmp, opencl, cuda, hip"
 
 ################################### COMMON ################################
-image_mem_util.o: $(COMMON_PATH)/image_mem_util.c $(INCLUDES)
-	$(CC) $(CFLAGS) -c $(COMMON_PATH)/image_mem_util.c
+common_conf:
+	mkdir -p $(COM_TARGET)
 
-image_file_util.o: $(COMMON_PATH)/image_file_util.c $(INCLUDES)
-	$(CC) $(CFLAGS) -c $(COMMON_PATH)/image_file_util.c
+image_mem_util.o: common_conf $(COMMON_PATH)/image_mem_util.c $(INCLUDES)
+	$(CC) $(CFLAGS) -c $(COMMON_PATH)/image_mem_util.c -o $(COM_TARGET)/image_mem_util.o
+
+image_file_util.o: common_conf $(COMMON_PATH)/image_file_util.c $(INCLUDES)
+	$(CC) $(CFLAGS) -c $(COMMON_PATH)/image_file_util.c -o $(COM_TARGET)/image_file_util.o
+
+util_data_rand.o: common_conf $(SRC_FOLDER)/util_data_rand.c
+	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/util_data_rand.c -o $(COM_TARGET)/util_data_rand.o
+
+util_arg.o: common_conf $(SRC_FOLDER)/util_arg.c
+	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/util_arg.c -o $(COM_TARGET)/util_arg.o
+
+util_data_files.o: common_conf $(SRC_FOLDER)/util_data_files.c
+	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/util_data_files.c -o $(COM_TARGET)/util_data_files.o
 
 ################################### SEQUENTIAL ################################
 # Shortcuts
@@ -87,32 +103,15 @@ cpu_conf:
 	mkdir -p $(SEQ_TARGET)
 
 # FIXME possible to define a list of sources and then generate the commands below from the list instead of having explicit definitions? 
-
-# FIXME not CPU specific, should have general build definition
-cpu_util_data_rand.o: cpu_conf $(SRC_FOLDER)/util_data_rand.c
-	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/util_data_rand.c -o $(SEQ_TARGET)/cpu_util_data_rand.o
-
-# FIXME not CPU specific, should have general build definition
-cpu_util_arg.o: cpu_conf $(SRC_FOLDER)/util_arg.c
-	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/util_arg.c -o $(SEQ_TARGET)/cpu_util_arg.o
-
-# FIXME not CPU specific, should have general build definition
-cpu_util_data_files.o: cpu_conf $(SRC_FOLDER)/util_data_files.c
-	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/util_data_files.c -o $(SEQ_TARGET)/cpu_util_data_files.o
-
-# FIXME not CPU specific, should have general build definition
-cpu_image_file_util.o: cpu_conf $(SRC_FOLDER)/image_file_util.c
-	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/image_file_util.c -o $(SEQ_TARGET)/cpu_image_file_util.o
-
 cpu_processing.o: cpu_conf $(SEQ_SRC)/processing.c
 	$(CC) $(CFLAGS) -c $(SEQ_SRC)/processing.c -o $(SEQ_TARGET)/cpu_processing.o
 
 cpu_device.o: cpu_conf $(SEQ_SRC)/device.c
 	$(CC) $(CFLAGS) -c $(SEQ_SRC)/device.c -o $(SEQ_TARGET)/cpu_device.o
 
-main_cpu: cpu_conf cpu_util_data_rand.o cpu_util_arg.o cpu_processing.o cpu_device.o cpu_util_data_files.o $(COMMON_OBJECTS)
+main_cpu: cpu_conf cpu_processing.o cpu_device.o  $(COMMON_OBJECTS)
 	mkdir -p $(BIN_PATH) 
-	$(CC) $(CFLAGS) $(SRC_FOLDER)/main.c $(SEQ_TARGET)/cpu_device.o $(SEQ_TARGET)/cpu_processing.o $(SEQ_TARGET)/cpu_util_data_rand.o $(SEQ_TARGET)/cpu_util_arg.o $(SEQ_TARGET)/cpu_util_data_files.o  $(COMMON_OBJECTS) -o $(SEQ_EXEC)
+	$(CC) $(CFLAGS) $(SRC_FOLDER)/main.c $(SEQ_TARGET)/cpu_device.o $(SEQ_TARGET)/cpu_processing.o  $(COMMON_OBJECTS_PATH) -o $(SEQ_EXEC)
 
 ##################################### OPENMP #################################
 # Shortcuts
@@ -152,9 +151,9 @@ opencl_device.o: opencl_conf $(OPENCL_SRC)/device.c
 	/bin/bash $(CONFIG_PATH)/CLHT.sh
 	$(CC) -DOPENCL $(CFLAGS) -c $(OPENCL_SRC)/device.c  -o $(OPENCL_TARGET)/device.o $(OPFLAGS)
 
-main_opencl: opencl_conf cpu_util_data_rand.o cpu_util_arg.o opencl_device.o
+main_opencl: opencl_conf  opencl_device.o $(COMMON_OBJECTS)
 	mkdir -p $(BIN_PATH) 
-	$(CC) -DOPENCL $(CFLAGS) $(SRC_FOLDER)/main.c  $(OPENCL_TARGET)/device.o $(SEQ_TARGET)/cpu_util_data_rand.o $(SEQ_TARGET)/cpu_util_arg.o  -o $(OPENCL_EXEC)  $(OPFLAGS)
+	$(CC) -DOPENCL $(CFLAGS) $(SRC_FOLDER)/main.c  $(OPENCL_TARGET)/device.o  $(COMMON_OBJECTS_PATH) -o $(OPENCL_EXEC)  $(OPFLAGS)
 
 ###################################### CUDA ##################################
 # Shortcuts
@@ -175,9 +174,9 @@ cuda_device.o: cuda_conf $(CUDA_SRC)/device.cu
 cuda_processing.o: cuda_conf $(CUDA_SRC)/processing.cu
 	$(NVCC)  $(NVCCFLAGS) $(CUFLAGS) -DCUDA -c $(CUDA_SRC)/processing.cu  -o $(CUDA_TARGET)/cuda_processing.o
 
-main_cuda: cuda_conf cpu_util_data_rand.o cpu_util_arg.o  cuda_device.o cuda_processing.o  cpu_util_data_files.o $(COMMON_OBJECTS)
+main_cuda: cuda_conf  cuda_device.o cuda_processing.o  $(COMMON_OBJECTS)
 	mkdir -p $(BIN_PATH) 
-	$(CC)  -DCUDA $(SRC_FOLDER)/main.c  $(CUDA_TARGET)/cuda_device.o $(CUDA_TARGET)/cuda_processing.o  $(SEQ_TARGET)/cpu_util_data_rand.o $(SEQ_TARGET)/cpu_util_arg.o $(SEQ_TARGET)/cpu_util_data_files.o  $(COMMON_OBJECTS) -o $(CUDA_EXEC) $(CFLAGS) $(CUFLAGS)
+	$(CC)  -DCUDA $(SRC_FOLDER)/main.c  $(CUDA_TARGET)/cuda_device.o $(CUDA_TARGET)/cuda_processing.o  $(COMMON_OBJECTS_PATH) -o $(CUDA_EXEC) $(CFLAGS) $(CUFLAGS)
 
 ###################################### HIP ###################################
 # Shortcuts
@@ -204,6 +203,7 @@ main_hip: hip_conf main.c lib_hip.o lib_cpu.o
 ##################################### CLEAN ##################################
 .PHONY: clean
 clean:
+	rm -f $(COM_TARGET)/*.o
 	rm -f $(SEQ_TARGET)/*.o
 	rm -f $(OPENMP_TARGET)/*.o
 	rm -f $(OPENCL_TARGET)/*.o

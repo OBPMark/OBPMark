@@ -172,8 +172,11 @@ void f_mask_replace(
                 {
                     for(int j = -kernel_rad; j <= kernel_rad; ++j){
                         
-                        if (!(i + x < 0 || j + y < 0) || !( i + x > height - 1 || j + y > width - 1))
+                       
+
+                        if (!((i + x < 0 || j + y < 0) || ( i + x > height - 1 || j + y > width - 1)))
                         {
+                            //printf("POS s x %d y %d value %d\n", y + j, x + i, (y + j)* width + (x + i));
                             if ( mask[(y + j)* width + (x + i)] == 0)
                             {
                                 sum += frame[(y + j)*width+(x + i)]; 

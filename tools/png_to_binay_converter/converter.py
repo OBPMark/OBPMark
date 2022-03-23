@@ -13,6 +13,8 @@ def arguments():
     parser.add_argument('-f', '--files', required=True , nargs='+', help='list of files to be converted')
     # add argument to select the bit depth of the bitfile
     parser.add_argument('-d', '--bit_depth', type=int, default=16, help='bit depth of the bitfile, default is 16')
+    # add brightness argument for the 32 bit bitfile
+    parser.add_argument('-b', '--brightness', type=int, default=0, help='brightness of the bitfile, default is 0, only used for 32 bit bitfile')
     args = parser.parse_args()
     return args
 
@@ -38,7 +40,7 @@ def png_to_bitfile(file):
     image_data.tofile(name + '.bin')
 
 
-def bitfile_to_png(file, bit_depth):
+def bitfile_to_png(file, bit_depth, brightness):
     # read the bitfile
     if bit_depth == 16:
         np_bit_depth = np.uint16 
@@ -54,6 +56,22 @@ def bitfile_to_png(file, bit_depth):
     name = file.split('/')[-1].split('.')[0]
     # add the output folder to the name
     name = 'output/' + name
+    # if bit_depth is 32 the image_data will be the square root of each elements of image_data
+    if bit_depth == 32:
+        # loop through each element of image_data
+        for i in range(len(image_data)):
+            # calculate the square root of each element
+            value = int(np.sqrt(image_data[i]))
+            value = value * brightness
+            # if the result is greater than 65535, set it to 65535
+            if value > 65535:
+                value = 65535
+            # if the result is less than 0, set it to 0
+            if value < 0:
+                value = 0
+            image_data[i] = value
+            
+            
     # create the image array when the image is a square with the square root of the length of the bitfile, each value is the average of the RGB values
     img = np.zeros((int(np.sqrt(len(image_data))), int(np.sqrt(len(image_data))), 3), dtype=np_bit_depth)
     # read each pixel
@@ -80,7 +98,7 @@ def main():
     elif args.conversion == 'b':
         # convert bitfile to png
         for file in args.files:
-            bitfile_to_png(file, args.bit_depth)
+            bitfile_to_png(file, args.bit_depth, args.brightness)
     else:
         print('Error: invalid conversion')
             

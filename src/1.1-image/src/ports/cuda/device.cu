@@ -249,7 +249,7 @@ void process_benchmark(
             }
             else if (pipe1_stream == cudaErrorIllegalAddress)
             {
-                printf("Error Illegal Access memory in the GPU\n");
+                printf("Error Illegal Access memory in the GPU Copy\n");
                 exit(-1);
             }
         }
@@ -294,7 +294,7 @@ void process_benchmark(
             }
             else if (pipe1_stream == cudaErrorIllegalAddress)
             {
-                printf("Error Illegal Access memory in the GPU\n");
+                printf("Error Illegal Access memory in the GPU Pipe 1\n");
                 exit(-1);
             }
         }
@@ -436,7 +436,7 @@ void process_benchmark(
             }
             else if (pipe1_stream == cudaErrorIllegalAddress)
             {
-                printf("Error Illegal Access memory in the GPU\n");
+                printf("Error Illegal Access memory in the GPU  Pipe 2\n");
                 exit(-1);
             }
         }

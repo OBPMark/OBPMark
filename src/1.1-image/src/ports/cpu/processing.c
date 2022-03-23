@@ -222,7 +222,7 @@ void f_2x2_bin(
 		y2 = 0;
 		for(y=0; y<frame->h; y+=2)
 		{
-			PIXEL(binned_frame,x2,y2)	= PIXEL(frame,x,y)+ PIXEL(frame,(x+1),y) + PIXEL(frame,x,(y+1))	+ PIXEL(frame,(x+1),(y+1));
+			PIXEL(binned_frame,x2,y2)	= PIXEL(frame,x,y) +  PIXEL(frame,(x+1),y) + PIXEL(frame,x,(y+1)) + PIXEL(frame,(x+1),(y+1));
 			++y2;
 		}
 		++x2;
