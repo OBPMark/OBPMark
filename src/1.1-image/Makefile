@@ -111,7 +111,7 @@ cpu_device.o: cpu_conf $(SEQ_SRC)/device.c
 
 main_cpu: cpu_conf cpu_processing.o cpu_device.o  $(COMMON_OBJECTS)
 	mkdir -p $(BIN_PATH) 
-	$(CC) $(CFLAGS) $(SRC_FOLDER)/main.c $(SEQ_TARGET)/cpu_device.o $(SEQ_TARGET)/cpu_processing.o  $(COMMON_OBJECTS_PATH) -o $(SEQ_EXEC)
+	$(CC) $(CFLAGS) $(SRC_FOLDER)/main.cpp $(SEQ_TARGET)/cpu_device.o $(SEQ_TARGET)/cpu_processing.o  $(COMMON_OBJECTS_PATH) -o $(SEQ_EXEC)
 
 ##################################### OPENMP #################################
 # Shortcuts
@@ -136,7 +136,7 @@ openmp_device.o: cpu_conf $(OPENMP_SRC)/device.c
 
 main_openmp: openmp_conf openmp_processing.o openmp_device.o $(COMMON_OBJECTS)
 	mkdir -p $(BIN_PATH) 
-	$(CC) $(CFLAGS) $(OMPFLAGS) -DOPENMP $(SRC_FOLDER)/main.c  $(OPENMP_TARGET)/openmp_processing.o $(OPENMP_TARGET)/openmp_device.o $(COMMON_OBJECTS_PATH) -o $(OPENMP_EXEC)
+	$(CC) $(CFLAGS) $(OMPFLAGS) -DOPENMP $(SRC_FOLDER)/main.cpp  $(OPENMP_TARGET)/openmp_processing.o $(OPENMP_TARGET)/openmp_device.o $(COMMON_OBJECTS_PATH) -o $(OPENMP_EXEC)
 
 ##################################### OPENCL #################################
 # Shortcuts
@@ -157,7 +157,7 @@ opencl_device.o: opencl_conf $(OPENCL_SRC)/device.c
 
 main_opencl: opencl_conf  opencl_device.o $(COMMON_OBJECTS)
 	mkdir -p $(BIN_PATH) 
-	$(CC) -DOPENCL $(CFLAGS) $(SRC_FOLDER)/main.c  $(OPENCL_TARGET)/device.o  $(COMMON_OBJECTS_PATH) -o $(OPENCL_EXEC)  $(OPFLAGS)
+	$(CC) -DOPENCL $(CFLAGS) $(SRC_FOLDER)/main.cpp  $(OPENCL_TARGET)/device.o  $(COMMON_OBJECTS_PATH) -o $(OPENCL_EXEC)  $(OPFLAGS)
 
 ###################################### CUDA ##################################
 # Shortcuts
@@ -180,7 +180,7 @@ cuda_processing.o: cuda_conf $(CUDA_SRC)/processing.cu
 
 main_cuda: cuda_conf  cuda_device.o cuda_processing.o  $(COMMON_OBJECTS)
 	mkdir -p $(BIN_PATH) 
-	$(CC)  -DCUDA $(SRC_FOLDER)/main.c  $(CUDA_TARGET)/cuda_device.o $(CUDA_TARGET)/cuda_processing.o  $(COMMON_OBJECTS_PATH) -o $(CUDA_EXEC) $(CFLAGS) $(CUFLAGS)
+	$(CC)  -DCUDA $(SRC_FOLDER)/main.cpp  $(CUDA_TARGET)/cuda_device.o $(CUDA_TARGET)/cuda_processing.o  $(COMMON_OBJECTS_PATH) -o $(CUDA_EXEC) $(CFLAGS) $(CUFLAGS)
 
 ###################################### HIP ###################################
 # Shortcuts
@@ -197,12 +197,15 @@ hip: main_hip
 hip_conf:
 	mkdir -p $(HIP_TARGET)
 
-lib_hip.o: hip_conf $(HIP_SRC)/lib_hip.cpp
-	$(HIP) $(CFLAGS) $(HIPFLAGS) -D$(DATATYPE) -DBLOCK_SIZE=$(BLOCKSIZE) -DHIP -c $(HIP_SRC)/lib_hip.cpp -o $(HIP_TARGET)/lib_hip.o
+hip_device.o: hip_conf $(HIP_SRC)/device.cpp
+	$(HIPCC) $(HIPCCFLAGS) -DHIP -c $(HIP_SRC)/device.cpp -o $(HIP_TARGET)/hip_device.o $(CFLAGS)
 
-main_hip: hip_conf main.c lib_hip.o lib_cpu.o
-	mkdir -p $(BIN_PATH) 
-	$(HIP) $(CFLAGS) $(HIPFLAGS) -D$(DATATYPE) -DHIP $(SRC_FOLDER)/main.c $(BUILD_PATH)/lib_hip.o  $(SEQ_FOLDER)/lib_cpu.o -o $(HIP_EXEC)_$(shell echo $(DATATYPE) | tr A-Z a-z)_$(BLOCKSIZESQUARED) 
+hip_processing.o: hip_conf $(HIP_SRC)/processing.cpp
+	$(HIPCC)  $(HIPCCFLAGS) -DHIP -c $(HIP_SRC)/processing.cpp -o $(HIP_TARGET)/lib_processing.o $(CFLAGS)
+
+main_hip: hip_conf hip_device.o hip_processing.o  $(COMMON_OBJECTS)
+	mkdir -p $(BIN_PATH)
+	$(HIPCC) -DHIP $(SRC_FOLDER)/main.cpp -x none $(HIP_TARGET)/hip_device.o  $(HIP_TARGET)/lib_processing.o $(COMMON_OBJECTS_PATH) -o $(HIP_EXEC) $(CFLAGS) $(HIPCCFLAGS)
 
 ##################################### CLEAN ##################################
 .PHONY: clean

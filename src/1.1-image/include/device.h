@@ -137,6 +137,50 @@ typedef struct {
 } image_time_t; 
 #elif HIP
 /* HIP version */
+struct image_data_t
+{
+        uint16_t *frames;
+        unsigned int num_frames;
+
+        uint16_t *offsets;
+        uint16_t *gains;
+        uint8_t *bad_pixels;
+
+        uint8_t *scrub_mask;
+
+        uint32_t *binned_frame;
+
+        uint32_t *image_output;
+};
+
+
+typedef struct {
+        hipEvent_t *start_test;
+        hipEvent_t *stop_test;
+        hipEvent_t *start_memory_copy_device;
+        hipEvent_t *stop_memory_copy_device;
+        hipEvent_t *start_memory_copy_host;
+        hipEvent_t *stop_memory_copy_host;
+        hipEvent_t *start_frame_list;
+        hipEvent_t *stop_frame_list;
+        // detailed timing
+        hipEvent_t *start_frame_offset;
+        hipEvent_t *stop_frame_offset;
+        hipEvent_t *start_frame_badpixel;
+        hipEvent_t *stop_frame_badpixel;
+        hipEvent_t *start_frame_scrub;
+        hipEvent_t *stop_frame_scrub;
+        hipEvent_t *start_frame_gain;
+        hipEvent_t *stop_frame_gain;
+        hipEvent_t *start_frame_binning;
+        hipEvent_t *stop_frame_binning;
+        hipEvent_t *start_frame_coadd;
+        hipEvent_t *stop_frame_coadd;
+
+} image_time_t;
+
+
+
 #else
 /* Sequential C version */
 struct image_data_t

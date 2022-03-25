@@ -25,6 +25,7 @@
 /* OPENMP version */
 #include <omp.h>
 #elif HIP
+#include "hip/hip_runtime.h"
 #else
 #endif
 
@@ -55,6 +56,9 @@
 #define DEVICESELECTED		0
 
 #elif HIP
+#define DEVICESELECTED		0
+#define BLOCK_SIZE_PLANE 	256 
+#define BLOCK_SIZE 		16
 
 #else
 #define DEVICESELECTED		0

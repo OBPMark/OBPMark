@@ -28,7 +28,7 @@ void print_output_result(frame32_t *output_image)
 		for(w_position=0; w_position < output_image->w; w_position++)
 		{
 			//FIXME chaneg to the 1D and 2D version
-			printf("%hu, ", output_image->f[(h_position * (output_image->h) + w_position)]);
+			printf("%u, ", output_image->f[(h_position * (output_image->h) + w_position)]);
 		}
 		printf("\n");
 	}
