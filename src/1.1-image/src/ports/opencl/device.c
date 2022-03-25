@@ -273,7 +273,7 @@ void process_benchmark(
                     kernel_offset.setArg(3, width * height);
 
 
-                    //queues[1].enqueueNDRangeKernel(kernel_offset,cl::NullRange,global_offset,local_offset, NULL, NULL);
+                    queues[1].enqueueNDRangeKernel(kernel_offset,cl::NullRange,global_offset,local_offset, NULL, NULL);
 
                     cl::NDRange local_mask;
                     cl::NDRange global_mask;
@@ -294,7 +294,7 @@ void process_benchmark(
                     kernel_mask.setArg(3, width);
                     kernel_mask.setArg(4, height);
 
-                    //queues[1].enqueueNDRangeKernel(kernel_mask,cl::NullRange,global_mask,local_mask, NULL, NULL);
+                    queues[1].enqueueNDRangeKernel(kernel_mask,cl::NullRange,global_mask,local_mask, NULL, NULL);
                     queues[1].enqueueMarkerWithWaitList(NULL,&evt_p1);
 
                     r1p = 1;
