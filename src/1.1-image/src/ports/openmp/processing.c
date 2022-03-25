@@ -1,177 +1,238 @@
-/**
+/** 
+ * \brief OBPMark "Image corrections and calibrations." processing task.
  * \file processing.c
- * \brief Benchmark #1.1 OpenMP implementation
- * \author Ivan Rodriguez-Ferrandez (BSC)
- */ 
-#include "benchmark.h"
-#include "benchmark_openmp.h"
-#include "device.h"
+ * \author david.steenari@esa.int
+ * European Space Agency Community License V2.3 applies.
+ * For more info see the LICENSE file in the root folder.
+ */
+#include "processing.h"
+#include "obpmark.h"
+#include "obpmark_time.h"
 
-void init(DeviceObject *device_object, char* device_name)
+void prepare_image_frame(image_data_t *p, image_time_t *t, frame16_t *frame, unsigned int frame_i)
 {
-    init(device_object, 0,0, device_name);
+	/* [I]: Bias offset correction */ 
+	T_START_VERBOSE(t->t_offset[frame_i]);
+	f_offset(frame, &p->offsets);
+	T_STOP_VERBOSE(t->t_offset[frame_i]);
+
+	/* [II]: Bad pixel correction */
+	T_START_VERBOSE(t->t_badpixel[frame_i]);
+	f_mask_replace(frame, &p->bad_pixels);
+	T_STOP_VERBOSE(t->t_badpixel[frame_i]);
+}
+
+void proc_image_frame(image_data_t *p, image_time_t *t, frame16_t *frame, unsigned int frame_i)
+{
+	/* [III]: Radiation scrubbing */
+	T_START_VERBOSE(t->t_scrub[frame_i]);
+	f_scrub(frame, p->frames, frame_i);
+	T_STOP_VERBOSE(t->t_scrub[frame_i]);
+
+	/* [IV]: Gain correction */
+	T_START_VERBOSE(t->t_gain[frame_i]);
+	f_gain(frame, &p->gains);
+	T_STOP_VERBOSE(t->t_gain[frame_i]);
+
+	/* [V]: Spatial binning */
+	T_START_VERBOSE(t->t_binning[frame_i]);
+	f_2x2_bin(frame, &p->binned_frame);
+	T_STOP_VERBOSE(t->t_binning[frame_i]);
+
+	
+	/* [VI]: Co-adding frames */
+	T_START_VERBOSE(t->t_coadd[frame_i]);
+	f_coadd(&p->image_output, &p->binned_frame);
+	T_STOP_VERBOSE(t->t_coadd[frame_i]);
+
 }
 
 
-void init(DeviceObject *device_object, int platform ,int device, char* device_name)
+/* Kernel functions */
+
+void f_offset(
+	frame16_t *frame,
+	frame16_t *offsets
+	)
 {
-    // TBD Feature: device name. -- Bulky generic platform implementation
-	strcpy(device_name,"Generic device");
+	unsigned int x,y; 
+	#pragma omp parallel for
+	for(x=0; x<frame->w; x++)
+	{   
+		#pragma omp parallel for
+		for(y=0; y<frame->h; y++)
+		{
+			PIXEL(frame,x,y) -= PIXEL(offsets,x,y);
+		}
+	}
 }
 
-
-bool device_memory_init(DeviceObject *device_object, unsigned int size_image, unsigned int size_reduction_image)
+void f_coadd(
+	frame32_t *sum_frame,
+	frame32_t *add_frame
+	)
 {
-    device_object->image_output = (int*) malloc (size_reduction_image * sizeof(int));
-    device_object->processing_image = (int*) malloc (size_image * sizeof(int));
-    device_object->processing_image_error_free = (int*) malloc (size_image * sizeof(int));
-    return true;
-}
+	unsigned int x,y; 
 
-
-void copy_memory_to_device(DeviceObject *device_object, int* correlation_table, int* gain_correlation_map, bool* bad_pixel_map , unsigned int size_image)
-{
-    device_object->correlation_table = correlation_table;
-    device_object->gain_correlation_map = gain_correlation_map;
-    device_object->bad_pixel_map = bad_pixel_map;
-}
-
-
-void copy_frame_to_device(DeviceObject *device_object, int* input_data, unsigned int size_image, unsigned int frame)
-{
-    device_object->image_input = input_data + (frame * size_image) ;   
-}
-
-
-void process_full_frame_list (DeviceObject *device_object,int* input_frames,unsigned int frames, unsigned int size_frame,unsigned int w_size, unsigned int h_size){
-    // Start timer
-    const double start_wtime = omp_get_wtime();
-   
-    for (unsigned int frame = 0; frame < frames; ++frame )
-    {
-        // copy image
-        copy_frame_to_device(device_object, input_frames, size_frame, frame);
-        // process image
-        process_image(device_object, w_size, h_size, frame);
-    }
-
-    // End timer
-    device_object->elapsed_time = omp_get_wtime() - start_wtime;
-}
-
-void process_image(DeviceObject *device_object, unsigned int w_size, unsigned int h_size, unsigned int frame)
-{
-    const unsigned int size_image = w_size * h_size;
-
-    // Image offset correlation gain correction
-    #pragma omp parallel for
-    for(unsigned int i = 0; i < size_image; ++i)
-    {
-        device_object->processing_image[i] = (device_object->image_input[i] - device_object->correlation_table[i]) * device_object->gain_correlation_map[i];
-    }
-
-
-    // Bad pixel correlation
-    #pragma omp parallel for collapse(2)
-    for(unsigned int y = 0; y < h_size; ++y)
-    {
-        for(unsigned int x = 0; x < w_size; ++x)
-        {
-            
-            // Lots and lots of bifurcations: Suboptimal
-            if (device_object->bad_pixel_map[y * h_size + x])
-            {
-                if (x == 0 && y == 0)
-                {
-                    // TOP left
-                    device_object->processing_image_error_free[y * h_size + x ] = (device_object->processing_image[y * h_size +  (x +1)] + device_object->processing_image[(y +1) * h_size +  (x +1) ] + device_object->processing_image[(y +1) * h_size + x  ])/3;
-                }
-                else if (x == 0 && y == h_size)
-                {
-                    // Top right
-                    device_object->processing_image_error_free[y * h_size + x] = (device_object->processing_image[y * h_size +  (x -1)] + device_object->processing_image[(y -1) * h_size +  (x -1)] + device_object->processing_image[(y -1) * h_size + x ])/3;
-                }
-                else if(x == w_size && y == 0)
-                {
-                    //Bottom left
-                    device_object->processing_image_error_free[y * h_size + x ] = (device_object->processing_image[(y -1) * h_size +  x] + device_object->processing_image[(y -1) * h_size +  (x + 1)] + device_object->processing_image[y * h_size +  (x +1)])/3;
-                }
-                else if (x == w_size && y == h_size)
-                {
-                    // Bottom right
-                    device_object->processing_image_error_free[y * h_size + x ] = (device_object->processing_image[(y -1) * h_size +  (x -1)] + device_object->processing_image[(y -1) * h_size +  x ] + device_object->processing_image[y * h_size +  (x -1)])/3;
-                }
-                else if (y == 0)
-                {
-                    // Top Edge
-                    device_object->processing_image_error_free[y * h_size + x ] = (device_object->processing_image[y * h_size +  (x -1) ] + device_object->processing_image[y * h_size +  (x +1) ] + device_object->processing_image[(y +1) * h_size +  x ])/3;
-                }
-                else if (x == 0)
-                {
-                    //  Left Edge
-                    device_object->processing_image_error_free[y * h_size + x] = (device_object->processing_image[(y -1) * h_size +  x ] + device_object->processing_image[y * h_size +  (x +1) ] + device_object->processing_image[(y +1) * h_size +  x ])/3;
-                }
-                else if (x == w_size)
-                {
-                    //  Right Edge
-                    device_object->processing_image_error_free[y * h_size + x ] = (device_object->processing_image[(y -1) * h_size +  x ] + device_object->processing_image[y * h_size +  (x -1) ] + device_object->processing_image[(y +1) * h_size +  x ])/3;
-                }
-                else if (y == h_size)
-                {
-                    // Bottom Edge
-                    device_object->processing_image_error_free[y * h_size + x ] = (device_object->processing_image[(y -1) * h_size +  x ] + device_object->processing_image[y * h_size +  (x -1) ] + device_object->processing_image[y * h_size +  (x +1)])/3;
-                }
-                else
-                {
-                    // Standart Case
-                    device_object->processing_image_error_free[y * h_size + x ] = (device_object->processing_image[y * h_size +  (x -1)] + device_object->processing_image[y * h_size +  (x -1) ] + device_object->processing_image[(y +1) * h_size +  x  ] +  device_object->processing_image[(y +1) * h_size +  x  ])/4;
-                }
-            }
-            else
-            {
-                device_object->processing_image_error_free[y * h_size + x ] = device_object->processing_image[y * h_size +  x];
-            }
-        }
-    }
-
-    // Spatial Binning Temporal Binning
-    const unsigned int w_size_half = w_size/2;
-    const unsigned int h_size_half = h_size/2;
-    #pragma omp parallel for
-    for(unsigned int y = 0; y < h_size_half; ++y)
-    {
-        for(unsigned int x = 0; x < w_size_half; ++x)
-        {
-            device_object->image_output[y * h_size_half + x ] += device_object->processing_image_error_free[ (2*y)* (h_size_half*2) + (2 *x) ] + device_object->processing_image_error_free[(2*y)* (h_size_half*2) + (2 *(x+1))  ] + device_object->processing_image_error_free[(2*(y+1))* (h_size_half*2) + (2 *x) ] + device_object->processing_image_error_free[(2*(y+1))* (h_size_half*2) + (2 *(x+1)) ];
-        }
-    }
-}
-
-
-void copy_memory_to_host(DeviceObject *device_object, int* output_image, unsigned int size_image)
-{
-    memcpy(output_image, &device_object->image_output[0], sizeof(int) * size_image);
-}
-
-
-void get_elapsed_time(DeviceObject *device_object, bool csv_format)
-{
-    if (csv_format)
+	#pragma omp parallel for
+	for(x=0; x<sum_frame->w; x++)
 	{
-        printf("%.10f;%.10f;%.10f;\n", (float) 0, device_object->elapsed_time * 1000.f, (float) 0);
-    } 
-	else
-	{
-		printf("Elapsed time Host->Device: %.10f miliseconds\n", (float) 0);
-		printf("Elapsed time kernel: %.10f miliseconds\n", device_object->elapsed_time * 1000.f);
-		printf("Elapsed time Device->Host: %.10f miliseconds\n", (float) 0);
-    }
+		#pragma omp parallel for
+		for(y=0; y<sum_frame->h; y++)
+		{
+			PIXEL(sum_frame,x,y) += PIXEL(add_frame,x,y);
+			//PIXEL(sum_frame,x,y) = PIXEL(add_frame,x,y);
+		}
+	}
 }
 
-
-void clean(DeviceObject *device_object)
+void f_gain(
+	frame16_t *frame,
+	frame16_t *gains	
+	)
 {
-	free(device_object->image_output);
-    free(device_object->processing_image_error_free);
-    free(device_object->processing_image);
+	unsigned int x,y;
+
+	#pragma omp parallel for
+	for(x=0; x<frame->w; x++)
+	{
+		#pragma omp parallel for
+		for(y=0; y<frame->h; y++)
+		{
+			PIXEL(frame,x,y) = (uint16_t)((uint32_t)(PIXEL(frame,x,y)) * (uint32_t)(PIXEL(gains,x,y)) >> 16);
+		}
+	}
 }
+
+/**
+ * \brief Help function for f_mask_replace(). Calculates mean of neighbours not marked in mask frame.
+ */
+uint32_t f_neighbour_masked_sum(
+	frame16_t *frame,
+	frame8_t *mask,
+	int x_mid,
+	int y_mid
+	)
+{
+	int x,y;
+
+	int x_start	= -1;
+	int x_stop	= 1;
+	int y_start	= -1;
+	int y_stop	= 1;
+	
+	unsigned int n_sum=0;
+	uint32_t sum=0;
+	uint32_t mean; 
+
+	/* Check if pixel is on edge of frame */
+	if(x_mid == 0) {
+		x_start = 0;
+	}
+	else if(x_mid == (frame->w-1)) {
+		x_stop = 0;
+	}
+
+	if(y_mid == 0) {
+		y_start = 0;
+	}
+	else if(y_mid == (frame->h-1)) {
+		y_stop = 0;
+	}
+
+	/* Calculate unweighted sum of good pixels in 3x3 neighbourhood (can be smaller if on edge or corner). */
+    for(x=x_start; x<(x_stop+1); x++)
+	{
+		for(y=y_start; y<(y_stop+1); y++)
+		{
+			/* Only include good pixels */
+			if(PIXEL(mask,(x_mid+x),(y_mid+y)) == 0)
+			{
+				sum += PIXEL(frame,(x_mid+x),(y_mid+y));
+				n_sum++;
+			}
+		}
+	}
+
+	/* Calculate mean of summed good pixels */
+	mean = n_sum == 0 ? 0 : sum / n_sum;
+
+	return mean;
+}
+
+void f_mask_replace(
+	frame16_t *frame,
+	frame8_t *mask
+	)
+{
+	unsigned int x,y;
+
+	/* Replace based on mask */
+	#pragma omp parallel for
+	for(x=0; x<frame->w; x++)
+	{
+		#pragma omp parallel for
+		for(y=0; y<frame->h; y++)
+		{
+			if(PIXEL(mask,x,y) == 1)
+			{
+				/* Replace pixel value */
+				PIXEL(frame,x,y) = (uint16_t)f_neighbour_masked_sum(frame,mask, x,y);
+			}
+		}
+	}
+}
+
+void f_scrub(
+	frame16_t *frame,
+	frame16_t *fs,
+	unsigned int frame_i
+	)
+{
+	unsigned int x,y;
+	static unsigned int num_neighbour = 4;
+	
+	uint32_t sum;
+	uint32_t mean;
+	uint32_t thr;
+
+	/* Generate scrubbing mask */
+	#pragma omp parallel for
+	for(x=0; x<frame->w; x++) 
+	{
+		#pragma omp parallel for private(sum,mean,thr)
+		for(y=0; y<frame->h; y++)
+		{
+			/* Sum temporal neighbours between -2 to + 2 without actual */ // FIXME unroll by 4
+			sum = PIXEL(&fs[frame_i-2],x,y) + PIXEL(&fs[frame_i-1],x,y) +  PIXEL(&fs[frame_i+1],x,y) + PIXEL(&fs[frame_i+2],x,y);
+			/* Calculate mean and threshold */
+			mean = sum / (num_neighbour); 
+			thr = 2*mean; 
+			/* If above threshold, replace with mean of temporal neighbours */
+			if(PIXEL(frame,x,y) > thr) {
+				PIXEL(frame,x,y) = (uint16_t)mean; 
+			}
+		}
+	}
+}
+
+
+void f_2x2_bin(
+	frame16_t *frame,
+	frame32_t *binned_frame
+	)
+{
+	unsigned int x,y;
+	#pragma omp parallel for
+	for(x=0; x<frame->w; x+=2)
+	{
+		#pragma omp parallel for
+		for(y=0; y<frame->h; y+=2)
+		{
+			PIXEL(binned_frame,x/2,y/2)	= PIXEL(frame,x,y) +  PIXEL(frame,(x+1),y) + PIXEL(frame,x,(y+1)) + PIXEL(frame,(x+1),(y+1));
+
+		}
+
+	}
+}
+

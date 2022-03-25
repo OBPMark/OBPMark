@@ -23,6 +23,7 @@
 #include <iostream>
 #elif OPENMP
 /* OPENMP version */
+#include <omp.h>
 #elif HIP
 #else
 #endif

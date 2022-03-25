@@ -107,6 +107,34 @@ typedef struct {
 
 #elif OPENMP
 /* OPENMP version */
+struct image_data_t
+{
+	frame16_t *frames;
+	unsigned int num_frames; 
+
+	frame16_t offsets;
+	frame16_t gains; 
+	frame8_t bad_pixels;
+
+	frame8_t scrub_mask;
+
+	frame32_t binned_frame; 
+
+	frame32_t image_output; 
+};
+
+typedef struct {
+	time_t t_test;
+	time_t *t_frame;
+	// detailed timing
+	time_t *t_offset;
+	time_t *t_badpixel;
+	time_t *t_scrub;
+	time_t *t_gain;
+	time_t *t_binning;
+	time_t *t_coadd;
+
+} image_time_t; 
 #elif HIP
 /* HIP version */
 #else
