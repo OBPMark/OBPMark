@@ -112,20 +112,23 @@ void copy_memory_to_device(
 {
 
     const static uint8_t initial_frames = 5;
-
+    // NOTE: in opencl the implementation of the uint16/uint32 ar not fully working and we need to use the c like types
+    // so uint16_t will be switch to unsigned short
+    // and uint32_t  will be switch to unsigned int
+    // and uint8_t will be switch to unsigned char
     // copy the initial frames to the device memory
     for (int i = 0; i < initial_frames; ++i)
     {
         
-        cl_buffer_region position = {(input_frames[i].h * input_frames[i].w * i) *sizeof(uint16_t) ,input_frames[i].h * input_frames[i].w *sizeof(uint16_t) };
-        image_data->queue->enqueueWriteBuffer(image_data->frames->createSubBuffer(CL_MEM_READ_WRITE,CL_BUFFER_CREATE_TYPE_REGION,&position, NULL), CL_TRUE,0, input_frames[i].h * input_frames[i].w * sizeof(uint16_t),input_frames[i].f,NULL,NULL);
+        cl_buffer_region position = {(input_frames[i].h * input_frames[i].w * i) *sizeof(unsigned short) ,input_frames[i].h * input_frames[i].w *sizeof(unsigned short) };
+        image_data->queue->enqueueWriteBuffer(image_data->frames->createSubBuffer(CL_MEM_READ_WRITE,CL_BUFFER_CREATE_TYPE_REGION,&position, NULL), CL_TRUE,0, input_frames[i].h * input_frames[i].w * sizeof(unsigned short),input_frames[i].f,NULL,NULL);
     }
     // copy the offset map to the device memory
-    image_data->queue->enqueueWriteBuffer(*image_data->offsets, CL_TRUE,0,correlation_table->h * correlation_table->w * sizeof(uint16_t),correlation_table->f,NULL,NULL);
+    image_data->queue->enqueueWriteBuffer(*image_data->offsets, CL_TRUE,0,correlation_table->h * correlation_table->w * sizeof(unsigned short),correlation_table->f,NULL,NULL);
     // copy the gains map to the device memory
-    image_data->queue->enqueueWriteBuffer(*image_data->gains, CL_TRUE,0,gain_correlation_map->h * gain_correlation_map->w * sizeof(uint16_t),gain_correlation_map->f,NULL,NULL);
+    image_data->queue->enqueueWriteBuffer(*image_data->gains, CL_TRUE,0,gain_correlation_map->h * gain_correlation_map->w * sizeof(unsigned short),gain_correlation_map->f,NULL,NULL);
     // copy the bad pixels map to the device memory
-    image_data->queue->enqueueWriteBuffer(*image_data->bad_pixels, CL_TRUE,0,bad_pixel_map->h * bad_pixel_map->w * sizeof(uint8_t),bad_pixel_map->f,NULL,NULL);
+    image_data->queue->enqueueWriteBuffer(*image_data->bad_pixels, CL_TRUE,0,bad_pixel_map->h * bad_pixel_map->w * sizeof(unsigned char),bad_pixel_map->f,NULL,NULL);
 }
 
 
@@ -206,9 +209,12 @@ void process_benchmark(
                 {
                     if (frame_status[i] == E || frame_status[i] == RO){
                         // call function to copy
-                        cl_buffer_region position = {((width * height * i) *sizeof(uint16_t)), ((width * height ) *sizeof(uint16_t))};
+                        // NOTE: in opencl the implementation of the uint16/uint32 ar not fully working and we need to use the c like types
+                        // so uint16_t will be switch to unsigned short
+                        // and uint32_t  will be switch to unsigned int
+                        cl_buffer_region position = {((width * height * i) *sizeof(unsigned short)), ((width * height ) *sizeof(unsigned short))};
 
-                        queues[0].enqueueWriteBuffer(image_data->frames->createSubBuffer(CL_MEM_READ_WRITE,CL_BUFFER_CREATE_TYPE_REGION,&position, NULL), CL_TRUE,0, input_frames[next_frame_to_copy].h * input_frames[next_frame_to_copy].w * sizeof(uint16_t),input_frames[next_frame_to_copy].f,NULL,NULL);
+                        queues[0].enqueueWriteBuffer(image_data->frames->createSubBuffer(CL_MEM_READ_WRITE,CL_BUFFER_CREATE_TYPE_REGION,&position, NULL), CL_TRUE,0, input_frames[next_frame_to_copy].h * input_frames[next_frame_to_copy].w * sizeof(unsigned short),input_frames[next_frame_to_copy].f,NULL,NULL);
                         queues[0].enqueueMarkerWithWaitList(NULL,&evt_cp);
                         cp = 1;
                         cp_pos = i;
@@ -256,13 +262,18 @@ void process_benchmark(
                         local_offset = cl::NDRange(x_local*y_local);
                         global_offset = cl::NDRange(width*height);
                     }
-                    cl_buffer_region position_P1 = {((width * height * i) *sizeof(uint16_t)), ((width * height) *sizeof(uint16_t))};
+                    // NOTE: in opencl the implementation of the uint16/uint32 ar not fully working and we need to use the c like types
+                    // so uint16_t will be switch to unsigned short
+                    // and uint32_t  will be switch to unsigned int
+                    //cl_buffer_region position_P1 = {((width * height * i) *sizeof(unsigned short)), ((width * height) *sizeof(unsigned short))};
                     cl::Kernel kernel_offset=cl::Kernel(*image_data->program,"f_offset");
-                    kernel_offset.setArg(0,image_data->frames->createSubBuffer(CL_MEM_READ_WRITE,CL_BUFFER_CREATE_TYPE_REGION,&position_P1, NULL));
-                    kernel_offset.setArg(1,*image_data->offsets);
-                    kernel_offset.setArg(2, width * height);
+                    kernel_offset.setArg(0,*image_data->frames);
+                    kernel_offset.setArg(1,i);
+                    kernel_offset.setArg(2,*image_data->offsets);
+                    kernel_offset.setArg(3, width * height);
 
-                    queues[1].enqueueNDRangeKernel(kernel_offset,cl::NullRange,global_offset,local_offset, NULL, NULL);
+
+                    //queues[1].enqueueNDRangeKernel(kernel_offset,cl::NullRange,global_offset,local_offset, NULL, NULL);
 
                     cl::NDRange local_mask;
                     cl::NDRange global_mask;
@@ -277,12 +288,13 @@ void process_benchmark(
                         global_mask = cl::NDRange(width, height);
                     }
                     cl::Kernel kernel_mask=cl::Kernel(*image_data->program,"f_mask_replace");
-                    kernel_mask.setArg(0,image_data->frames->createSubBuffer(CL_MEM_READ_WRITE,CL_BUFFER_CREATE_TYPE_REGION,&position_P1, NULL));
-                    kernel_mask.setArg(1,*image_data->bad_pixels);
-                    kernel_mask.setArg(2, width);
-                    kernel_mask.setArg(3, height);
+                    kernel_mask.setArg(0,*image_data->frames);
+                    kernel_mask.setArg(1,i);
+                    kernel_mask.setArg(2,*image_data->bad_pixels);
+                    kernel_mask.setArg(3, width);
+                    kernel_mask.setArg(4, height);
 
-                    queues[1].enqueueNDRangeKernel(kernel_mask,cl::NullRange,global_mask,local_mask, NULL, NULL);
+                    //queues[1].enqueueNDRangeKernel(kernel_mask,cl::NullRange,global_mask,local_mask, NULL, NULL);
                     queues[1].enqueueMarkerWithWaitList(NULL,&evt_p1);
 
                     r1p = 1;
@@ -425,11 +437,6 @@ void process_benchmark(
                         }
 
                         
-                        cl_buffer_region position_P2 = {((width * height * i) *sizeof(uint16_t)), ((width * height) *sizeof(uint16_t))};
-                        //cl_buffer_region position_0 = {((width * height * frame_i_0) *sizeof(uint16_t)), ((width * height ) *sizeof(uint16_t))};
-                        //cl_buffer_region position_1 = {((width * height * frame_i_1) *sizeof(uint16_t)), ((width * height) *sizeof(uint16_t))};
-                        //cl_buffer_region position_2 = {((width * height * frame_i_2) *sizeof(uint16_t)), ((width * height ) *sizeof(uint16_t))};
-                        //cl_buffer_region position_3 = {((width * height * frame_i_3) *sizeof(uint16_t)), ((width * height ) *sizeof(uint16_t))};
                         cl::Kernel kernel_scrub=cl::Kernel(*image_data->program,"f_scrub");
                         kernel_scrub.setArg(0,*image_data->frames);
                         kernel_scrub.setArg(1, i);
@@ -456,9 +463,12 @@ void process_benchmark(
                             global_gain = cl::NDRange(width*height);
                         }
                         cl::Kernel kernel_gain=cl::Kernel(*image_data->program,"f_gain");
-                        kernel_gain.setArg(0,image_data->frames->createSubBuffer(CL_MEM_READ_WRITE,CL_BUFFER_CREATE_TYPE_REGION,&position_P2, NULL));
-                        kernel_gain.setArg(1,*image_data->gains);
-                        kernel_gain.setArg(2, width*height);
+                        kernel_gain.setArg(0,*image_data->frames);
+                        kernel_gain.setArg(1,i);
+                        kernel_gain.setArg(2,*image_data->gains);
+                        kernel_gain.setArg(3, width*height);
+                        kernel_gain.setArg(4, width);
+                        kernel_gain.setArg(5, height);
 
                         queues[2].enqueueNDRangeKernel(kernel_gain,cl::NullRange,global_gain,local_gain, NULL, NULL);
                         // Third f_2x2_bin_coadd
@@ -476,15 +486,17 @@ void process_benchmark(
                             global_coadd = cl::NDRange(width/2, height/2);
                         }
                         cl::Kernel kernel_coadd=cl::Kernel(*image_data->program,"f_2x2_bin_coadd");
-                        kernel_coadd.setArg(0,image_data->frames->createSubBuffer(CL_MEM_READ_WRITE,CL_BUFFER_CREATE_TYPE_REGION,&position_P2, NULL));
-                        kernel_coadd.setArg(1,*image_data->image_output);
-                        kernel_coadd.setArg(2, width/2);
-                        kernel_coadd.setArg(2, height/2);
-                        kernel_coadd.setArg(2, width/2);
+                        kernel_coadd.setArg(0,*image_data->frames);
+                        kernel_coadd.setArg(1, i);
+                        kernel_coadd.setArg(2,*image_data->image_output);
+                        kernel_coadd.setArg(3, width/2);
+                        kernel_coadd.setArg(4, height/2);
+                        kernel_coadd.setArg(5, width/2);
 
                         queues[2].enqueueNDRangeKernel(kernel_coadd,cl::NullRange,global_coadd,local_coadd, NULL, NULL);
 
                         queues[2].enqueueMarkerWithWaitList(NULL,&evt_p2);
+                        queues[2].finish();
                     }
                     
                 }
@@ -507,7 +519,7 @@ void process_benchmark(
         }
     }
     
-
+   
 }
 
 
@@ -517,7 +529,10 @@ void copy_memory_to_host(
 	frame32_t *output_image
 	)
 {
-    image_data->queue->enqueueReadBuffer(*image_data->image_output,CL_TRUE,0,output_image->h * output_image->w * sizeof(uint32_t),output_image->f, NULL, t->memory_copy_host);
+    // NOTE: in opencl the implementation of the uint16/uint32 ar not fully working and we need to use the c like types
+    // so uint16_t will be switch to unsigned short
+    // and uint32_t  will be switch to unsigned int
+    image_data->queue->enqueueReadBuffer(*image_data->image_output,CL_TRUE,0,output_image->h * output_image->w * sizeof(unsigned int),output_image->f, NULL, t->memory_copy_host);
 
 }
 
