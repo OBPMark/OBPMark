@@ -39,21 +39,6 @@ typedef struct {
 	cudaEvent_t *stop_memory_copy_device;
 	cudaEvent_t *start_memory_copy_host;
 	cudaEvent_t *stop_memory_copy_host;
-	cudaEvent_t *start_frame_list;
-	cudaEvent_t *stop_frame_list;
-	// detailed timing
-	cudaEvent_t *start_frame_offset;
-	cudaEvent_t *stop_frame_offset;
-	cudaEvent_t *start_frame_badpixel;
-	cudaEvent_t *stop_frame_badpixel;
-	cudaEvent_t *start_frame_scrub;
-	cudaEvent_t *stop_frame_scrub;
-	cudaEvent_t *start_frame_gain;
-	cudaEvent_t *stop_frame_gain;
-	cudaEvent_t *start_frame_binning;
-	cudaEvent_t *stop_frame_binning;
-	cudaEvent_t *start_frame_coadd;
-	cudaEvent_t *stop_frame_coadd;
 
 } image_time_t; 
 #elif OPENCL
@@ -82,26 +67,9 @@ struct image_data_t
 };
 
 typedef struct {
-	cl::Event *start_test;
-	cl::Event *stop_test;
-	cl::Event *start_memory_copy_device;
-	cl::Event *stop_memory_copy_device;
-	cl::Event *memory_copy_host;
-	cl::Event *start_frame_list;
-	cl::Event *stop_frame_list;
-	// detailed timing
-	cl::Event *start_frame_offset;
-	cl::Event *stop_frame_offset;
-	cl::Event *start_frame_badpixel;
-	cl::Event *stop_frame_badpixel;
-	cl::Event *start_frame_scrub;
-	cl::Event *stop_frame_scrub;
-	cl::Event *start_frame_gain;
-	cl::Event *stop_frame_gain;
-	cl::Event *start_frame_binning;
-	cl::Event *stop_frame_binning;
-	cl::Event *start_frame_coadd;
-	cl::Event *stop_frame_coadd;
+	time_t t_test;
+	time_t t_hots_device;
+	cl::Event *t_device_host;
 
 } image_time_t; 
 
@@ -125,14 +93,7 @@ struct image_data_t
 
 typedef struct {
 	time_t t_test;
-	time_t *t_frame;
-	// detailed timing
-	time_t *t_offset;
-	time_t *t_badpixel;
-	time_t *t_scrub;
-	time_t *t_gain;
-	time_t *t_binning;
-	time_t *t_coadd;
+
 
 } image_time_t; 
 #elif HIP
@@ -161,21 +122,6 @@ typedef struct {
         hipEvent_t *stop_memory_copy_device;
         hipEvent_t *start_memory_copy_host;
         hipEvent_t *stop_memory_copy_host;
-        hipEvent_t *start_frame_list;
-        hipEvent_t *stop_frame_list;
-        // detailed timing
-        hipEvent_t *start_frame_offset;
-        hipEvent_t *stop_frame_offset;
-        hipEvent_t *start_frame_badpixel;
-        hipEvent_t *stop_frame_badpixel;
-        hipEvent_t *start_frame_scrub;
-        hipEvent_t *stop_frame_scrub;
-        hipEvent_t *start_frame_gain;
-        hipEvent_t *stop_frame_gain;
-        hipEvent_t *start_frame_binning;
-        hipEvent_t *stop_frame_binning;
-        hipEvent_t *start_frame_coadd;
-        hipEvent_t *stop_frame_coadd;
 
 } image_time_t;
 
@@ -201,14 +147,6 @@ struct image_data_t
 
 typedef struct {
 	time_t t_test;
-	time_t *t_frame;
-	// detailed timing
-	time_t *t_offset;
-	time_t *t_badpixel;
-	time_t *t_scrub;
-	time_t *t_gain;
-	time_t *t_binning;
-	time_t *t_coadd;
 
 } image_time_t; 
 #endif
@@ -287,7 +225,9 @@ void get_elapsed_time(
 	image_data_t *image_data, 
 	image_time_t *t, 
 	bool csv_format,
-	bool full_time_output
+	bool database_format,
+	bool verbose_print,
+	long int timestamp
 	);
 
 

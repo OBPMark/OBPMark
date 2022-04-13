@@ -10,9 +10,9 @@
 
 #include "obpmark_image.h"
 
-int write_frame8(char filename[], frame8_t *frame);
-int write_frame16(char filename[], frame16_t *frame);
-int write_frame32(char filename[], frame32_t *frame);
+int write_frame8(char filename[], frame8_t *frame, uint8_t verbose);
+int write_frame16(char filename[], frame16_t *frame, uint8_t verbose);
+int write_frame32(char filename[], frame32_t *frame, uint8_t verbose);
 
 int read_frame8(char filename[], frame8_t *frame);
 int read_frame16(char filename[], frame16_t *frame);

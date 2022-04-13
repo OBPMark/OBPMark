@@ -12,38 +12,26 @@
 void prepare_image_frame(image_data_t *p, image_time_t *t, frame16_t *frame, unsigned int frame_i)
 {
 	/* [I]: Bias offset correction */ 
-	T_START_VERBOSE(t->t_offset[frame_i]);
 	f_offset(frame, &p->offsets);
-	T_STOP_VERBOSE(t->t_offset[frame_i]);
 
 	/* [II]: Bad pixel correction */
-	T_START_VERBOSE(t->t_badpixel[frame_i]);
 	f_mask_replace(frame, &p->bad_pixels);
-	T_STOP_VERBOSE(t->t_badpixel[frame_i]);
 }
 
 void proc_image_frame(image_data_t *p, image_time_t *t, frame16_t *frame, unsigned int frame_i)
 {
 	/* [III]: Radiation scrubbing */
-	T_START_VERBOSE(t->t_scrub[frame_i]);
 	f_scrub(frame, p->frames, frame_i);
-	T_STOP_VERBOSE(t->t_scrub[frame_i]);
 
 	/* [IV]: Gain correction */
-	T_START_VERBOSE(t->t_gain[frame_i]);
 	f_gain(frame, &p->gains);
-	T_STOP_VERBOSE(t->t_gain[frame_i]);
 
 	/* [V]: Spatial binning */
-	T_START_VERBOSE(t->t_binning[frame_i]);
 	f_2x2_bin(frame, &p->binned_frame);
-	T_STOP_VERBOSE(t->t_binning[frame_i]);
 
 	
 	/* [VI]: Co-adding frames */
-	T_START_VERBOSE(t->t_coadd[frame_i]);
 	f_coadd(&p->image_output, &p->binned_frame);
-	T_STOP_VERBOSE(t->t_coadd[frame_i]);
 
 }
 
@@ -150,6 +138,7 @@ uint32_t f_neighbour_masked_sum(
 	}
 
 	/* Calculate mean of summed good pixels */
+	//if (y_mid == 541 && x_mid == 140){printf("POS s x %d y %d value %u:%u\n",y_mid, x_mid, sum, n_sum);}
 	mean = n_sum == 0 ? 0 : sum / n_sum;
 
 	return mean;
@@ -200,7 +189,9 @@ void f_scrub(
 			mean = sum / (num_neighbour); 
 			thr = 2*mean; 
 			/* If above threshold, replace with mean of temporal neighbours */
+			//if (y == 541 && x == 140){printf("%u POS s x %d y %d value %u:%u ---- %u %u %u %u\n",frame_i+2, y, x, thr, mean, PIXEL(&fs[frame_i-2],x,y), PIXEL(&fs[frame_i-1],x,y),PIXEL(&fs[frame_i+1],x,y),PIXEL(&fs[frame_i+2],x,y));}
 			if(PIXEL(frame,x,y) > thr) {
+				//printf("POS s x %d y %d value %u:%u\n", y, x, thr, mean);
 				PIXEL(frame,x,y) = (uint16_t)mean; 
 			}
 		}

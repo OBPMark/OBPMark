@@ -12,38 +12,26 @@
 void prepare_image_frame(image_data_t *p, image_time_t *t, frame16_t *frame, unsigned int frame_i)
 {
 	/* [I]: Bias offset correction */ 
-	T_START_VERBOSE(t->t_offset[frame_i]);
 	f_offset(frame, &p->offsets);
-	T_STOP_VERBOSE(t->t_offset[frame_i]);
 
 	/* [II]: Bad pixel correction */
-	T_START_VERBOSE(t->t_badpixel[frame_i]);
 	f_mask_replace(frame, &p->bad_pixels);
-	T_STOP_VERBOSE(t->t_badpixel[frame_i]);
 }
 
 void proc_image_frame(image_data_t *p, image_time_t *t, frame16_t *frame, unsigned int frame_i)
 {
 	/* [III]: Radiation scrubbing */
-	T_START_VERBOSE(t->t_scrub[frame_i]);
 	f_scrub(frame, p->frames, frame_i);
-	T_STOP_VERBOSE(t->t_scrub[frame_i]);
 
 	/* [IV]: Gain correction */
-	T_START_VERBOSE(t->t_gain[frame_i]);
 	f_gain(frame, &p->gains);
-	T_STOP_VERBOSE(t->t_gain[frame_i]);
 
 	/* [V]: Spatial binning */
-	T_START_VERBOSE(t->t_binning[frame_i]);
 	f_2x2_bin(frame, &p->binned_frame);
-	T_STOP_VERBOSE(t->t_binning[frame_i]);
 
 	
 	/* [VI]: Co-adding frames */
-	T_START_VERBOSE(t->t_coadd[frame_i]);
 	f_coadd(&p->image_output, &p->binned_frame);
-	T_STOP_VERBOSE(t->t_coadd[frame_i]);
 
 }
 

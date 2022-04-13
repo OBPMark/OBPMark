@@ -5,6 +5,7 @@
  */
 #include "benchmark.h"
 #include "device.h"
+#include "obpmark_time.h"
 
 #include "GEN_processing.hcl"
 
@@ -58,14 +59,12 @@ void init(
     strcpy(device_name,default_device.getInfo<CL_DEVICE_NAME>().c_str() );
     // context
     image_data->context = new cl::Context(default_device);
-    image_data->queue = new cl::CommandQueue(*image_data->context,default_device,NULL);
+    image_data->queue = new cl::CommandQueue(*image_data->context,default_device,NULL); //CL_QUEUE_PROFILING_ENABLE
     image_data->default_device = default_device;
     
     // events
-    /*device_object->memory_copy_device_a = new cl::Event; 
-    device_object->memory_copy_device_b = new cl::Event;
-    device_object->memory_copy_device_c = new cl::Event;
-    device_object->memory_copy_host = new cl::Event;*/
+    t->t_device_host = new cl::Event();
+   
 
     // program
     cl::Program::Sources sources;
@@ -117,6 +116,7 @@ void copy_memory_to_device(
     // and uint32_t  will be switch to unsigned int
     // and uint8_t will be switch to unsigned char
     // copy the initial frames to the device memory
+    T_START(t->t_hots_device);
     for (int i = 0; i < initial_frames; ++i)
     {
         
@@ -129,6 +129,7 @@ void copy_memory_to_device(
     image_data->queue->enqueueWriteBuffer(*image_data->gains, CL_TRUE,0,gain_correlation_map->h * gain_correlation_map->w * sizeof(unsigned short),gain_correlation_map->f,NULL,NULL);
     // copy the bad pixels map to the device memory
     image_data->queue->enqueueWriteBuffer(*image_data->bad_pixels, CL_TRUE,0,bad_pixel_map->h * bad_pixel_map->w * sizeof(unsigned char),bad_pixel_map->f,NULL,NULL);
+    T_STOP(t->t_hots_device);
 }
 
 
@@ -166,7 +167,7 @@ void process_benchmark(
     /* Queue 0 focus in the copy of the input image, Queue 1 focus in the 1º part of the computation, Queue 2 focus in the 2º part*/
     cl::CommandQueue queues[NUMBER_STREAMS];
     for (unsigned int i = 0; i < NUMBER_STREAMS; ++i) {
-         queues[i] = cl::CommandQueue(*image_data->context,image_data->default_device,NULL);
+         queues[i] = cl::CommandQueue(*image_data->context,image_data->default_device,NULL);//CL_QUEUE_PROFILING_ENABLE
     }
     // status signals
     cl::Event evt_cp;
@@ -193,6 +194,8 @@ void process_benchmark(
     frame_status[2] = R2;
     frame_status[3] = R2;
     frame_status[4] = R1;
+
+    T_START(t->t_test);
     // loop until we finish processing x amount of frames
     while (number_frame_process != 0){
         // fist check for empty spaces for copy data
@@ -519,7 +522,7 @@ void process_benchmark(
         }
     }
     
-   
+   T_STOP(t->t_test);
 }
 
 
@@ -532,7 +535,7 @@ void copy_memory_to_host(
     // NOTE: in opencl the implementation of the uint16/uint32 ar not fully working and we need to use the c like types
     // so uint16_t will be switch to unsigned short
     // and uint32_t  will be switch to unsigned int
-    image_data->queue->enqueueReadBuffer(*image_data->image_output,CL_TRUE,0,output_image->h * output_image->w * sizeof(unsigned int),output_image->f, NULL, t->memory_copy_host);
+    image_data->queue->enqueueReadBuffer(*image_data->image_output,CL_TRUE,0,output_image->h * output_image->w * sizeof(unsigned int),output_image->f, NULL, t->t_device_host);
 
 }
 
@@ -540,9 +543,34 @@ void get_elapsed_time(
 	image_data_t *image_data, 
 	image_time_t *t, 
 	bool csv_format,
-	bool full_time_output
+	bool database_format,
+	bool verbose_print,
+	long int timestamp
 	)
-{
+{	
+
+    t->t_device_host->wait();
+	double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
+    double host_to_device =   (t->t_hots_device) / ((double)(CLOCKS_PER_SEC / 1000)); 
+    double device_to_host = t->t_device_host->getProfilingInfo<CL_PROFILING_COMMAND_END>() - t->t_device_host->getProfilingInfo<CL_PROFILING_COMMAND_START>();
+
+    if (csv_format)
+	{
+		
+		printf("%.10f;%.10f;%.10f;\n", host_to_device, elapsed_time, device_to_host/ 1000000.0);
+	}
+	else if (database_format)
+	{
+		
+		
+		printf("%.10f;%.10f;%.10f;%ld;\n", host_to_device, elapsed_time, device_to_host/ 1000000.0, timestamp);
+	}
+	else if(verbose_print)
+	{
+		printf("Elapsed time Host->Device: %.10f milliseconds\n", (float) 0);
+		printf("Elapsed time kernel: %.10f milliseconds\n", elapsed_time );
+		printf("Elapsed time Device->Host: %.10f milliseconds\n", device_to_host/ 1000000.0);
+	}
     /*device_object->memory_copy_host->wait();
     float elapsed_h_d = 0, elapsed = 0, elapsed_d_h = 0;
     elapsed_h_d = device_object->memory_copy_device_a->getProfilingInfo<CL_PROFILING_COMMAND_END>() - device_object->memory_copy_device_a->getProfilingInfo<CL_PROFILING_COMMAND_START>();
@@ -569,4 +597,15 @@ void clean(
 	)
 {
 
+    delete image_data->context;
+    delete image_data->queue;
+    delete image_data->frames;
+    delete image_data->offsets;
+    delete image_data->gains;
+    delete image_data->bad_pixels;
+    delete image_data->binned_frame;
+    delete image_data->image_output;
+    delete image_data->scrub_mask;
+    // pointer to memory
+    delete t->t_device_host;
 }

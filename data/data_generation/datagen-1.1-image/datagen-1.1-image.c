@@ -54,17 +54,16 @@ void gen_gains(frame16_t *gains)
 	unsigned int x,y;
 
 	// the 0.95 % value
-	const static unsigned int base_value = 62257;
 	// get the +/- 5 % 
-	const static unsigned int max_gain_top_variance = 3276; 
-	const static unsigned int max_gain_lower_variance = 3276;
+	const static unsigned int max_gain_top_variance = 0x8666;
+	const static unsigned int max_gain_lower_variance = 0x799A;
 
 	for(x=0; x<gains->w; x++)
 	{
 		for(y=0; y<gains->h; y++)
 		{	
 			//uint16_t gain_value = 65535;
-			uint16_t gain_value = (rand() % ((base_value + max_gain_top_variance) - (base_value - max_gain_lower_variance) + 1)) + (base_value - max_gain_top_variance);
+			uint16_t gain_value = (rand() % ((max_gain_top_variance) - (max_gain_lower_variance) + 1)) + (max_gain_top_variance);
 			PIXEL(gains,x,y) = gain_value;
 		}
 	}
@@ -80,6 +79,7 @@ void gen_bad_pixels(frame8_t *bad_pixels)
 	{
 		for(y=0; y<bad_pixels->h; y++)
 		{
+			// TODO CHECK
 			/* Using a worst case of 5% of pixels marked as bad pixels */
 			val = (uint8_t)((rand() % 20 + 1) / 20) & 0x1;
 
@@ -124,6 +124,7 @@ unsigned int add_offsets(frame16_t *frame, frame16_t *offsets)
 
 unsigned int add_gains(frame16_t *frame, frame16_t *gains)
 {
+
 	unsigned int x,y; 
 	for(x=0; x<gains->w; x++)
 	{
@@ -297,17 +298,17 @@ int benchmark1_1_write_files(
 	sprintf(bad_pixels_name, "out/bad_pixels-%d-%d.bin", 	frame_width, frame_height);
 
 	printf("Writing calibration data to files...\n");
-	if(!write_frame16(offsets_name, offsets)) {
+	if(!write_frame16(offsets_name, offsets, 1)) {
 		printf("error: failed to write offsets.\n");
 		return 0;
 	}
 
-	if(!write_frame16(gains_name, gains)) {
+	if(!write_frame16(gains_name, gains, 1)) {
 		printf("error: failed to write gains.\n");
 		return 0;
 	}
 
-	if(!write_frame8(bad_pixels_name, bad_pixels)) {
+	if(!write_frame8(bad_pixels_name, bad_pixels, 1)) {
 		printf("error: failed to write bad_pixels.\n");
 		return 0;
 	}
@@ -317,7 +318,7 @@ int benchmark1_1_write_files(
 	for(i=0; i<num_frames; i++)
 	{
 		sprintf(frame_name, "out/frame_%d-%d-%d.bin", i, frame_width, frame_height);
-		if(!write_frame16(frame_name, &fs[i])) {
+		if(!write_frame16(frame_name, &fs[i], 1)) {
 			printf("error: failed to write frame data: %d\n", i);
 			return 0;
 		}

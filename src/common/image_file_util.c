@@ -14,7 +14,7 @@
 # ifdef OBPMARK_FRAME_DATA_2D
 /* Write data to file */
 
-int write_frame(char filename[], void **f, unsigned int width, unsigned int height, int data_width)
+int write_frame(char filename[], void **f, unsigned int width, unsigned int height, int data_width, uint8_t verbose)
 {
 	FILE *framefile;
 	size_t bytes_written;
@@ -40,23 +40,27 @@ int write_frame(char filename[], void **f, unsigned int width, unsigned int heig
 	}
 
 	fclose(framefile);
-	printf("Wrote %ld bytes to file: %s, (expected %ld bytes)\n", bytes_total, filename, (bytes_expected*width));
+	if (verbose == 1)
+	{
+		printf("Wrote %ld bytes to file: %s, (expected %ld bytes)\n", bytes_total, filename, (bytes_expected*width));
+	}
+	
 	return 1;
 }
 
-int write_frame8(char filename[], frame8_t *frame)
+int write_frame8(char filename[], frame8_t *frame, uint8_t verbose)
 {
-	return write_frame(filename, (void**)(frame->f), frame->w, frame->h, (int)sizeof(uint8_t));
+	return write_frame(filename, (void**)(frame->f), frame->w, frame->h, (int)sizeof(uint8_t), verbose);
 }
 
-int write_frame16(char filename[], frame16_t *frame)
+int write_frame16(char filename[], frame16_t *frame, uint8_t verbose)
 {
-	return write_frame(filename, (void**)(frame->f), frame->w, frame->h, (int)sizeof(uint16_t));
+	return write_frame(filename, (void**)(frame->f), frame->w, frame->h, (int)sizeof(uint16_t), verbose);
 }
 
-int write_frame32(char filename[], frame32_t *frame)
+int write_frame32(char filename[], frame32_t *frame, uint8_t verbose)
 {
-	return write_frame(filename, (void**)(frame->f), frame->w, frame->h, (int)sizeof(uint32_t));
+	return write_frame(filename, (void**)(frame->f), frame->w, frame->h, (int)sizeof(uint32_t), verbose);
 }
 
 /* Read data from file */
@@ -111,7 +115,7 @@ int read_frame32(char filename[], frame32_t *frame)
 
 /* Write data to file */
 
-int write_frame8(char filename[], frame8_t *frame)
+int write_frame8(char filename[], frame8_t *frame, uint8_t verbose)
 {
 
 	FILE *framefile;
@@ -139,11 +143,14 @@ int write_frame8(char filename[], frame8_t *frame)
 	}
 
 	fclose(framefile);
-	printf("Wrote %ld bytes to file: %s, (expected %ld bytes)\n", bytes_total, filename, (bytes_expected*frame->w));
+	if (verbose == 1)
+	{
+		printf("Wrote %ld bytes to file: %s, (expected %ld bytes)\n", bytes_total, filename, (bytes_expected*frame->w));
+	}
 	return 1;
 }
 
-int write_frame16(char filename[], frame16_t *frame)
+int write_frame16(char filename[], frame16_t *frame, uint8_t verbose)
 {
 	FILE *framefile;
 	size_t bytes_written;
@@ -170,11 +177,14 @@ int write_frame16(char filename[], frame16_t *frame)
 	}
 
 	fclose(framefile);
-	printf("Wrote %ld bytes to file: %s, (expected %ld bytes)\n", bytes_total, filename, (bytes_expected*frame->w));
+	if (verbose == 1)
+	{
+		printf("Wrote %ld bytes to file: %s, (expected %ld bytes)\n", bytes_total, filename, (bytes_expected*frame->w));
+	}
 	return 1;
 }
 
-int write_frame32(char filename[], frame32_t *frame)
+int write_frame32(char filename[], frame32_t *frame, uint8_t verbose)
 {
 	FILE *framefile;
 	size_t bytes_written;
@@ -201,7 +211,10 @@ int write_frame32(char filename[], frame32_t *frame)
 	}
 
 	fclose(framefile);
-	printf("Wrote %ld bytes to file: %s, (expected %ld bytes)\n", bytes_total, filename, (bytes_expected*frame->w));
+	if (verbose == 1)
+	{
+		printf("Wrote %ld bytes to file: %s, (expected %ld bytes)\n", bytes_total, filename, (bytes_expected*frame->w));
+	}
 	return 1;
 }
 

@@ -30,7 +30,7 @@ int load_data_from_files(
     /* open offset map */
     // create the offset map path base on the w_size and h_size
     char offset_map_path[256];
-    sprintf(offset_map_path, "../../data/verification_data/1.1-image/%d/offsets-%d-%d.bin",w_size, w_size, h_size);
+    sprintf(offset_map_path, "../../data/input_data/1.1-image/%d/offsets-%d-%d.bin",w_size, w_size, h_size);
     // init the offset map
     offset_map->w = w_size;
 	offset_map->h = h_size;
@@ -41,7 +41,7 @@ int load_data_from_files(
     /* open bad pixel map */
     // create the bad pixel map path base on the w_size and h_size
     char bad_pixel_map_path[256];
-    sprintf(bad_pixel_map_path, "../../data/verification_data/1.1-image/%d/bad_pixels-%d-%d.bin",w_size, w_size, h_size);
+    sprintf(bad_pixel_map_path, "../../data/input_data/1.1-image/%d/bad_pixels-%d-%d.bin",w_size, w_size, h_size);
     // init the bad pixel map
     bad_pixel_map->w = w_size;
     bad_pixel_map->h = h_size;
@@ -52,7 +52,7 @@ int load_data_from_files(
     /* open gain map */
     // create the gain map path base on the w_size and h_size
     char gain_map_path[256];
-    sprintf(gain_map_path, "../../data/verification_data/1.1-image/%d/gains-%d-%d.bin",w_size, w_size, h_size);
+    sprintf(gain_map_path, "../../data/input_data/1.1-image/%d/gains-%d-%d.bin",w_size, w_size, h_size);
     // init the gain map
     gain_map->w = w_size;
     gain_map->h = h_size;
@@ -65,7 +65,7 @@ int load_data_from_files(
 
     for (frame_position = 0; frame_position < num_frames; frame_position++)
     {
-        sprintf(input_frames_path, "../../data/verification_data/1.1-image/%d/frame_%d-%d-%d.bin",w_size,frame_position ,w_size, h_size);
+        sprintf(input_frames_path, "../../data/input_data/1.1-image/%d/frame_%d-%d-%d.bin",w_size,frame_position ,w_size, h_size);
         // init the input frames
         input_frames[frame_position].w = w_size;
         input_frames[frame_position].h = h_size;

@@ -51,21 +51,6 @@ void init(
     t->stop_memory_copy_device = new hipEvent_t;
     t->start_memory_copy_host = new hipEvent_t;
     t->stop_memory_copy_host= new hipEvent_t;
-    // create list of events
-    t->start_frame_list = new hipEvent_t[image_data->num_frames];
-    t->stop_frame_list = new hipEvent_t[image_data->num_frames];
-    t->start_frame_offset = new hipEvent_t[image_data->num_frames];
-    t->stop_frame_offset = new hipEvent_t[image_data->num_frames];
-    t->start_frame_badpixel = new hipEvent_t[image_data->num_frames];
-    t->stop_frame_badpixel = new hipEvent_t[image_data->num_frames];
-    t->start_frame_scrub = new hipEvent_t[image_data->num_frames];
-    t->stop_frame_scrub = new hipEvent_t[image_data->num_frames];
-    t->start_frame_gain = new hipEvent_t[image_data->num_frames];
-    t->stop_frame_gain = new hipEvent_t[image_data->num_frames];
-    t->start_frame_binning = new hipEvent_t[image_data->num_frames];
-    t->stop_frame_binning = new hipEvent_t[image_data->num_frames];
-    t->start_frame_coadd = new hipEvent_t[image_data->num_frames];
-    t->stop_frame_coadd = new hipEvent_t[image_data->num_frames];
 
     // init streams
     for(unsigned int x = 0; x < NUMBER_STREAMS; ++x){
@@ -210,6 +195,7 @@ void process_benchmark(
     frame_status[2] = R2;
     frame_status[3] = R2;
     frame_status[4] = R1;
+    hipEventRecord(*t->start_test);
     // loop until we finish processing x amount of frames
     while (number_frame_process != 0){
 
@@ -442,7 +428,7 @@ void process_benchmark(
             }
         }
     }
-
+    hipEventRecord(*t->stop_test);
 
 }
 
@@ -462,9 +448,37 @@ void get_elapsed_time(
 	image_data_t *image_data, 
 	image_time_t *t, 
 	bool csv_format,
-	bool full_time_output
+	bool database_format,
+	bool verbose_print,
+	long int timestamp
 	)
-{
+{	
+
+    hipEventSynchronize(*t->stop_memory_copy_host);
+    float milliseconds_h_d = 0, milliseconds = 0, milliseconds_d_h = 0;
+    // memory transfer time host-device
+    hipEventElapsedTime(&milliseconds_h_d, *t->start_memory_copy_device, *t->stop_memory_copy_device);
+    // kernel time
+    hipEventElapsedTime(&milliseconds, *t->start_test, *t->stop_test);
+    //  memory transfer time device-host
+    hipEventElapsedTime(&milliseconds_d_h, *t->start_memory_copy_host, *t->stop_memory_copy_host);
+    
+
+    if (csv_format)
+	{
+		printf("%.10f;%.10f;%.10f;\n", milliseconds_h_d,milliseconds,milliseconds_d_h);
+	}
+	else if (database_format)
+	{
+		
+		printf("%.10f;%.10f;%.10f;%ld;\n", milliseconds_h_d, milliseconds, milliseconds_d_h, timestamp);
+	}
+	else if(verbose_print)
+	{
+		printf("Elapsed time Host->Device: %.10f miliseconds\n", milliseconds_h_d);
+        printf("Elapsed time kernel: %.10f miliseconds\n", milliseconds);
+        printf("Elapsed time Device->Host: %.10f miliseconds\n", milliseconds_d_h);
+	}
 
 }
 /*
@@ -534,21 +548,6 @@ void clean(
     delete t->stop_memory_copy_device;
     delete t->start_memory_copy_host;
     delete t->stop_memory_copy_host;
-    // delete list of events
-    delete[] t->start_frame_list;
-    delete[] t->stop_frame_list;
-    delete[] t->start_frame_offset;
-    delete[] t->stop_frame_offset;
-    delete[] t->start_frame_badpixel;
-    delete[] t->stop_frame_badpixel;
-    delete[] t->start_frame_scrub;
-    delete[] t->stop_frame_scrub;
-    delete[] t->start_frame_gain;
-    delete[] t->stop_frame_gain;
-    delete[] t->start_frame_binning;
-    delete[] t->stop_frame_binning;
-    delete[] t->start_frame_coadd;
-    delete[] t->stop_frame_coadd;
 
     // clean streams
     for(unsigned int x = 0; x < NUMBER_STREAMS ; ++x){
@@ -558,69 +557,3 @@ void clean(
 
 
 }
-/*
-void clean(DeviceObject *device_object){
-    hipError_t err = hipSuccess;
-
-    err = hipFree(device_object->image_input);
-
-    if (err != hipSuccess)
-    {
-        fprintf(stderr, "Failed to free device vector image_input (error code %s)!\n", hipGetErrorString(err));
-        return;
-    }
-    
-    err = hipFree(device_object->processing_image);
-    
-
-    if (err != hipSuccess)
-    {
-        fprintf(stderr, "Failed to free device vector processing_image (error code %s)!\n", hipGetErrorString(err));
-        return;
-    }
-
-    err = hipFree(device_object->processing_image_error_free);
-    
-
-    if (err != hipSuccess)
-    {
-        fprintf(stderr, "Failed to free device vector processing_image (error code %s)!\n", hipGetErrorString(err));
-        return;
-    }
-    err = hipFree(device_object->image_output);
-
-    if (err != hipSuccess)
-    {
-        fprintf(stderr, "Failed to free device vector image_output (error code %s)!\n", hipGetErrorString(err));
-        return;
-    }
-    err = hipFree(device_object->correlation_table);
-
-    if (err != hipSuccess)
-    {
-        fprintf(stderr, "Failed to free device vector correlation_table (error code %s)!\n", hipGetErrorString(err));
-        return;
-    }
-    err = hipFree(device_object->gain_correlation_map);
-
-    if (err != hipSuccess)
-    {
-        fprintf(stderr, "Failed to free device vector gain_correlation_map (error code %s)!\n", hipGetErrorString(err));
-        return;
-    }
-    err = hipFree(device_object->bad_pixel_map);
-
-    if (err != hipSuccess)
-    {
-        fprintf(stderr, "Failed to free device vector bad_pixel_map (error code %s)!\n", hipGetErrorString(err));
-        return;
-    }
-
-    // delete events
-    delete device_object->start;
-    delete device_object->stop;
-    delete device_object->start_memory_copy_device;
-    delete device_object->stop_memory_copy_device;
-    delete device_object->start_memory_copy_host;
-    delete device_object->stop_memory_copy_host;
-}*/

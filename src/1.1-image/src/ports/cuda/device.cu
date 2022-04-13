@@ -42,7 +42,6 @@ void init(
     cudaDeviceProp prop;
     cudaGetDeviceProperties(&prop, device);
     strcpy(device_name,prop.name);
-    // TODO verfy that these are the required events for timming
     //event create 
     t->start_test = new cudaEvent_t;
     t->stop_test = new cudaEvent_t;
@@ -50,22 +49,7 @@ void init(
     t->stop_memory_copy_device = new cudaEvent_t;
     t->start_memory_copy_host = new cudaEvent_t;
     t->stop_memory_copy_host= new cudaEvent_t;
-    // create list of events
-    t->start_frame_list = new cudaEvent_t[image_data->num_frames];
-    t->stop_frame_list = new cudaEvent_t[image_data->num_frames];
-    t->start_frame_offset = new cudaEvent_t[image_data->num_frames];
-    t->stop_frame_offset = new cudaEvent_t[image_data->num_frames];
-    t->start_frame_badpixel = new cudaEvent_t[image_data->num_frames];
-    t->stop_frame_badpixel = new cudaEvent_t[image_data->num_frames];
-    t->start_frame_scrub = new cudaEvent_t[image_data->num_frames];
-    t->stop_frame_scrub = new cudaEvent_t[image_data->num_frames];
-    t->start_frame_gain = new cudaEvent_t[image_data->num_frames];
-    t->stop_frame_gain = new cudaEvent_t[image_data->num_frames];
-    t->start_frame_binning = new cudaEvent_t[image_data->num_frames];
-    t->stop_frame_binning = new cudaEvent_t[image_data->num_frames];
-    t->start_frame_coadd = new cudaEvent_t[image_data->num_frames];
-    t->stop_frame_coadd = new cudaEvent_t[image_data->num_frames];
-
+    
     // init streams
     for(unsigned int x = 0; x < NUMBER_STREAMS; ++x){
         // this makes the priority to have a image copy and the 1º part of the computation is done first
@@ -209,6 +193,7 @@ void process_benchmark(
     frame_status[2] = R2;
     frame_status[3] = R2;
     frame_status[4] = R1;
+    cudaEventRecord(*t->start_test);
     // loop until we finish processing x amount of frames
     while (number_frame_process != 0){
 
@@ -441,7 +426,7 @@ void process_benchmark(
             }
         }
     }
-
+    cudaEventRecord(*t->stop_test);
 
 }
 
@@ -461,31 +446,40 @@ void get_elapsed_time(
 	image_data_t *image_data, 
 	image_time_t *t, 
 	bool csv_format,
-	bool full_time_output
+	bool database_format,
+	bool verbose_print,
+	long int timestamp
 	)
-{
+{	
 
-}
-/*
-void get_elapsed_time(DeviceObject *device_object, bool csv_format){
-    cudaEventSynchronize(*device_object->stop_memory_copy_host);
+    cudaEventSynchronize(*t->stop_memory_copy_host);
     float milliseconds_h_d = 0, milliseconds = 0, milliseconds_d_h = 0;
     // memory transfer time host-device
-    cudaEventElapsedTime(&milliseconds_h_d, *device_object->start_memory_copy_device, *device_object->stop_memory_copy_device);
+    cudaEventElapsedTime(&milliseconds_h_d, *t->start_memory_copy_device, *t->stop_memory_copy_device);
     // kernel time
-    cudaEventElapsedTime(&milliseconds, *device_object->start, *device_object->stop);
+    cudaEventElapsedTime(&milliseconds, *t->start_test, *t->stop_test);
     //  memory transfer time device-host
-    cudaEventElapsedTime(&milliseconds_d_h, *device_object->start_memory_copy_host, *device_object->stop_memory_copy_host);
+    cudaEventElapsedTime(&milliseconds_d_h, *t->start_memory_copy_host, *t->stop_memory_copy_host);
     
-    if (csv_format){
-         printf("%.10f;%.10f;%.10f;\n", milliseconds_h_d,milliseconds,milliseconds_d_h);
-    }else{
-         printf("Elapsed time Host->Device: %.10f miliseconds\n", milliseconds_h_d);
-         printf("Elapsed time kernel: %.10f miliseconds\n", milliseconds);
-         printf("Elapsed time Device->Host: %.10f miliseconds\n", milliseconds_d_h);
-    }
+
+    if (csv_format)
+	{
+		printf("%.10f;%.10f;%.10f;\n", milliseconds_h_d,milliseconds,milliseconds_d_h);
+	}
+	else if (database_format)
+	{
+		
+		printf("%.10f;%.10f;%.10f;%ld;\n", milliseconds_h_d, milliseconds, milliseconds_d_h, timestamp);
+	}
+	else if(verbose_print)
+	{
+		printf("Elapsed time Host->Device: %.10f miliseconds\n", milliseconds_h_d);
+        printf("Elapsed time kernel: %.10f miliseconds\n", milliseconds);
+        printf("Elapsed time Device->Host: %.10f miliseconds\n", milliseconds_d_h);
+	}
+
 }
-*/
+
 void clean(
 	image_data_t *image_data, 
 	image_time_t *t
@@ -533,21 +527,6 @@ void clean(
     delete t->stop_memory_copy_device;
     delete t->start_memory_copy_host;
     delete t->stop_memory_copy_host;
-    // delete list of events
-    delete[] t->start_frame_list;
-    delete[] t->stop_frame_list;
-    delete[] t->start_frame_offset;
-    delete[] t->stop_frame_offset;
-    delete[] t->start_frame_badpixel;
-    delete[] t->stop_frame_badpixel;
-    delete[] t->start_frame_scrub;
-    delete[] t->stop_frame_scrub;
-    delete[] t->start_frame_gain;
-    delete[] t->stop_frame_gain;
-    delete[] t->start_frame_binning;
-    delete[] t->stop_frame_binning;
-    delete[] t->start_frame_coadd;
-    delete[] t->stop_frame_coadd;
 
     // clean streams
     for(unsigned int x = 0; x < NUMBER_STREAMS ; ++x){
@@ -557,69 +536,3 @@ void clean(
 
 
 }
-/*
-void clean(DeviceObject *device_object){
-    cudaError_t err = cudaSuccess;
-
-    err = cudaFree(device_object->image_input);
-
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to free device vector image_input (error code %s)!\n", cudaGetErrorString(err));
-        return;
-    }
-    
-    err = cudaFree(device_object->processing_image);
-    
-
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to free device vector processing_image (error code %s)!\n", cudaGetErrorString(err));
-        return;
-    }
-
-    err = cudaFree(device_object->processing_image_error_free);
-    
-
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to free device vector processing_image (error code %s)!\n", cudaGetErrorString(err));
-        return;
-    }
-    err = cudaFree(device_object->image_output);
-
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to free device vector image_output (error code %s)!\n", cudaGetErrorString(err));
-        return;
-    }
-    err = cudaFree(device_object->correlation_table);
-
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to free device vector correlation_table (error code %s)!\n", cudaGetErrorString(err));
-        return;
-    }
-    err = cudaFree(device_object->gain_correlation_map);
-
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to free device vector gain_correlation_map (error code %s)!\n", cudaGetErrorString(err));
-        return;
-    }
-    err = cudaFree(device_object->bad_pixel_map);
-
-    if (err != cudaSuccess)
-    {
-        fprintf(stderr, "Failed to free device vector bad_pixel_map (error code %s)!\n", cudaGetErrorString(err));
-        return;
-    }
-
-    // delete events
-    delete device_object->start;
-    delete device_object->stop;
-    delete device_object->start_memory_copy_device;
-    delete device_object->stop_memory_copy_device;
-    delete device_object->start_memory_copy_host;
-    delete device_object->stop_memory_copy_host;
-}*/

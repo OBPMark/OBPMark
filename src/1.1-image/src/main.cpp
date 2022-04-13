@@ -48,7 +48,9 @@ void init_benchmark(
 	
 	bool csv_mode, 
 	bool print_output,
-	bool full_time_output
+	bool database_mode,
+	bool verbose_print,
+	long int timestamp
 	)
 {
 	image_time_t *t = (image_time_t *)malloc(sizeof(image_time_t));
@@ -76,7 +78,7 @@ void init_benchmark(
 	copy_memory_to_host(image_data, t, output_image);
 
 	/* Get benchmark times */
-	get_elapsed_time(image_data, t, csv_mode, full_time_output);
+	get_elapsed_time(image_data, t, csv_mode, database_mode,verbose_print, timestamp);
 	if(print_output)
 	{
 		print_output_result(output_image);
@@ -85,7 +87,7 @@ void init_benchmark(
 	{
 		// write the output image to a file call "output.bin"
 
-		write_frame32 (output_file, output_image);
+		write_frame32 (output_file, output_image, !csv_mode && !database_mode);
 	}
 
 	/* Clean and free device object */
@@ -98,7 +100,8 @@ int main(int argc, char **argv)
 
 	bool csv_mode = false;
 	bool print_output = false;
-	bool full_time_output = false;
+	bool verbose_output = false;
+	bool database_mode = false;
 	bool random_data = false;
 
 	int file_loading_output = 0;
@@ -115,7 +118,6 @@ int main(int argc, char **argv)
 	unsigned int mem_size_reduction_image;
 
 	unsigned int frame_i;
-
 	static unsigned int number_neighbours = 4;
 
 	frame16_t *input_frames;
@@ -126,7 +128,7 @@ int main(int argc, char **argv)
 	frame16_t *gain_map;
 
 	/* Command line argument handling */
-	ret = arguments_handler(argc, argv, &w_size, &h_size, &num_processing_frames, &csv_mode, &print_output, &full_time_output, &random_data);
+	ret = arguments_handler(argc, argv, &w_size, &h_size, &num_processing_frames, &csv_mode, &database_mode, &print_output, &verbose_output, &random_data);
 	if(ret == ARG_ERROR) {
 		exit(-1);
 	}
@@ -195,7 +197,8 @@ int main(int argc, char **argv)
 		input_frames, output_image,
 		offset_map, bad_pixel_map, gain_map,
 		w_size, h_size, num_frames,
-		csv_mode, print_output,full_time_output
+		csv_mode, print_output,database_mode,
+		verbose_output,get_timestamp()
 		);
 
 	/* Free input data */
