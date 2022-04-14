@@ -44,7 +44,10 @@ typedef struct {
 #elif OPENCL
 /* OPENCL version */
 /* define the types to have the same as the cuda version */
-static const std::string type_def_kernel = "typedef short int uint16_t;\ntypedef unsigned char uint8_t;\ntypedef unsigned int uint32_t;\n";
+#define uint32_t_cl unsigned int
+#define uint16_t_cl unsigned short
+#define uint8_t_cl unsigned char
+static const std::string type_def_kernel = "#define uint32_t_cl unsigned int\nt#define uint16_t_cl unsigned short\n#define uint8_t_cl unsigned char\n";
 struct image_data_t
 {
 	cl::Context *context;

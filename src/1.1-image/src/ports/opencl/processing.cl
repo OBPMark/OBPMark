@@ -5,10 +5,7 @@
 // and uint32_t  will be switch to unsigned int
 // and uint8_t will be switch to unsigned char
 
-// TODO move to a top level
-#define uint32_t_cl unsigned int
-#define uint16_t_cl unsigned short
-#define uint8_t_cl unsigned char
+
 
 void kernel
 f_offset(

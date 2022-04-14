@@ -120,15 +120,15 @@ void copy_memory_to_device(
     for (int i = 0; i < initial_frames; ++i)
     {
         
-        cl_buffer_region position = {(input_frames[i].h * input_frames[i].w * i) *sizeof(unsigned short) ,input_frames[i].h * input_frames[i].w *sizeof(unsigned short) };
-        image_data->queue->enqueueWriteBuffer(image_data->frames->createSubBuffer(CL_MEM_READ_WRITE,CL_BUFFER_CREATE_TYPE_REGION,&position, NULL), CL_TRUE,0, input_frames[i].h * input_frames[i].w * sizeof(unsigned short),input_frames[i].f,NULL,NULL);
+        cl_buffer_region position = {(input_frames[i].h * input_frames[i].w * i) *sizeof(uint16_t_cl) ,input_frames[i].h * input_frames[i].w *sizeof(uint16_t_cl) };
+        image_data->queue->enqueueWriteBuffer(image_data->frames->createSubBuffer(CL_MEM_READ_WRITE,CL_BUFFER_CREATE_TYPE_REGION,&position, NULL), CL_TRUE,0, input_frames[i].h * input_frames[i].w * sizeof(uint16_t_cl),input_frames[i].f,NULL,NULL);
     }
     // copy the offset map to the device memory
-    image_data->queue->enqueueWriteBuffer(*image_data->offsets, CL_TRUE,0,correlation_table->h * correlation_table->w * sizeof(unsigned short),correlation_table->f,NULL,NULL);
+    image_data->queue->enqueueWriteBuffer(*image_data->offsets, CL_TRUE,0,correlation_table->h * correlation_table->w * sizeof(uint16_t_cl),correlation_table->f,NULL,NULL);
     // copy the gains map to the device memory
-    image_data->queue->enqueueWriteBuffer(*image_data->gains, CL_TRUE,0,gain_correlation_map->h * gain_correlation_map->w * sizeof(unsigned short),gain_correlation_map->f,NULL,NULL);
+    image_data->queue->enqueueWriteBuffer(*image_data->gains, CL_TRUE,0,gain_correlation_map->h * gain_correlation_map->w * sizeof(uint16_t_cl),gain_correlation_map->f,NULL,NULL);
     // copy the bad pixels map to the device memory
-    image_data->queue->enqueueWriteBuffer(*image_data->bad_pixels, CL_TRUE,0,bad_pixel_map->h * bad_pixel_map->w * sizeof(unsigned char),bad_pixel_map->f,NULL,NULL);
+    image_data->queue->enqueueWriteBuffer(*image_data->bad_pixels, CL_TRUE,0,bad_pixel_map->h * bad_pixel_map->w * sizeof(uint8_t_cl),bad_pixel_map->f,NULL,NULL);
     T_STOP(t->t_hots_device);
 }
 
@@ -215,7 +215,7 @@ void process_benchmark(
                         // NOTE: in opencl the implementation of the uint16/uint32 ar not fully working and we need to use the c like types
                         // so uint16_t will be switch to unsigned short
                         // and uint32_t  will be switch to unsigned int
-                        cl_buffer_region position = {((width * height * i) *sizeof(unsigned short)), ((width * height ) *sizeof(unsigned short))};
+                        cl_buffer_region position = {((width * height * i) *sizeof(uint16_t_cl)), ((width * height ) *sizeof(uint16_t_cl))};
 
                         queues[0].enqueueWriteBuffer(image_data->frames->createSubBuffer(CL_MEM_READ_WRITE,CL_BUFFER_CREATE_TYPE_REGION,&position, NULL), CL_TRUE,0, input_frames[next_frame_to_copy].h * input_frames[next_frame_to_copy].w * sizeof(unsigned short),input_frames[next_frame_to_copy].f,NULL,NULL);
                         queues[0].enqueueMarkerWithWaitList(NULL,&evt_cp);
@@ -535,7 +535,7 @@ void copy_memory_to_host(
     // NOTE: in opencl the implementation of the uint16/uint32 ar not fully working and we need to use the c like types
     // so uint16_t will be switch to unsigned short
     // and uint32_t  will be switch to unsigned int
-    image_data->queue->enqueueReadBuffer(*image_data->image_output,CL_TRUE,0,output_image->h * output_image->w * sizeof(unsigned int),output_image->f, NULL, t->t_device_host);
+    image_data->queue->enqueueReadBuffer(*image_data->image_output,CL_TRUE,0,output_image->h * output_image->w * sizeof(uint32_t_cl),output_image->f, NULL, t->t_device_host);
 
 }
 

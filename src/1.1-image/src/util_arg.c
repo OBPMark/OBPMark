@@ -23,13 +23,14 @@ void print_usage(const char *exec_name)
 	printf(" -w size : width of the input image in pixels\n");
 	printf(" -h size : height of the input image in pixels \n");
 	printf(" -r : random data\n");
+	printf(" -F : lotaion forder of the input data\n");
 	printf(" -c : print time in CSV\n");
 	printf(" -C : print time in CSV with timestamp\n");
 	printf(" -t : print time in verbose\n");
 	printf(" -o : print output\n");
 }
 
-int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int *h_size, unsigned int *frames, bool *csv_mode, bool *database_mode, bool *print_output, bool *verbose_output, bool *random_data)
+int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int *h_size, unsigned int *frames, bool *csv_mode, bool *database_mode, bool *print_output, bool *verbose_output, bool *random_data, char *input_folder)
 {
 	if(argc < 3) {
 		print_usage(argv[0]);
@@ -42,6 +43,7 @@ int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int 
 			case 'w' : args +=1; *w_size = atoi(argv[args]);break;
 			case 'h' : args +=1; *h_size = atoi(argv[args]);break;
 			case 'f' : args +=1; *frames = atoi(argv[args]);break;
+			case 'F' : args +=1; strcpy(input_folder,argv[args]);break;
 			case 'c' : *csv_mode = true;break;
 			case 'C' : *database_mode = true;break;
 			case 'r' : *random_data = true;break;

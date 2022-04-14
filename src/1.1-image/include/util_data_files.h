@@ -30,7 +30,9 @@ int load_data_from_files(
 
 	unsigned int w_size,
 	unsigned int h_size,
-	unsigned int num_frames
+	unsigned int num_frames,
+
+	char *input_folder
 	);
 
 #endif // UTIL_DATA_FILES_H_

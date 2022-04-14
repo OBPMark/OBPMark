@@ -126,9 +126,10 @@ int main(int argc, char **argv)
 	frame16_t *offset_map;  
 	frame8_t *bad_pixel_map; 
 	frame16_t *gain_map;
+	char input_folder[100] = "";
 
 	/* Command line argument handling */
-	ret = arguments_handler(argc, argv, &w_size, &h_size, &num_processing_frames, &csv_mode, &database_mode, &print_output, &verbose_output, &random_data);
+	ret = arguments_handler(argc, argv, &w_size, &h_size, &num_processing_frames, &csv_mode, &database_mode, &print_output, &verbose_output, &random_data, input_folder);
 	if(ret == ARG_ERROR) {
 		exit(-1);
 	}
@@ -185,7 +186,7 @@ int main(int argc, char **argv)
 		file_loading_output = load_data_from_files(
 		input_frames, output_image,
 		offset_map, bad_pixel_map, gain_map,
-		w_size, h_size, num_frames
+		w_size, h_size, num_frames, input_folder
 		);
 		if (file_loading_output == FILE_LOADING_ERROR)
 		{

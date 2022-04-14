@@ -32,7 +32,8 @@ int arguments_handler(
 	bool *database_mode,
 	bool *print_output,
 	bool *verbose_output,
-	bool *random_data
+	bool *random_data,
+	char *input_folder
 	);
 
 /**
