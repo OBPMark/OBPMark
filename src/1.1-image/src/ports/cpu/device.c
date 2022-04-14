@@ -1,7 +1,7 @@
 /**
  * \file device.c
  * \brief Benchmark #1.1 CPU version (sequential) device initialization. 
- * \author Ivan Rodriguez (BSC)
+ * \author Ivan Rodriguez-Ferrandez (BSC)
  */
 #include "device.h"
 #include "processing.h"
@@ -28,14 +28,6 @@ void init(
     // TBD Feature: device name. -- Bulky generic platform implementation
 	strcpy(device_name,"Generic device");
 
-	/* Time object init */
-	t->t_frame =  (time_t*)malloc(sizeof(time_t) * image_data->num_frames); 
-	t->t_offset =  (time_t*)malloc(sizeof(time_t) * image_data->num_frames); 
-	t->t_badpixel =  (time_t*)malloc(sizeof(time_t) * image_data->num_frames); 
-	t->t_scrub =  (time_t*)malloc(sizeof(time_t) * image_data->num_frames); 
-	t->t_gain =  (time_t*)malloc(sizeof(time_t) * image_data->num_frames); 
-	t->t_binning =  (time_t*)malloc(sizeof(time_t) * image_data->num_frames); 
-	t->t_coadd =  (time_t*)malloc(sizeof(time_t) * image_data->num_frames); 
 }
 
 
@@ -111,10 +103,15 @@ void copy_memory_to_device(
 
 void process_benchmark(
 	image_data_t *image_data,
-	image_time_t *t
+	image_time_t *t,
+	frame16_t *input_frames,
+	unsigned int width,
+    unsigned int height
 	)
 {    
     
+	/* input frame, width and height is not use in the sequential version */
+
     unsigned int frame_i;
 	static unsigned int offset_neighbours = 2;
 	
@@ -122,11 +119,12 @@ void process_benchmark(
 	T_START(t->t_test);
 	for(frame_i=offset_neighbours; frame_i < image_data->num_frames - offset_neighbours; frame_i++)
 	{
-		T_START(t->t_frame[frame_i]);
+		
+		/*  Start the preparation of the frame, frame_i + 2, to be ready for the radiation scrubbing. */
+		prepare_image_frame(image_data, t, &image_data->frames[frame_i + 2], frame_i + 2);
+		/* Then compute the frame_i using the already calculate data from frame_i -2, frame_i -1, frame_i + 1 and frame_i + 2 */
 		proc_image_frame(image_data, t, &image_data->frames[frame_i], frame_i);
-		T_STOP(t->t_frame[frame_i]);
-
-		// FIXME radiation correction frame handling to be implemented
+		
 
 	}
 	T_STOP(t->t_test);
@@ -145,25 +143,34 @@ void copy_memory_to_host(
 }
 
 
-float get_elapsed_time(
+void get_elapsed_time(
 	image_data_t *image_data, 
 	image_time_t *t, 
-	bool csv_format
+	bool csv_format,
+	bool database_format,
+	bool verbose_print,
+	long int timestamp
 	)
-{
-    // FIXME with new time format
-	/*float elapsed =  (device_object->end.tv_sec - device_object->start.tv_sec) * 1000 + (device_object->end.tv_nsec - device_object->start.tv_nsec) / 1000000;
-    if (csv_format)
+{	
+
+	if (csv_format)
 	{
-        printf("%.10f;%.10f;%.10f;\n", (float) 0, elapsed, (float) 0);
-    } 
-	else
+		double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
+		printf("%.10f;%.10f;%.10f;\n", (float) 0, elapsed_time, (float) 0);
+	}
+	else if (database_format)
 	{
-		printf("Elapsed time Host->Device: %.10f miliseconds\n", (float) 0);
-		printf("Elapsed time kernel: %.10f miliseconds\n", elapsed);
-		printf("Elapsed time Device->Host: %.10f miliseconds\n", (float) 0);
-    }
-	return elapsed;*/
+		
+		double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
+		printf("%.10f;%.10f;%.10f;%ld;\n", (float) 0, elapsed_time, (float) 0, timestamp);
+	}
+	else if(verbose_print)
+	{
+		double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
+		printf("Elapsed time Host->Device: %.10f milliseconds\n", (float) 0);
+		printf("Elapsed time kernel: %.10f milliseconds\n", elapsed_time );
+		printf("Elapsed time Device->Host: %.10f milliseconds\n", (float) 0);
+	}
 }
 
 
@@ -175,13 +182,6 @@ void clean(
 	unsigned int frame_i;
 
 	/* Clean time */
-	free(t->t_frame);
-	free(t->t_offset);
-	free(t->t_badpixel);
-	free(t->t_scrub);
-	free(t->t_gain);
-	free(t->t_binning);
-	free(t->t_coadd);
 	free(t);
 
 	for(frame_i=0; frame_i < image_data->num_frames; frame_i++)

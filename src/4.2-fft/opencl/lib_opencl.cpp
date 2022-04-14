@@ -156,7 +156,7 @@ void copy_memory_to_host(GraficObject *device_object, bench_t* h_B, int64_t size
     device_object->queue->enqueueReadBuffer(*device_object->d_Br,CL_TRUE,0,sizeof(bench_t)*size,h_B, NULL, device_object->evt_copyBr);
 }
 
-float get_elapsed_time(GraficObject *device_object, bool csv_format, bool csv_format_timestamp, long int current_time){
+void get_elapsed_time(GraficObject *device_object, bool csv_format, bool csv_format_timestamp, long int current_time){
     device_object->evt_copyBr->wait();
     float elapsed_h_d = 0, elapsed = 0, elapsed_d_h = 0;
     elapsed_h_d = device_object->evt_copyB->getProfilingInfo<CL_PROFILING_COMMAND_END>() - device_object->evt_copyB->getProfilingInfo<CL_PROFILING_COMMAND_START>();
@@ -177,7 +177,6 @@ float get_elapsed_time(GraficObject *device_object, bool csv_format, bool csv_fo
          printf("Elapsed time kernel: %.10f milliseconds\n",  device_object->elapsed_time);
          printf("Elapsed time Device->Host: %.10f milliseconds\n", elapsed_d_h / 1000000.0);
     }
-    return elapsed / 1000000.0; // TODO Change
 }
 
 void clean(GraficObject *device_object){

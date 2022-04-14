@@ -1,7 +1,7 @@
 /**
  * \file main.c 
  * \brief Benchmark #1.1 benchmark main file.
- * \author Ivan Rodriguez (BSC)
+ * \author Ivan Rodriguez-Ferrandez (BSC)
  */
 // FIXME copy top comment+license from old code 
 // FIXME add license to all files 
@@ -14,6 +14,7 @@
 /* Optional utility headers */
 #include "util_arg.h"
 #include "util_data_rand.h"
+#include "util_data_files.h"
 
 void print_output_result(frame32_t *output_image)
 {
@@ -21,13 +22,13 @@ void print_output_result(frame32_t *output_image)
 	unsigned int w_position;
 
 	/* Print output */
-	for(h_position=0; h_position < output_image->h/2; h_position++)
+	for(h_position=0; h_position < output_image->h; h_position++)
 	{
 		
-		for(w_position=0; w_position < output_image->w/2; w_position++)
+		for(w_position=0; w_position < output_image->w; w_position++)
 		{
 			//FIXME chaneg to the 1D and 2D version
-			printf("%hu, ", output_image->f[(h_position * (output_image->h/2) + w_position)]);
+			printf("%u, ", output_image->f[(h_position * (output_image->h) + w_position)]);
 		}
 		printf("\n");
 	}
@@ -46,7 +47,10 @@ void init_benchmark(
 	unsigned int num_frames,
 	
 	bool csv_mode, 
-	bool print_output
+	bool print_output,
+	bool database_mode,
+	bool verbose_print,
+	long int timestamp
 	)
 {
 	image_time_t *t = (image_time_t *)malloc(sizeof(image_time_t));
@@ -54,6 +58,7 @@ void init_benchmark(
 	/* Init number of frames */
 	image_data->num_frames = num_frames;
 	char device[100] = "";
+	char* output_file = (char*)"output.bin";
 
 	/* Device object init */
 	init(image_data, t, 0, DEVICESELECTED, device);
@@ -67,16 +72,22 @@ void init_benchmark(
 	copy_memory_to_device(image_data, t, input_frames, offset_map, gain_map, bad_pixel_map);
 
 	/* Run the benchmark, by processing the full frame list */
-	process_benchmark(image_data,t );
+	process_benchmark(image_data,t, input_frames, w_size, h_size);
 
 	/* Copy data back from device */
 	copy_memory_to_host(image_data, t, output_image);
 
 	/* Get benchmark times */
-	get_elapsed_time(image_data, t, csv_mode);
+	get_elapsed_time(image_data, t, csv_mode, database_mode,verbose_print, timestamp);
 	if(print_output)
 	{
 		print_output_result(output_image);
+	}
+	else 
+	{
+		// write the output image to a file call "output.bin"
+
+		write_frame32 (output_file, output_image, !csv_mode && !database_mode);
 	}
 
 	/* Clean and free device object */
@@ -89,6 +100,11 @@ int main(int argc, char **argv)
 
 	bool csv_mode = false;
 	bool print_output = false;
+	bool verbose_output = false;
+	bool database_mode = false;
+	bool random_data = false;
+
+	int file_loading_output = 0;
 
 	unsigned int w_size = 0;
 	unsigned int h_size = 0; 
@@ -102,7 +118,6 @@ int main(int argc, char **argv)
 	unsigned int mem_size_reduction_image;
 
 	unsigned int frame_i;
-
 	static unsigned int number_neighbours = 4;
 
 	frame16_t *input_frames;
@@ -111,9 +126,10 @@ int main(int argc, char **argv)
 	frame16_t *offset_map;  
 	frame8_t *bad_pixel_map; 
 	frame16_t *gain_map;
+	char input_folder[100] = "";
 
 	/* Command line argument handling */
-	ret = arguments_handler(argc, argv, &w_size, &h_size, &num_processing_frames, &csv_mode, &print_output);
+	ret = arguments_handler(argc, argv, &w_size, &h_size, &num_processing_frames, &csv_mode, &database_mode, &print_output, &verbose_output, &random_data, input_folder);
 	if(ret == ARG_ERROR) {
 		exit(-1);
 	}
@@ -139,6 +155,9 @@ int main(int argc, char **argv)
 	
 	// FIXME create 2D memory reservation
 	output_image->f = (uint32_t*)malloc(mem_size_reduction_image);
+	output_image->h = w_size/2;
+	output_image->w = h_size/2;
+
 
 	/* Allocate memory for calibration and correction data */
 	// FIXME create 2D memory reservation
@@ -151,19 +170,36 @@ int main(int argc, char **argv)
 	gain_map = (frame16_t*)malloc(sizeof(frame16_t));
 	gain_map->f = (uint16_t*)malloc(mem_size_frame);
 
-	/* Generate random data */
-	benchmark_gen_rand_data(
+	if (random_data)
+	{
+		/* Generate random data */
+		benchmark_gen_rand_data(
 		input_frames, output_image,
 		offset_map, bad_pixel_map, gain_map,
 		w_size, h_size, num_frames
 		);
-
+	}
+	else
+	{
+		/* Load data from files */
+		
+		file_loading_output = load_data_from_files(
+		input_frames, output_image,
+		offset_map, bad_pixel_map, gain_map,
+		w_size, h_size, num_frames, input_folder
+		);
+		if (file_loading_output == FILE_LOADING_ERROR)
+		{
+			exit(-1);
+		}
+	}
 	/* Init device and run test */
 	init_benchmark(
 		input_frames, output_image,
 		offset_map, bad_pixel_map, gain_map,
 		w_size, h_size, num_frames,
-		csv_mode, print_output
+		csv_mode, print_output,database_mode,
+		verbose_output,get_timestamp()
 		);
 
 	/* Free input data */

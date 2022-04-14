@@ -1,11 +1,18 @@
 /**
  * \file util_arg.c
  * \brief Command line argument util for Benchmark #1.1
- * \author Ivan Rodriguez (BSC)
+ * \author Ivan Rodriguez-Ferrandez (BSC)
  */
 #include "util_arg.h"
 
 #include <stdio.h>
+
+long int get_timestamp(){
+	struct timeval time_now{};
+    gettimeofday(&time_now, nullptr);
+    time_t msecs_time = (time_now.tv_sec * 1000) + (time_now.tv_usec / 1000);
+	return (long int) msecs_time;
+}
 
 /* Functions */ 
 
@@ -15,11 +22,15 @@ void print_usage(const char *exec_name)
 	printf(" -f size : number of frames\n");
 	printf(" -w size : width of the input image in pixels\n");
 	printf(" -h size : height of the input image in pixels \n");
+	printf(" -r : random data\n");
+	printf(" -F : lotaion forder of the input data\n");
 	printf(" -c : print time in CSV\n");
+	printf(" -C : print time in CSV with timestamp\n");
+	printf(" -t : print time in verbose\n");
 	printf(" -o : print output\n");
 }
 
-int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int *h_size, unsigned int *frames, bool *csv_mode, bool *print_output)
+int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int *h_size, unsigned int *frames, bool *csv_mode, bool *database_mode, bool *print_output, bool *verbose_output, bool *random_data, char *input_folder)
 {
 	if(argc < 3) {
 		print_usage(argv[0]);
@@ -32,8 +43,12 @@ int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int 
 			case 'w' : args +=1; *w_size = atoi(argv[args]);break;
 			case 'h' : args +=1; *h_size = atoi(argv[args]);break;
 			case 'f' : args +=1; *frames = atoi(argv[args]);break;
+			case 'F' : args +=1; strcpy(input_folder,argv[args]);break;
 			case 'c' : *csv_mode = true;break;
+			case 'C' : *database_mode = true;break;
+			case 'r' : *random_data = true;break;
 			case 'o' : *print_output = true;break;
+			case 't' : *verbose_output = true;break;
 			default: print_usage(argv[0]); return ARG_ERROR;
 		}
 

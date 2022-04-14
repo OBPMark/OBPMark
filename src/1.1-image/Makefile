@@ -11,6 +11,21 @@ BUILD_PATH 	:= ../../$(BUILD_FOLDER)/1.1-image
 BIN_PATH 	:= ../../$(BIN_FOLDER)/1.1-image
 EXEC_PATH	:= $(BIN_PATH)/$(EXEC_NAME)
 
+################################################################################
+COMMON_PATH = ../../src/common
+
+_COMMON_INCLUDES = image_util.h image_mem_util.h image_file_util.h 
+_COMMON_SOURCES  = image_mem_util.c image_file_util.c util_data_rand.c util_arg.c util_data_files.c 
+COMMON_OBJECTS   = image_mem_util.o image_file_util.o util_data_rand.o util_arg.o util_data_files.o 
+COMMON_OBJECTS_PATH = $(COM_TARGET)/image_mem_util.o $(COM_TARGET)/image_file_util.o $(COM_TARGET)/util_data_rand.o $(COM_TARGET)/util_arg.o $(COM_TARGET)/util_data_files.o
+
+COMMON_INCLUDES = $(pathsubst %,$(COMMON_PATH)/%,$(_COMMON_INCLUDES))
+COMMON_SOURCES  = $(pathsubst %,$(COMMON_PATH)/%,$(_COMMON_SOURCES))
+################################################################################
+
+# - Common -
+COM_TARGET	:= $(BUILD_PATH)/$(COMM_FOLDER)
+
 # - Sequential - 
 SEQ_TARGET	:= $(BUILD_PATH)/$(SEQ_FOLDER)
 SEQ_EXEC	:= $(EXEC_PATH)_$(SEQ_NAME)
@@ -57,6 +72,25 @@ endif
 all: cpu openmp opencl cuda #hip
 #	@echo "error: must specify target: cpu, openmp, opencl, cuda, hip"
 
+################################### COMMON ################################
+common_conf:
+	mkdir -p $(COM_TARGET)
+
+image_mem_util.o: common_conf $(COMMON_PATH)/image_mem_util.c $(INCLUDES)
+	$(CC) $(CFLAGS) -c $(COMMON_PATH)/image_mem_util.c -o $(COM_TARGET)/image_mem_util.o
+
+image_file_util.o: common_conf $(COMMON_PATH)/image_file_util.c $(INCLUDES)
+	$(CC) $(CFLAGS) -c $(COMMON_PATH)/image_file_util.c -o $(COM_TARGET)/image_file_util.o
+
+util_data_rand.o: common_conf $(SRC_FOLDER)/util_data_rand.c
+	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/util_data_rand.c -o $(COM_TARGET)/util_data_rand.o
+
+util_arg.o: common_conf $(SRC_FOLDER)/util_arg.c
+	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/util_arg.c -o $(COM_TARGET)/util_arg.o
+
+util_data_files.o: common_conf $(SRC_FOLDER)/util_data_files.c
+	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/util_data_files.c -o $(COM_TARGET)/util_data_files.o
+
 ################################### SEQUENTIAL ################################
 # Shortcuts
 .PHONY: CPU
@@ -69,24 +103,15 @@ cpu_conf:
 	mkdir -p $(SEQ_TARGET)
 
 # FIXME possible to define a list of sources and then generate the commands below from the list instead of having explicit definitions? 
-
-# FIXME not CPU specific, should have general build definition
-cpu_util_data_rand.o: cpu_conf $(SRC_FOLDER)/util_data_rand.c
-	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/util_data_rand.c -o $(SEQ_TARGET)/cpu_util_data_rand.o
-
-# FIXME not CPU specific, should have general build definition
-cpu_util_arg.o: cpu_conf $(SRC_FOLDER)/util_arg.c
-	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/util_arg.c -o $(SEQ_TARGET)/cpu_util_arg.o
-
 cpu_processing.o: cpu_conf $(SEQ_SRC)/processing.c
 	$(CC) $(CFLAGS) -c $(SEQ_SRC)/processing.c -o $(SEQ_TARGET)/cpu_processing.o
 
 cpu_device.o: cpu_conf $(SEQ_SRC)/device.c
 	$(CC) $(CFLAGS) -c $(SEQ_SRC)/device.c -o $(SEQ_TARGET)/cpu_device.o
 
-main_cpu: cpu_conf cpu_util_data_rand.o cpu_util_arg.o cpu_processing.o cpu_device.o
+main_cpu: cpu_conf cpu_processing.o cpu_device.o  $(COMMON_OBJECTS)
 	mkdir -p $(BIN_PATH) 
-	$(CC) $(CFLAGS) $(SRC_FOLDER)/main.c $(SEQ_TARGET)/cpu_device.o $(SEQ_TARGET)/cpu_processing.o $(SEQ_TARGET)/cpu_util_data_rand.o $(SEQ_TARGET)/cpu_util_arg.o -o $(SEQ_EXEC)
+	$(CC) $(CFLAGS) $(SRC_FOLDER)/main.cpp $(SEQ_TARGET)/cpu_device.o $(SEQ_TARGET)/cpu_processing.o  $(COMMON_OBJECTS_PATH) -o $(SEQ_EXEC)
 
 ##################################### OPENMP #################################
 # Shortcuts
@@ -100,14 +125,18 @@ openmp: main_openmp
 
 openmp_conf:
 	mkdir -p $(OPENMP_TARGET)
-	export OMP_NUM_THREADS # FIXME this could probably be deleted, test first 
+	export OMP_NUM_THREADS 
+# FIXME this could probably be deleted, test first  (OMP_NUM_THREADS)
 
 openmp_processing.o: openmp_conf $(OPENMP_SRC)/processing.c
-	$(CC) $(CFLAGS) $(OMPFLAGS) -DOPENMP -c $(OPENMP_SRC)/processing.c  -o $(OPENMP_TARGET)/openmp_processing.o # FIXME -DOPENMP should be variable above, check others below as well
+	$(CC) $(CFLAGS) $(OMPFLAGS) -DOPENMP -c $(OPENMP_SRC)/processing.c  -o $(OPENMP_TARGET)/openmp_processing.o
 
-main_openmp: openmp_conf openmp_processing.o
+openmp_device.o: cpu_conf $(OPENMP_SRC)/device.c
+	$(CC) $(CFLAGS) $(OMPFLAGS) -DOPENMP -c $(OPENMP_SRC)/device.c -o $(OPENMP_TARGET)/openmp_device.o
+
+main_openmp: openmp_conf openmp_processing.o openmp_device.o $(COMMON_OBJECTS)
 	mkdir -p $(BIN_PATH) 
-	$(CC) $(CFLAGS) $(OMPFLAGS) $(SRC_FOLDER)/main.c  -DOPENMP $(OPENMP_TARGET)/openmp_processing.o -o $(OPENMP_EXEC)
+	$(CC) $(CFLAGS) $(OMPFLAGS) -DOPENMP $(SRC_FOLDER)/main.cpp  $(OPENMP_TARGET)/openmp_processing.o $(OPENMP_TARGET)/openmp_device.o $(COMMON_OBJECTS_PATH) -o $(OPENMP_EXEC)
 
 ##################################### OPENCL #################################
 # Shortcuts
@@ -122,13 +151,13 @@ opencl: main_opencl
 opencl_conf:
 	mkdir -p $(OPENCL_TARGET)
 
-opencl_processing.o: $(OPENCL_SRC)/processing.c
+opencl_device.o: opencl_conf $(OPENCL_SRC)/device.c
 	/bin/bash $(CONFIG_PATH)/CLHT.sh
-	$(CC) $(OPFLAGS) -DOPENCL -c $(OPENCL_SRC)/processing.c  -o $(OPENCL_TARGET)/opencl_processing.o
+	$(CC) -DOPENCL $(CFLAGS) -c $(OPENCL_SRC)/device.c  -o $(OPENCL_TARGET)/device.o $(OPFLAGS)
 
-main_opencl: opencl_processing.o
+main_opencl: opencl_conf  opencl_device.o $(COMMON_OBJECTS)
 	mkdir -p $(BIN_PATH) 
-	$(CC) $(CFLAGS) $(OPFLAGS) $(SRC_FOLDER)/main.c  -DOPENCL $(OPENCL_TARGET)/opencl_processing.o -o $(OPENCL_EXEC)
+	$(CC) -DOPENCL $(CFLAGS) $(SRC_FOLDER)/main.cpp  $(OPENCL_TARGET)/device.o  $(COMMON_OBJECTS_PATH) -o $(OPENCL_EXEC)  $(OPFLAGS)
 
 ###################################### CUDA ##################################
 # Shortcuts
@@ -143,12 +172,15 @@ cuda: main_cuda
 cuda_conf:
 	mkdir -p $(CUDA_TARGET)
 
-cuda_processing.o: cuda_conf $(CUDA_SRC)/processing.cu
-	$(NVCC) $(NVCCFLAGS) -DCUDA -c $(CUDA_SRC)/processing.cu  -o $(CUDA_TARGET)/cuda_processing.o
+cuda_device.o: cuda_conf $(CUDA_SRC)/device.cu
+	$(NVCC) $(NVCCFLAGS) $(CUFLAGS) -DCUDA -c $(CUDA_SRC)/device.cu -o $(CUDA_TARGET)/cuda_device.o
 
-main_cuda: cuda_conf cuda_processing.o
+cuda_processing.o: cuda_conf $(CUDA_SRC)/processing.cu
+	$(NVCC)  $(NVCCFLAGS) $(CUFLAGS) -DCUDA -c $(CUDA_SRC)/processing.cu  -o $(CUDA_TARGET)/cuda_processing.o
+
+main_cuda: cuda_conf  cuda_device.o cuda_processing.o  $(COMMON_OBJECTS)
 	mkdir -p $(BIN_PATH) 
-	$(CC) $(CFLAGS) $(CUFLAGS) $(SRC_FOLDER)/main.c -DCUDA $(CUDA_TARGET)/cuda_processing.o -o $(CUDA_EXEC)
+	$(CC)  -DCUDA $(SRC_FOLDER)/main.cpp  $(CUDA_TARGET)/cuda_device.o $(CUDA_TARGET)/cuda_processing.o  $(COMMON_OBJECTS_PATH) -o $(CUDA_EXEC) $(CFLAGS) $(CUFLAGS)
 
 ###################################### HIP ###################################
 # Shortcuts
@@ -165,16 +197,20 @@ hip: main_hip
 hip_conf:
 	mkdir -p $(HIP_TARGET)
 
-lib_hip.o: hip_conf $(HIP_SRC)/lib_hip.cpp
-	$(HIP) $(CFLAGS) $(HIPFLAGS) -D$(DATATYPE) -DBLOCK_SIZE=$(BLOCKSIZE) -DHIP -c $(HIP_SRC)/lib_hip.cpp -o $(HIP_TARGET)/lib_hip.o
+hip_device.o: hip_conf $(HIP_SRC)/device.cpp
+	$(HIPCC) $(HIPCCFLAGS) -DHIP -c $(HIP_SRC)/device.cpp -o $(HIP_TARGET)/hip_device.o $(CFLAGS)
 
-main_hip: hip_conf main.c lib_hip.o lib_cpu.o
-	mkdir -p $(BIN_PATH) 
-	$(HIP) $(CFLAGS) $(HIPFLAGS) -D$(DATATYPE) -DHIP $(SRC_FOLDER)/main.c $(BUILD_PATH)/lib_hip.o  $(SEQ_FOLDER)/lib_cpu.o -o $(HIP_EXEC)_$(shell echo $(DATATYPE) | tr A-Z a-z)_$(BLOCKSIZESQUARED) 
+hip_processing.o: hip_conf $(HIP_SRC)/processing.cpp
+	$(HIPCC)  $(HIPCCFLAGS) -DHIP -c $(HIP_SRC)/processing.cpp -o $(HIP_TARGET)/lib_processing.o $(CFLAGS)
+
+main_hip: hip_conf hip_device.o hip_processing.o  $(COMMON_OBJECTS)
+	mkdir -p $(BIN_PATH)
+	$(HIPCC) -DHIP $(SRC_FOLDER)/main.cpp -x none $(HIP_TARGET)/hip_device.o  $(HIP_TARGET)/lib_processing.o $(COMMON_OBJECTS_PATH) -o $(HIP_EXEC) $(CFLAGS) $(HIPCCFLAGS)
 
 ##################################### CLEAN ##################################
 .PHONY: clean
 clean:
+	rm -f $(COM_TARGET)/*.o
 	rm -f $(SEQ_TARGET)/*.o
 	rm -f $(OPENMP_TARGET)/*.o
 	rm -f $(OPENCL_TARGET)/*.o

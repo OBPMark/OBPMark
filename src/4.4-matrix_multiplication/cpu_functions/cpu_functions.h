@@ -21,7 +21,31 @@ typedef double bench_t;
 
 
 
-#ifdef FLOAT
+#ifdef INT
+#ifdef BIGENDIAN
+
+// bigendian version
+union
+	{
+		int f;
+		struct
+		{
+			unsigned char a,b,c,d;
+		}binary_values;
+	} binary_float;
+#else
+// littelendian version
+union
+	{
+		int f;
+		struct
+		{
+			unsigned char d,c,b,a;
+		}binary_values;
+	} binary_float;
+#endif
+
+#elif FLOAT
 #ifdef BIGENDIAN
 // bigendian version
 union
