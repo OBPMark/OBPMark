@@ -6,7 +6,7 @@
 
 #include "util_data_rand.h"
 
-void benchmark_gen_rand_data(uint8_t *input_data, uint8_t *cypher_key, unsigned int data_length, unsigned int key_length)
+void benchmark_gen_rand_data(uint8_t *input_data, uint8_t *cypher_key, uint8_t *iv,  unsigned int data_length, unsigned int key_length)
 {
 
 	/* Initialize srad seed */
@@ -17,7 +17,8 @@ void benchmark_gen_rand_data(uint8_t *input_data, uint8_t *cypher_key, unsigned 
 	/* Input text */
 	for(int i = 0; i < data_length; i++) 
 	    input_data[i] = (uint8_t) rand() % randnumber;
+	for(int i = 0; i < 16; i++)
+	    iv[i] = (uint8_t) rand() % randnumber;
 	for(int i = 0; i < key_length; i++)
 	    cypher_key[i] = (uint8_t) rand() % randnumber;
-
 }

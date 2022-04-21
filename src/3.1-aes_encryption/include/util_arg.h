@@ -9,6 +9,10 @@
 #include "obpmark.h"
 #include "benchmark.h"
 
+#include <chrono>
+#include <sys/time.h>
+#include <ctime>
+
 /* Definitions */
 #define ARG_SUCCESS 	0
 #define ARG_ERROR 	-1
@@ -19,21 +23,27 @@
  * \brief Command line argument handler.
  */
 int arguments_handler(
-        int argc,
-        char **argv,
-        unsigned int *key_size,
-        char **key_filepath,
-        unsigned int *data_length,
-        char **data_filepath,
-        bool *csv_mode,
-        bool *print_output,
-        bool *print_input,
-        bool *silent
-        );
+    int argc,
+    char **argv,
+    unsigned int *data_length,
+    unsigned int *key_size,
+    char **mode,
+    bool *csv_mode,
+    bool *database_mode,
+    bool *print_output,
+    bool *verbose_output,
+    bool *random_data,
+    char **key_filepath
+    );
 
 /**
  * \brief Prints command line usage. 
  */
 void print_usage(const char *exec_name); 
+
+/**
+ * \brief gets the linux time in microseconds.
+ */
+long int get_timestamp();
 
 #endif // UTIL_ARG_H_
