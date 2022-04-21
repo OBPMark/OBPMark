@@ -145,29 +145,54 @@ void AES_MixColumns(STATE_PARAM)
 
 void AES_encrypt_state(STATES_PARAM, NB_PARAM, SBOX_PARAM, ROUNDKEY_PARAM, unsigned int num_rounds) 
 {
-	AES_AddRoundKey(in_state, state, roundkey, Nb, 0); 
+    time_t aux;
+    AES_AddRoundKey(in_state, state, roundkey, Nb, 0); 
 
-	for(unsigned int roundi=1; roundi<num_rounds; roundi++)
-	{
-		AES_SubBytes(state, sbox); 
-		AES_ShiftRows(state);
-		AES_MixColumns(state);
-		AES_AddRoundKey(state, state, roundkey, Nb, roundi); 
-	}
-	//Last iteration without MixColumns
-	AES_SubBytes(state, sbox);
-	AES_ShiftRows(state); 
-	AES_AddRoundKey(state, state, roundkey, Nb, num_rounds); 
+    for(unsigned int roundi=1; roundi<num_rounds; roundi++)
+    {
+        AES_SubBytes(state, sbox); 
+        AES_ShiftRows(state);
+        AES_MixColumns(state);
+        AES_AddRoundKey(state, state, roundkey, Nb, roundi); 
+    }
+    //Last iteration without MixColumns
+    AES_SubBytes(state, sbox);
+    AES_ShiftRows(state); 
+    AES_AddRoundKey(state, state, roundkey, Nb, num_rounds); 
 }
 
+void counter_add(uint8_t *iv, uint64_t block, int id){
+    uint64_t carry;
+    carry = iv[id] + block;
+    if (block <=(255-iv[id]) || id == 0) {
+        iv[id] = carry;
+        return;
+    }
+    else {
+        iv[id] = carry;
+        carry >>= 8;
+        counter_add(iv, carry, id-1);
+    }
+}
 
 /* Public functions */
 
-void AES_encrypt(AES_data_t *AES_data, AES_time_t *t, int block)
+void AES_encrypt(AES_data_t *AES_data, uint64_t block)
 {
-    uint8_t *initial_state = AES_data->input_text+block*16;
-    uint8_t *final_state = AES_data->encrypted_text+block*16;
+            uint8_t *final_state = AES_data->cyphertext+block*16;
+            uint8_t *plaintext = AES_data->plaintext+block*16;
+            uint8_t *iv = AES_data->iv;
+	switch(AES_data->mode) {
+		case AES_ECB: 
+            /* operations per state */
+            AES_encrypt_state((uint8_t (*)[4]) plaintext, (uint8_t (*)[4]) final_state, AES_data->key->Nb, AES_data->sbox, AES_data->expanded_key, AES_data->key->Nr);
+		    break;
+		case AES_CTR:
+            /* operations per state */
+            AES_encrypt_state((uint8_t (*)[4]) iv, (uint8_t (*)[4]) final_state, AES_data->key->Nb, AES_data->sbox, AES_data->expanded_key, AES_data->key->Nr);
 
-    /* Operations per state */
-    AES_encrypt_state((uint8_t (*)[4]) initial_state, (uint8_t (*)[4]) final_state, AES_data->key->Nb, AES_data->sbox, AES_data->expanded_key, AES_data->key->Nr);
+            for(int y = 0; y < 4*AES_data->key->Nb; y++) final_state[y] ^= plaintext[y];
+                //*((uint32_t*) &final_state[4*y]) ^= *((uint32_t*) &plaintext[4*y]);
+		    break;
+	}
 }
