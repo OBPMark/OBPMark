@@ -191,12 +191,16 @@ void AES_encrypt(AES_data_t *AES_data, uint64_t block)
             /* operations per state */
             AES_encrypt_state((uint8_t (*)[4]) plaintext, (uint8_t (*)[4]) final_state, AES_data->key->Nb, AES_data->sbox, AES_data->expanded_key, AES_data->key->Nr);
 		    break;
+
 		case AES_CTR:
             /* operations per state */
             AES_encrypt_state((uint8_t (*)[4]) iv, (uint8_t (*)[4]) final_state, AES_data->key->Nb, AES_data->sbox, AES_data->expanded_key, AES_data->key->Nr);
+
+            /* Update the counter value */
             counter_add(iv, 1);
-            for(int y = 0; y < AES_data->key->Nb; y++) //final_state[y] ^= plaintext[y];
-                *((uint32_t*) &final_state[4*y]) ^= *((uint32_t*) &plaintext[4*y]);
+
+            /* XOR iv with plaintext */
+            for(int y = 0; y < AES_data->key->Nb; y++) *((uint32_t*) &final_state[4*y]) ^= *((uint32_t*) &plaintext[4*y]);
 		    break;
 	}
 }
