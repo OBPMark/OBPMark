@@ -1,7 +1,7 @@
 /**
  * \file benchmark.h
- * \brief Benchmark #1.1 top-level header
- * \author Ivan Rodriquez (BSC)
+ * \brief Benchmark #3.1 top-level header
+ * \author Marc Sole (BSC)
  */
 #ifndef BENCHMARK_H_
 #define BENCHMARK_H_
@@ -27,6 +27,8 @@
 #define BLOCK_SIZE		16
 
 #elif OPENMP
+/* OPENMP version */
+#include <omp.h>
 #define DEVICESELECTED		0
 
 #elif HIP

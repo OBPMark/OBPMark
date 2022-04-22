@@ -99,13 +99,13 @@ void process_benchmark(
 	)
 {    
     uint64_t n_blocks = AES_data->data_length/ (4*AES_data->key->Nb);
-    T_START(t->t_test);
+	const double start_wtime = omp_get_wtime();
     AES_KeyExpansion(AES_data->key, (uint32_t*) AES_data->expanded_key, AES_data->sbox, AES_data->rcon);
     #pragma omp parallel for
     for(uint64_t b = 0; b < n_blocks; b++){
         AES_encrypt(AES_data, b);
     }
-    T_STOP(t->t_test);
+	t->t_test = omp_get_wtime() - start_wtime;
 }
 
 void copy_memory_to_host(
@@ -129,17 +129,17 @@ void get_elapsed_time(
 
 	if (csv_format)
 	{
-		double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
+		double elapsed_time = t->t_test * 1000;
 		printf("%.10f;%.10f;%.10f;\n", (float) 0, elapsed_time, (float) 0);
 	}
 	else if (database_format)
 	{
-		double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
+		double elapsed_time = t->t_test * 1000;
 		printf("%.10f;%.10f;%.10f;%ld;\n", (float) 0, elapsed_time, (float) 0, timestamp);
 	}
 	else if(verbose_print)
 	{
-		double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
+		double elapsed_time = t->t_test * 1000;
 		printf("Elapsed time Host->Device: %.10f milliseconds\n", (float) 0);
 		printf("Elapsed time kernel: %.10f milliseconds\n", elapsed_time );
 		printf("Elapsed time Device->Host: %.10f milliseconds\n", (float) 0);

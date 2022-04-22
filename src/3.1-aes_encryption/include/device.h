@@ -130,7 +130,7 @@ struct AES_data_t
 };
 
 typedef struct {
-	time_t t_test;
+    double t_test;
 } AES_time_t; 
 
 #else
