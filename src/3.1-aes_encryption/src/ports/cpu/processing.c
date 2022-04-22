@@ -164,7 +164,7 @@ void AES_encrypt_state(STATES_PARAM, NB_PARAM, SBOX_PARAM, ROUNDKEY_PARAM, unsig
 void counter_add(uint8_t *iv, uint64_t block, int id){
     uint64_t carry;
     carry = iv[id] + block;
-    if (block <=(255-iv[id]) || id == 0) {
+    if (carry <= 255 || id == 0) {
         iv[id] = carry;
         return;
     }
@@ -190,7 +190,7 @@ void AES_encrypt(AES_data_t *AES_data, uint64_t block)
 		case AES_CTR:
             /* operations per state */
             AES_encrypt_state((uint8_t (*)[4]) iv, (uint8_t (*)[4]) final_state, AES_data->key->Nb, AES_data->sbox, AES_data->expanded_key, AES_data->key->Nr);
-
+            counter_add(iv, 1, 15);
             for(int y = 0; y < 4*AES_data->key->Nb; y++) final_state[y] ^= plaintext[y];
                 //*((uint32_t*) &final_state[4*y]) ^= *((uint32_t*) &plaintext[4*y]);
 		    break;
