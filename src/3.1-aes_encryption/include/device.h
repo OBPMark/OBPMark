@@ -105,10 +105,36 @@ typedef struct {
 
 } AES_time_t; 
 
-#elif HIP
-/* HIP version */
+#elif OPENMP
+/* OPENMP version */
+
+typedef struct {
+    uint8_t *value;
+    AES_keysize_t size;
+    uint32_t Nb;
+    uint32_t Nk;
+    uint32_t Nr;
+} AES_key_t;
+
+struct AES_data_t
+{
+	AES_key_t *key;
+	uint8_t *plaintext;
+	size_t data_length;
+	uint8_t *expanded_key;
+	uint8_t *cyphertext;
+	uint8_t *iv;
+	AES_mode_t mode;
+	uint8_t *sbox;
+	uint8_t *rcon;
+};
+
+typedef struct {
+	time_t t_test;
+} AES_time_t; 
+
 #else
-/* Sequential C version & OPENMP version */
+/* Sequential C version */
 
 typedef struct {
     uint8_t *value;

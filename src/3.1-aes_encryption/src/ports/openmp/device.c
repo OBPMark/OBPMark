@@ -52,7 +52,7 @@ bool device_memory_init(
 	/* memory allocation for input and output texts */
     AES_data->plaintext = (uint8_t*) malloc(sizeof(uint8_t)*data_length);
     AES_data->cyphertext = (uint8_t*) malloc(sizeof(uint8_t)*data_length);
-    AES_data->iv = (uint8_t*) malloc(sizeof(uint8_t)*16);
+    AES_data->iv = (uint8_t*) malloc(sizeof(uint8_t)*data_length); //16 * #blocks -> 16 * length/16 -> length
     AES_data->data_length = data_length;
 
     /* allocate constant lookup tables */
@@ -82,7 +82,10 @@ void copy_memory_to_device(
     /* initialize input text */
     memcpy(AES_data->plaintext, input_text, sizeof(uint8_t)*AES_data->data_length);
     /* initialize iv */
-    memcpy(AES_data->iv, input_iv, sizeof(uint8_t)*16);
+    //copy input value #blocks times
+    uint64_t n_blocks = AES_data->data_length/ (4*AES_data->key->Nb);
+    for(uint64_t i = 0; i < n_blocks; i++)
+        memcpy((AES_data->iv+i*16*sizeof(uint8_t)), input_iv, sizeof(uint8_t)*16);
     /* initialize sbox */
     memcpy(AES_data->sbox, input_sbox, sizeof(uint8_t)*256);
     /* initialize rcon */
