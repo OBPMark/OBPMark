@@ -95,7 +95,7 @@ struct image_data_t
 };
 
 typedef struct {
-	time_t t_test;
+	double t_test;
 
 
 } image_time_t; 
