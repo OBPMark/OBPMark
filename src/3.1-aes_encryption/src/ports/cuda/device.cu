@@ -181,31 +181,6 @@ void copy_memory_to_host(
    cudaEventRecord(*t->stop_memory_copy_host);
 }
 
-
-float get_elapsed_time(
-	AES_time_t *t, 
-	bool csv_format
-	)
-{
-    cudaEventSynchronize(*t->stop_memory_copy_host);
-    float milliseconds_h_d = 0, milliseconds = 0, milliseconds_d_h = 0;
-    // memory transfer time host-device
-    cudaEventElapsedTime(&milliseconds_h_d, *t->start_memory_copy_device, *t->stop_memory_copy_device);
-    // kernel time
-    cudaEventElapsedTime(&milliseconds, *t->start, *t->stop);
-    //  memory transfer time device-host
-    cudaEventElapsedTime(&milliseconds_d_h, *t->start_memory_copy_host, *t->stop_memory_copy_host);
-    
-    if (csv_format){
-         printf("%.10f;%.10f;%.10f;\n", milliseconds_h_d,milliseconds,milliseconds_d_h);
-    }else{
-         printf("Elapsed time Host->Device: %.10f miliseconds\n", milliseconds_h_d);
-         printf("Elapsed time kernel: %.10f miliseconds\n", milliseconds);
-         printf("Elapsed time Device->Host: %.10f miliseconds\n", milliseconds_d_h);
-    }
-    return milliseconds;
-}
-
 void get_elapsed_time(
 	AES_time_t *t, 
 	bool csv_format,
