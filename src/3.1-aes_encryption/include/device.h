@@ -97,11 +97,9 @@ struct AES_data_t
 };
 
 typedef struct {
-	cl::Event *start_test;
-	cl::Event *stop_test;
-	cl::Event *start_memory_copy_device;
-	cl::Event *stop_memory_copy_device;
-	cl::Event *memory_copy_host;
+	time_t t_test;
+	time_t t_host_device;
+	cl::Event *t_device_host;
 
 } AES_time_t; 
 
