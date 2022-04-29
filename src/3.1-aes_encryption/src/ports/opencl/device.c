@@ -164,6 +164,7 @@ void process_benchmark(
     kernel_encrypt.setArg(6, *AES_data->expanded_key);
     kernel_encrypt.setArg(7, (AES_data->mode==AES_ECB)?0:1);
     AES_data->queue->enqueueNDRangeKernel(kernel_encrypt, cl::NullRange, global_range, cl::NullRange, NULL, NULL);
+    AES_data->queue->finish();
     T_STOP(t->t_test);
 }
 
