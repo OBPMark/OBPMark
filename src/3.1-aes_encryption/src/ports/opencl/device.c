@@ -123,11 +123,7 @@ void copy_memory_to_device(
     /* initialize input text */
     AES_data->queue->enqueueWriteBuffer(*AES_data->plaintext, CL_TRUE, 0, sizeof(unsigned char)*AES_data->data_length, input_text, NULL, NULL);
     /* initialize initialization vector */
-    unsigned int n_blocks = AES_data->data_length/(4*AES_data->key->Nb);
-    for(int i=0; i<n_blocks; i++){
-        cl_buffer_region position = {i*16*sizeof(unsigned char), 16*(sizeof(unsigned char))};
-        AES_data->queue->enqueueWriteBuffer(AES_data->iv->createSubBuffer(CL_MEM_READ_WRITE,CL_BUFFER_CREATE_TYPE_REGION,&position, NULL), CL_TRUE, 0, sizeof(unsigned char)*16, input_iv, NULL, NULL);
-    }
+    AES_data->queue->enqueueWriteBuffer(*AES_data->iv, CL_TRUE, 0, sizeof(unsigned char)*16, input_iv, NULL, NULL);
     /* initialize sbox */
     AES_data->queue->enqueueWriteBuffer(*AES_data->sbox, CL_TRUE, 0, sizeof(unsigned char)*256, input_sbox, NULL, NULL);
     /* initialize rcon */

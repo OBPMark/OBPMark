@@ -137,9 +137,7 @@ void copy_memory_to_device(
     cudaMemcpy(AES_data->host->plaintext, input_text, sizeof(uint8_t)*AES_data->host->data_length, cudaMemcpyHostToDevice);
 
     /* initialize iv */
-    uint64_t n_blocks = AES_data->host->data_length/ (4*AES_data->host_key->Nb);
-    for(uint64_t i = 0; i < n_blocks; i++)
-        cudaMemcpy(AES_data->host->iv+i*16*sizeof(uint8_t), input_iv, sizeof(uint8_t)*16, cudaMemcpyHostToDevice);
+    cudaMemcpy(AES_data->host->iv, input_iv, sizeof(uint8_t)*16, cudaMemcpyHostToDevice);
 
     /* initialize sbox */
     cudaMemcpy(AES_data->host->sbox, input_sbox, sizeof(uint8_t)*256, cudaMemcpyHostToDevice);

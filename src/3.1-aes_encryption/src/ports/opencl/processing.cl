@@ -180,13 +180,15 @@ void AES_encrypt_state(STATES_PARAM, NB_PARAM, SBOX_PARAM, ROUNDKEY_PARAM, unsig
 
 void counter_add_rec(global unsigned char *iv, unsigned int block, int id){
     unsigned int carry;
+    unsigned char *counter = iv+get_global_id(0)*16;
     carry = iv[id] + block;
     if (block <=(255-iv[id]) || id == 0) {
-        iv[id] = carry;
+        counter[id] = carry;
+        for(int i = id-1; i>=0; i--) counter[i] = iv[i];
         return;
     }
     else {
-        iv[id] = carry;
+        counter[id] = carry;
         carry >>= 8;
         counter_add_rec(iv, carry, id-1);
     }
@@ -209,8 +211,8 @@ AES_encrypt(DATA_PARAM)
 
         case AES_CTR:
             /* set the counter value */
-            counter_add(counter, get_global_id(0));
-
+            counter_add(iv, get_global_id(0));
+            
             /* Operations per state */
             AES_encrypt_state(counter, final_state, Nb, sbox, roundkey, Nr);
 

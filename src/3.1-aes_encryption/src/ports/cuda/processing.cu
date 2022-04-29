@@ -157,13 +157,15 @@ __device__ void AES_encrypt_state(STATES_PARAM, NB_PARAM, SBOX_PARAM, ROUNDKEY_P
 
 __device__ void counter_add(uint8_t *iv, uint64_t block, int id){
     uint64_t carry;
+    uint8_t *counter = iv+16*(blockIdx.x*512+threadIdx.x);
     carry = iv[id] + block;
     if (block <=(255-iv[id]) || id == 0) {
-        iv[id] = carry;
+        counter[id] = carry;
+        for(int i = id-1; i>=0; i--)  counter[i] = iv[i];
         return;
     }
     else {
-        iv[id] = carry;
+        counter[id] = carry;
         carry >>= 8;
         counter_add(iv, carry, id-1);
     }
@@ -183,7 +185,7 @@ __global__ void AES_encrypt(AES_values_t *AES_data)
     int offset =  16*(thread+block*512);
     if (offset >= AES_data->data_length) return;
     uint8_t *plaintext = AES_data->plaintext+offset;
-    uint8_t *iv = AES_data->iv+offset;
+    uint8_t *counter = AES_data->iv+offset;
     uint8_t *final_state = AES_data->cyphertext+offset;
 
     switch(AES_data->mode){
@@ -194,10 +196,10 @@ __global__ void AES_encrypt(AES_values_t *AES_data)
 
         case AES_CTR:
             /*set the counter value */
-            counter_add(iv, offset>>4);
+            counter_add(AES_data->iv, offset>>4);
 
             /* Operations per state */
-            AES_encrypt_state((uint8_t (*)[4]) iv, (uint8_t (*)[4]) final_state, AES_data->key->Nb, AES_data->sbox, AES_data->expanded_key, AES_data->key->Nr);
+            AES_encrypt_state((uint8_t (*)[4]) counter, (uint8_t (*)[4]) final_state, AES_data->key->Nb, AES_data->sbox, AES_data->expanded_key, AES_data->key->Nr);
 
             /* XOR iv with plaintext */
             for(int y = 0; y < AES_data->key->Nb; y++) *((uint32_t*) &final_state[4*y]) ^= *((uint32_t*) &plaintext[4*y]);
