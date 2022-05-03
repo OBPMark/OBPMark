@@ -69,7 +69,6 @@ void init(
 
 bool device_memory_init(
 	AES_data_t *AES_data,
-	AES_mode_t enc_mode,
     unsigned int key_size,
     unsigned int data_length
 	)
@@ -83,8 +82,6 @@ bool device_memory_init(
 		case AES_KEY256: AES_data->key->Nk = 8; AES_data->key->Nr = 14; break;
 	}
 	AES_data->key->Nb = 4;
-	/* Encryption mode */
-	AES_data->mode = enc_mode;
 
 	/* key value memory allocation */
 	AES_data->key->value = new cl::Buffer(*AES_data->context, CL_MEM_READ_WRITE, sizeof(uint8_t)*key_size);
@@ -162,7 +159,6 @@ void process_benchmark(
     kernel_encrypt.setArg(4, AES_data->key->Nr);
     kernel_encrypt.setArg(5, *AES_data->sbox);
     kernel_encrypt.setArg(6, *AES_data->expanded_key);
-    kernel_encrypt.setArg(7, (AES_data->mode==AES_ECB)?0:1);
     AES_data->queue->enqueueNDRangeKernel(kernel_encrypt, cl::NullRange, global_range, cl::NullRange, NULL, NULL);
     AES_data->queue->finish();
     T_STOP(t->t_test);

@@ -47,7 +47,6 @@ void init(
 
 bool device_memory_init(
 	AES_data_t *AES_data,
-    AES_mode_t enc_mode,
     unsigned int key_size,
     unsigned int data_length
 	)
@@ -57,9 +56,6 @@ bool device_memory_init(
     //malloc host addresses
     AES_data->host = (AES_values_t*) malloc(sizeof(AES_values_t));
     AES_data->host_key = (AES_key_t*) malloc(sizeof(AES_key_t));
-
-    //Store execution mode in host
-    AES_data->host->mode = enc_mode;
 
     //fill host_key value
     AES_data->host_key->Nb = 4;

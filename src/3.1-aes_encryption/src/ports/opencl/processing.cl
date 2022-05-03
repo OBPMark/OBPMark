@@ -15,11 +15,7 @@
 
 #define KEY_PARAM NB_PARAM, NR_PARAM, NK_PARAM, KEY_VALUE
 
-#define AES_ECB 0
-#define AES_CTR 1
-#define MODE_PARAM const unsigned int mode
-
-#define DATA_PARAM global unsigned char *plaintext, global unsigned char *cyphertext, global unsigned char *iv, NB_PARAM, NR_PARAM, SBOX_PARAM, ROUNDKEY_PARAM, MODE_PARAM
+#define DATA_PARAM global unsigned char *plaintext, global unsigned char *cyphertext, global unsigned char *iv, NB_PARAM, NR_PARAM, SBOX_PARAM, ROUNDKEY_PARAM
 
 void printState(STATE_PARAM, int Nb){
     for(int i =0; i<Nb; i++){
@@ -200,26 +196,17 @@ void counter_add(global unsigned char *iv, unsigned int block){
 void kernel
 AES_encrypt(DATA_PARAM)
 {
-    global unsigned char *initial_state = plaintext+get_global_id(0)*16;
+    global unsigned char *pt = plaintext+get_global_id(0)*16;
     global unsigned char *final_state = cyphertext+get_global_id(0)*16;
     global unsigned char *counter = iv+get_global_id(0)*16;
-    switch(mode){
-        case AES_ECB:
-            /* Operations per state */
-            AES_encrypt_state(initial_state, final_state, Nb, sbox, roundkey, Nr);
-            break;
+    /* set the counter value */
+    counter_add(iv, get_global_id(0));
+    
+    /* Operations per state */
+    AES_encrypt_state(counter, final_state, Nb, sbox, roundkey, Nr);
 
-        case AES_CTR:
-            /* set the counter value */
-            counter_add(iv, get_global_id(0));
-            
-            /* Operations per state */
-            AES_encrypt_state(counter, final_state, Nb, sbox, roundkey, Nr);
-
-            /* XOR iv with plaintext */
-            for(int y = 0; y < Nb; y++) *((unsigned int*) &final_state[4*y]) ^= *((unsigned int*) &initial_state[4*y]);
-            break;
-    }
+    /* XOR iv with plaintext */
+    for(int y = 0; y < Nb; y++) *((unsigned int*) &final_state[4*y]) ^= *((unsigned int*) &pt[4*y]);
 }
 
 #htendvar

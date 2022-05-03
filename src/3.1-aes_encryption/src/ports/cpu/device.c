@@ -30,13 +30,10 @@ void init(
 
 bool device_memory_init(
 	AES_data_t *AES_data,
-	AES_mode_t enc_mode,
     unsigned int key_size,
     unsigned int data_length
 	)
 {	
-	/* Store execution mode in AES_data */
-	AES_data->mode = enc_mode;
 	/* key configuration values initialization */
     AES_data->key = (AES_key_t*) malloc(sizeof(AES_key_t));
 	AES_data->key->size = (AES_keysize_t) key_size;

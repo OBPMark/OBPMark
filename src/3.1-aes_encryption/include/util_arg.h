@@ -27,7 +27,6 @@ int arguments_handler(
     char **argv,
     unsigned int *data_length,
     unsigned int *key_size,
-    char **mode,
     bool *csv_mode,
     bool *database_mode,
     bool *print_output,

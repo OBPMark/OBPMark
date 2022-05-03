@@ -182,25 +182,16 @@ void counter_add(uint8_t *iv, uint64_t block){
 
 void AES_encrypt(AES_data_t *AES_data, uint64_t block)
 {
-            uint8_t *final_state = AES_data->cyphertext+block*16;
-            uint8_t *plaintext = AES_data->plaintext+block*16;
-            uint8_t *iv = AES_data->iv;
+    uint8_t *final_state = AES_data->cyphertext+block*16;
+    uint8_t *plaintext = AES_data->plaintext+block*16;
+    uint8_t *iv = AES_data->iv;
 
-	switch(AES_data->mode) {
-		case AES_ECB: 
-            /* operations per state */
-            AES_encrypt_state((uint8_t (*)[4]) plaintext, (uint8_t (*)[4]) final_state, AES_data->key->Nb, AES_data->sbox, AES_data->expanded_key, AES_data->key->Nr);
-		    break;
+    /* operations per state */
+    AES_encrypt_state((uint8_t (*)[4]) iv, (uint8_t (*)[4]) final_state, AES_data->key->Nb, AES_data->sbox, AES_data->expanded_key, AES_data->key->Nr);
 
-		case AES_CTR:
-            /* operations per state */
-            AES_encrypt_state((uint8_t (*)[4]) iv, (uint8_t (*)[4]) final_state, AES_data->key->Nb, AES_data->sbox, AES_data->expanded_key, AES_data->key->Nr);
+    /* Update the counter value */
+    counter_add(iv, 1);
 
-            /* Update the counter value */
-            counter_add(iv, 1);
-
-            /* XOR iv with plaintext */
-            for(int y = 0; y < AES_data->key->Nb; y++) *((uint32_t*) &final_state[4*y]) ^= *((uint32_t*) &plaintext[4*y]);
-		    break;
-	}
+    /* XOR iv with plaintext */
+    for(int y = 0; y < AES_data->key->Nb; y++) *((uint32_t*) &final_state[4*y]) ^= *((uint32_t*) &plaintext[4*y]);
 }

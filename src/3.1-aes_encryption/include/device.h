@@ -17,11 +17,6 @@ typedef enum {
 	AES_KEY256 = 256
 } AES_keysize_t;
 
-typedef enum {
-    AES_ECB,
-    AES_CTR
-} AES_mode_t;
-
 /* Device Typedefs */
 #ifdef CUDA
 /* CUDA version */
@@ -44,7 +39,6 @@ struct AES_values_t
 	uint8_t *expanded_key;
 	uint8_t *cyphertext;
 	uint8_t *iv;
-	AES_mode_t mode;
 	uint8_t *sbox;
 	uint8_t *rcon;
 };
@@ -91,7 +85,6 @@ struct AES_data_t
     cl::Buffer *expanded_key;
     cl::Buffer *cyphertext;
     cl::Buffer *iv;
-	AES_mode_t mode;
     cl::Buffer *sbox;
     cl::Buffer *rcon;
 };
@@ -122,7 +115,6 @@ struct AES_data_t
 	uint8_t *expanded_key;
 	uint8_t *cyphertext;
 	uint8_t *iv;
-	AES_mode_t mode;
 	uint8_t *sbox;
 	uint8_t *rcon;
 };
@@ -150,7 +142,6 @@ struct AES_data_t
 	uint8_t *expanded_key;
 	uint8_t *cyphertext;
 	uint8_t *iv;
-	AES_mode_t mode;
 	uint8_t *sbox;
 	uint8_t *rcon;
 };
@@ -187,7 +178,6 @@ void init(
  */
 bool device_memory_init(
 	AES_data_t *AES_data,
-    AES_mode_t enc_mode,
     unsigned int key_size,
     unsigned int data_length
 	);
