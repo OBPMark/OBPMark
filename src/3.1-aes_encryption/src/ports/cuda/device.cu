@@ -153,13 +153,19 @@ void process_benchmark(
 	AES_time_t *t
 	)
 {    
-    int n_threads = AES_data->host->data_length/(4*AES_data->host_key->Nb);
-    int n_blocks = n_threads/512+(n_threads%512==0?0:1);
+    int data_block = AES_data->host->data_length/(4*AES_data->host_key->Nb);
+#ifdef CUDA_FINE
+    int n_blocks = data_block/64+(data_block%64==0?0:1);
+    dim3 threads(64,AES_data->host_key->Nb,4);
+#else 
+    int n_blocks = data_block/1024+(data_block%1024==0?0:1);
+    dim3 threads(1024,1,1);
+#endif
     int key_threads = AES_data->host_key->Nk;
     cudaEventRecord(*t->start);
     AES_KeyExpansion<<<1,key_threads>>>(AES_data->dev);
     cudaDeviceSynchronize();
-    AES_encrypt<<<n_blocks, 512>>>(AES_data->dev);
+    AES_encrypt<<<n_blocks, threads>>>(AES_data->dev);
     cudaDeviceSynchronize();
     cudaEventRecord(*t->stop);
 }

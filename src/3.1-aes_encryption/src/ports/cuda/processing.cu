@@ -67,24 +67,43 @@ __global__ void AES_KeyExpansion(DATA_PARAM)
 
 __device__ void AES_AddRoundKey(STATES_PARAM, ROUNDKEY_PARAM, NB_PARAM,  unsigned int round_number)
 {
+#ifdef CUDA_FINE
+	int i = threadIdx.y;
+	int j = threadIdx.z;
+    state[i][j] = in_state[i][j] ^ roundkey[(round_number * Nb * 4) + (i * Nb) + j];
+#else
 	for(int i=0; i<Nb; i++) {
 		for(int j=0; j<4; j++) {
             state[i][j] = in_state[i][j] ^ roundkey[(round_number * Nb * 4) + (i * Nb) + j];
 		}
 	}
+#endif
 }
 
 __device__ void AES_SubBytes(STATE_PARAM, uint8_t *sbox)
 {
+#ifdef CUDA_FINE
+	int i = threadIdx.y;
+	int j = threadIdx.z;
+    state[i][j] = sbox[state[i][j]]; 
+#else
 	for(int i=0; i<4; i++) {
 		for(int j=0; j<4; j++) {
 			state[i][j] = sbox[state[i][j]]; 
 		}
 	}
+#endif
 }
 
 __device__ void AES_ShiftRows(STATE_PARAM)
 {
+#ifdef CUDA_FINE
+	int i = threadIdx.y;
+	int j = threadIdx.z;
+	uint8_t temp= state[(i+j)%4][j];
+    __syncthreads();
+	state[i][j] = temp;
+#else
 	uint8_t temp;
 	/* Shift each column by coeficient, coeficent = nrow */
 	/* No shift on 1st row */
@@ -109,12 +128,23 @@ __device__ void AES_ShiftRows(STATE_PARAM)
 	state[2][3] = state[1][3];
 	state[1][3] = state[0][3];
 	state[0][3] = temp;
+#endif
 }
 
 #define xtime(x) ((x<<1) ^ (((x>>7) & 1) * 0x1b))
 
 __device__ void AES_MixColumns(STATE_PARAM)
 {
+#ifdef CUDA_FINE
+    int i = threadIdx.y;
+    int j = threadIdx.z;
+    uint8_t Tmp, Tm;
+    Tmp = state[i][0] ^ state[i][1] ^ state[i][2] ^ state[i][3] ;
+    Tm = state[i][j] ^ state[i][(j+1)%4];
+    Tm = xtime(Tm);
+    __syncthreads();
+    state[i][j] ^= Tm ^ Tmp;
+#else
     uint8_t Tmp, Tm, t;
     for (int i = 0; i < 4; ++i)
     {
@@ -137,27 +167,41 @@ __device__ void AES_MixColumns(STATE_PARAM)
         Tm = xtime(Tm);
         state[i][3] ^= Tm ^ Tmp;
     }
+#endif
 }
+
+#ifdef CUDA_FINE
+#define SYNC __syncthreads()
+#else 
+#define SYNC 
+#endif
 __device__ void AES_encrypt_state(STATES_PARAM, NB_PARAM, SBOX_PARAM, ROUNDKEY_PARAM, unsigned int num_rounds) 
 {
-	AES_AddRoundKey(in_state, state, roundkey, Nb, 0); 
-
-	for(unsigned int roundi=1; roundi<num_rounds; roundi++)
-	{
-		AES_SubBytes(state, sbox); 
-		AES_ShiftRows(state);
-		AES_MixColumns(state);
-		AES_AddRoundKey(state, state, roundkey, Nb, roundi); 
-	}
-	//Last iteration without MixColumns
-	AES_SubBytes(state, sbox);
-	AES_ShiftRows(state); 
-	AES_AddRoundKey(state, state, roundkey, Nb, num_rounds); 
+    AES_AddRoundKey(in_state, state, roundkey, Nb, 0); 
+    SYNC;
+    for(unsigned int roundi=1; roundi<num_rounds; roundi++)
+    {
+        AES_SubBytes(state, sbox); 
+        SYNC;
+        AES_ShiftRows(state);
+        SYNC;
+        AES_MixColumns(state);
+        SYNC;
+        AES_AddRoundKey(state, state, roundkey, Nb, roundi); 
+        SYNC;
+    }
+    //Last iteration without MixColumns
+    AES_SubBytes(state, sbox);
+    SYNC;
+    AES_ShiftRows(state); 
+    SYNC;
+    AES_AddRoundKey(state, state, roundkey, Nb, num_rounds); 
+    SYNC;
 }
 
 __device__ void counter_add(uint8_t *iv, uint64_t block, int id){
     uint64_t carry;
-    uint8_t *counter = iv+16*(blockIdx.x*512+threadIdx.x);
+    uint8_t *counter = iv+16*(blockIdx.x*blockDim.x+threadIdx.x);
     carry = iv[id] + block;
     if (block <=(255-iv[id]) || id == 0) {
         counter[id] = carry;
@@ -171,6 +215,9 @@ __device__ void counter_add(uint8_t *iv, uint64_t block, int id){
     }
 }
 __device__ void counter_add(uint8_t *iv, uint64_t block){
+#ifdef CUDA_FINE
+    if (threadIdx.y != 0 || threadIdx.z != 0) return;
+#endif
     counter_add(iv, block, 15);
 }
 
@@ -182,7 +229,7 @@ __global__ void AES_encrypt(AES_values_t *AES_data)
 {
     int block = blockIdx.x;
     int thread = threadIdx.x;
-    int offset =  16*(thread+block*512);
+    int offset =  16*(thread+block*blockDim.x);
     if (offset >= AES_data->data_length) return;
     uint8_t *plaintext = AES_data->plaintext+offset;
     uint8_t *counter = AES_data->iv+offset;
@@ -190,10 +237,15 @@ __global__ void AES_encrypt(AES_values_t *AES_data)
 
     /*set the counter value */
     counter_add(AES_data->iv, offset>>4);
+    SYNC;
 
     /* Operations per state */
     AES_encrypt_state((uint8_t (*)[4]) counter, (uint8_t (*)[4]) final_state, AES_data->key->Nb, AES_data->sbox, AES_data->expanded_key, AES_data->key->Nr);
 
     /* XOR iv with plaintext */
+#ifdef CUDA_FINE
+     final_state[4*threadIdx.y+threadIdx.z] ^= plaintext[4*threadIdx.y+threadIdx.z];
+#else 
     for(int y = 0; y < AES_data->key->Nb; y++) *((uint32_t*) &final_state[4*y]) ^= *((uint32_t*) &plaintext[4*y]);
+#endif
 }

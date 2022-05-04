@@ -153,11 +153,13 @@ cuda: main_cuda
 cuda_conf:
 	mkdir -p $(CUDA_TARGET)
 
+GRAIN?=CUDA_COARSE
+
 cuda_processing.o: cuda_conf $(CUDA_SRC)/processing.cu
-	$(NVCC) $(NVCCFLAGS) $(CUFLAGS) -DCUDA -c $(CUDA_SRC)/processing.cu  -o $(CUDA_TARGET)/cuda_processing.o
+	$(NVCC) $(NVCCFLAGS) $(CUFLAGS) -DCUDA -D$(GRAIN) -c $(CUDA_SRC)/processing.cu  -o $(CUDA_TARGET)/cuda_processing.o
 
 cuda_device.o: cuda_conf $(CUDA_SRC)/device.cu
-	$(NVCC) $(NVCCFLAGS) $(CUFLAGS) -DCUDA -c $(CUDA_SRC)/device.cu  -o $(CUDA_TARGET)/cuda_device.o
+	$(NVCC) $(NVCCFLAGS) $(CUFLAGS) -DCUDA -D$(GRAIN) -c $(CUDA_SRC)/device.cu  -o $(CUDA_TARGET)/cuda_device.o
 
 main_cuda: cuda_conf cuda_processing.o cuda_device.o $(COMMON_OBJECTS)
 	mkdir -p $(BIN_PATH) 
