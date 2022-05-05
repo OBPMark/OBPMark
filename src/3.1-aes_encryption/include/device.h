@@ -92,7 +92,9 @@ struct AES_data_t
 typedef struct {
 	time_t t_test;
 	time_t t_host_device;
-	cl::Event *t_device_host;
+    //FIXME Switch to openCL timing when verify in other platform
+	time_t t_device_host;
+	//cl::Event *t_device_host;
 
 } AES_time_t; 
 

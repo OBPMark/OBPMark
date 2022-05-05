@@ -50,7 +50,7 @@ void init(
     AES_data->default_device = default_device;
 
     // events
-    t->t_device_host = new cl::Event();
+    //t->t_device_host = new cl::Event();
 
     // program
     cl::Program::Sources sources;
@@ -170,7 +170,10 @@ void copy_memory_to_host(
 	uint8_t *output
 	)
 {
-    AES_data->queue->enqueueReadBuffer(*AES_data->cyphertext, CL_TRUE, 0, sizeof(unsigned char)*AES_data->data_length, output, NULL, t->t_device_host);
+    //FIXME Switch to openCL timing when verify in other platform
+    T_START(t->t_device_host);
+    AES_data->queue->enqueueReadBuffer(*AES_data->cyphertext, CL_TRUE, 0, sizeof(unsigned char)*AES_data->data_length, output, NULL, NULL); //t->t_device_host);
+    T_STOP(t->t_device_host);
 }
 
 
@@ -182,11 +185,12 @@ void get_elapsed_time(
 	long int timestamp
 	)
 {	
-    t->t_device_host->wait();
+    //t->t_device_host->wait();
     
     double host_to_device = (t->t_host_device)/((double) (CLOCKS_PER_SEC / 1000));
     double elapsed_time = (t->t_test)/((double) (CLOCKS_PER_SEC / 1000));
-    double device_to_host = t->t_device_host->getProfilingInfo<CL_PROFILING_COMMAND_END>() - t->t_device_host->getProfilingInfo<CL_PROFILING_COMMAND_START>();
+    double device_to_host = (t->t_device_host)/((double) (CLOCKS_PER_SEC / 1000)); 
+    //double device_to_host = t->t_device_host->getProfilingInfo<CL_PROFILING_COMMAND_END>() - t->t_device_host->getProfilingInfo<CL_PROFILING_COMMAND_START>();
 
 	if (csv_format)
 	{
