@@ -27,7 +27,7 @@ void print_data(uint8_t data[], unsigned int data_size){
 }
 
 
-int exec_benchmark_aes(unsigned int data_length, unsigned int key_size, bool csv_mode, bool database_mode, bool print_output, bool verbose_output, bool random_data, const char *key_filepath )
+int exec_benchmark_aes(unsigned int data_length, unsigned int key_size, bool csv_mode, bool database_mode, bool print_output, bool verbose_output, bool random_data, char *input_folder)
 {
     char device[100] = "";
     char *output_file = (char*)"output.bin";
@@ -61,7 +61,7 @@ int exec_benchmark_aes(unsigned int data_length, unsigned int key_size, bool csv
 		/* Load data from files */
 		
 		file_loading_output = load_data_from_files(
-		input, key, iv, data_length, key_size);
+		input, key, iv, data_length, key_size, input_folder);
 		if (file_loading_output == FILE_LOADING_ERROR)
 		{
 			exit(-1);
@@ -107,19 +107,19 @@ int main(int argc, char **argv)
 {
 	int ret;
 	unsigned int key_size=-1, data_length=-1;
-	char *key_filepath = NULL; 
+	char input_folder[100] = ""; 
 	bool csv_mode = false, database_mode = false, print_output = false, verbose_output = false, random_data = false;
 
     
 	/* Command line arguments processing */
-	ret = arguments_handler(argc, argv, &data_length, &key_size, &csv_mode, &database_mode, &print_output, &verbose_output, &random_data, &key_filepath);
+	ret = arguments_handler(argc, argv, &data_length, &key_size, &csv_mode, &database_mode, &print_output, &verbose_output, &random_data, input_folder);
 	if(ret == ERROR_ARGUMENTS) {
 		return ERROR_ARGUMENTS;
 	}
 	
 
 	/* Execute benchmark */
-	ret = exec_benchmark_aes(data_length, key_size, csv_mode, database_mode, print_output, verbose_output, random_data, key_filepath);
+	ret = exec_benchmark_aes(data_length, key_size, csv_mode, database_mode, print_output, verbose_output, random_data, input_folder);
 	if(ret != EXIT_SUCCESS) {
 		return ret;
 	}

@@ -1,7 +1,7 @@
 /**
  * \file util_data_files.h 
- * \brief Benchmark #1.1  Input data generation.
- * \author Ivan Rodriguez (BSC)
+ * \brief Benchmark #3.1  Input data generation.
+ * \author Marc Sole (BSC)
  */
 
 #ifndef UTIL_DATA_FILES_H_
@@ -26,7 +26,9 @@ int load_data_from_files(
 	uint8_t *iv,
 
 	unsigned int data_length,
-	unsigned int key_size
+	unsigned int key_size,
+
+	char *input_folder
 	);
 
 #endif // UTIL_DATA_FILES_H_

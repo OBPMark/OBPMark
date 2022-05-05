@@ -7,6 +7,8 @@
 
 #include "util_data_files.h"
 
+#define DEFAULT_INPUT_FOLDER "../../data/input_data/3.1-aes_encryption"
+
 
 
 int load_data_from_files(
@@ -16,17 +18,31 @@ int load_data_from_files(
 	uint8_t *iv,
 
 	unsigned int data_length,
-	unsigned int key_size
+	unsigned int key_size,
+	char *input_folder
 	)
 {
     frame8_t *input_frame = (frame8_t*) malloc(sizeof(frame8_t));
     frame8_t *key_frame = (frame8_t*) malloc(sizeof(frame8_t));
     frame8_t *iv_frame = (frame8_t*) malloc(sizeof(frame8_t));
 
+    bool default_input_folder = false;
+
+    if (strcmp(input_folder,"") == 0)
+    {
+        default_input_folder = true;
+    }
 
     // create the key path
     char key_path[256];
-    sprintf(key_path, "../../data/data_generation/datagen-3.1-aes_encryption/out/key-%d.bin", key_size);
+    if(default_input_folder)
+    {
+       sprintf(key_path, "%s/%d/3.1-aes_encryption-key_%d.bin", DEFAULT_INPUT_FOLDER,key_size, key_size);
+    }
+    else 
+    {
+       sprintf(key_path, "%s/3.1-aes_encryption-key_%d.bin", input_folder, key_size);
+    }
     // init the offset map
     key_frame->w = key_size/8;
 	key_frame->h = 1;
@@ -37,7 +53,14 @@ int load_data_from_files(
  
     // create the iv path
     char iv_path[256];
-    sprintf(iv_path, "../../data/data_generation/datagen-3.1-aes_encryption/out/iv-%d.bin", data_length/16);
+    if(default_input_folder)
+    {
+       sprintf(iv_path, "%s/%d/3.1-aes_encryption-iv_%d.bin", DEFAULT_INPUT_FOLDER, key_size, key_size);
+    }
+    else 
+    {
+       sprintf(iv_path, "%s/3.1-aes_encryption-iv_%d.bin", input_folder, key_size);
+    }
     // init the bad pixel map
     iv_frame->w = 16;
     iv_frame->h = 1;
@@ -47,7 +70,14 @@ int load_data_from_files(
 
     // create the input frames path 
     char input_path[256];
-    sprintf(input_path, "../../data/data_generation/datagen-3.1-aes_encryption/out/pt_%d.bin", data_length);
+    if(default_input_folder)
+    {
+       sprintf(input_path, "%s/%d/3.1-aes_encryption-data_%d.bin", DEFAULT_INPUT_FOLDER,key_size, data_length);
+    }
+    else 
+    {
+       sprintf(input_path, "%s/3.1-aes_encryption-data_%d.bin", input_folder, data_length);
+    }
     // init the bad pixel map
     input_frame->w = data_length;
     input_frame->h = 1;

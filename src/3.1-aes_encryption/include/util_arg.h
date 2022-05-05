@@ -32,7 +32,7 @@ int arguments_handler(
     bool *print_output,
     bool *verbose_output,
     bool *random_data,
-    char **key_filepath
+    char *input_folder
     );
 
 /**
