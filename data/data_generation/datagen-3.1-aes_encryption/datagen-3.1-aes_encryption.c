@@ -79,10 +79,8 @@ int benchmark3_1_write_files(
 	char iv_name[50];
 	char pt_name[50];
 
-	unsigned int n_blocks = data_length / 16;
-
 	sprintf(key_name,	 "out/key-%d.bin", 	key_size);
-	sprintf(iv_name, 	 "out/iv-%d.bin", 	n_blocks);
+	sprintf(iv_name, 	 "out/iv-%d.bin", key_size);
 
 	printf("Writing credentials data to files...\n");
 	if(!write_frame8(key_name, key, 1)) {
@@ -97,7 +95,7 @@ int benchmark3_1_write_files(
 
 	/* Write plaintext data to files */
 	printf("Writing plaintext data to files...\n");
-    sprintf(pt_name, "out/pt_%d.bin", data_length);
+    sprintf(pt_name, "out/data_%d.bin", data_length);
     if(!write_frame8(pt_name, plaintext, 1)) {
         printf("error: failed to write plaintext data: %d\n", i);
         return 0;
@@ -209,8 +207,8 @@ void print_usage(const char * appName)
 	printf(" -l: set length of the plaintext to be encrypted \n");
 	printf(" -k: set key size (128|192|256) \n");
 	printf(" -i: input plaintext \n");
-	printf(" -y: input cipher key \n");
-	printf(" -v: input initialization vector \n");
+	printf(" -y: input cipher key, otherwise random\n");
+	printf(" -v: input initialization vector, otherwise random\n");
 }
 
 int arguments_handler(int argc, char ** argv, unsigned int *data_length, unsigned int *key_size, char *input_file, char *rand_key, char *key_file, char *rand_iv, char *iv_file){

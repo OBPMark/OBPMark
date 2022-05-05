@@ -44,4 +44,4 @@ datagen-3.1-aes_encryption.o: datagen-3.1-aes_encryption.c $(INCLUDES)
 	$(CC) $(CFLAGS) -c datagen-3.1-aes_encryption.c
 
 clean:
-	rm $(OUTFILE) $(OBJECTS)
+	rm $(OUTFILE) $(OBJECTS) -f
