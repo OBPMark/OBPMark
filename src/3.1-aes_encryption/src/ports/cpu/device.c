@@ -25,15 +25,13 @@ void init(
 {
     // TBD Feature: device name. -- Bulky generic platform implementation
 	strcpy(device_name,"Generic device");
-	//Time object init for multiple
-
 }
 
 
 bool device_memory_init(
 	AES_data_t *AES_data,
     unsigned int key_size,
-    unsigned int data_size
+    unsigned int data_length
 	)
 {	
 	/* key configuration values initialization */
@@ -49,9 +47,10 @@ bool device_memory_init(
 	AES_data->key->value = (uint8_t*)malloc(sizeof(uint8_t)*key_size);
 
 	/* memory allocation for input and output texts */
-    AES_data->input_text = (uint8_t*) malloc(sizeof(uint8_t)*data_size);
-    AES_data->encrypted_text = (uint8_t*) malloc(sizeof(uint8_t)*data_size);
-    AES_data->data_length = data_size;
+    AES_data->plaintext = (uint8_t*) malloc(sizeof(uint8_t)*data_length);
+    AES_data->cyphertext = (uint8_t*) malloc(sizeof(uint8_t)*data_length);
+    AES_data->iv = (uint8_t*) malloc(sizeof(uint8_t)*16);
+    AES_data->data_length = data_length;
 
     /* allocate constant lookup tables */
     /* memory for sbox (256 uint8) */
@@ -67,8 +66,10 @@ bool device_memory_init(
 
 void copy_memory_to_device(
 	AES_data_t *AES_data,
+	AES_time_t *t,
 	uint8_t *input_key,
 	uint8_t *input_text,
+	uint8_t *input_iv,
 	uint8_t *input_sbox,
 	uint8_t *input_rcon
 	)
@@ -76,7 +77,9 @@ void copy_memory_to_device(
     /* initialize key value */
     memcpy(AES_data->key->value, input_key, sizeof(uint8_t)*AES_data->key->size/8);
     /* initialize input text */
-    memcpy(AES_data->input_text, input_text, sizeof(uint8_t)*AES_data->data_length);
+    memcpy(AES_data->plaintext, input_text, sizeof(uint8_t)*AES_data->data_length);
+    /* initialize iv */
+    memcpy(AES_data->iv, input_iv, sizeof(uint8_t)*16);
     /* initialize sbox */
     memcpy(AES_data->sbox, input_sbox, sizeof(uint8_t)*256);
     /* initialize rcon */
@@ -89,49 +92,51 @@ void process_benchmark(
 	AES_time_t *t
 	)
 {    
-    int n_blocks = AES_data->data_length/ (4*AES_data->key->Nb);
+    uint64_t n_blocks = AES_data->data_length/ (4*AES_data->key->Nb);
     T_START(t->t_test);
-    T_START_VERBOSE(t->t_key_expand);
     AES_KeyExpansion(AES_data->key, (uint32_t*) AES_data->expanded_key, AES_data->sbox, AES_data->rcon);
-    T_STOP_VERBOSE(t->t_key_expand);
-    T_START_VERBOSE(t->t_encrypt);
-    //TODO time each encrytp block
-    for(int b = 0; b < n_blocks; b++){
-        AES_encrypt(AES_data, t, b);
+    for(uint64_t b = 0; b < n_blocks; b++){
+        AES_encrypt(AES_data, b);
     }
-    T_STOP_VERBOSE(t->t_encrypt);
     T_STOP(t->t_test);
 }
 
 void copy_memory_to_host(
 	AES_data_t *AES_data,
+	AES_time_t *t,
 	uint8_t *output
 	)
 {
-    memcpy(output, AES_data->encrypted_text, sizeof(uint8_t)*AES_data->data_length);
+    memcpy(output, AES_data->cyphertext, sizeof(uint8_t)*AES_data->data_length);
 }
 
 
-float get_elapsed_time(
-//	image_data_t *image_data, 
+void get_elapsed_time(
 	AES_time_t *t, 
-	bool csv_format
+	bool csv_format,
+	bool database_format,
+	bool verbose_print,
+	long int timestamp
 	)
-{
-    // FIXME with new time format
-	//float elapsed =  (device_object->end.tv_sec - device_object->start.tv_sec) * 1000 + (device_object->end.tv_nsec - device_object->start.tv_nsec) / 1000000;
-	float elapsed = T_TO_SEC(t->t_test)*1000;
-    if (csv_format)
+{	
+
+	if (csv_format)
 	{
-        printf("%.10f;%.10f;%.10f;\n", (float) 0, elapsed, (float) 0);
-    } 
-	else
+		double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
+		printf("%.10f;%.10f;%.10f;\n", (float) 0, elapsed_time, (float) 0);
+	}
+	else if (database_format)
 	{
-		printf("Elapsed time Host->Device: %.10f miliseconds\n", (float) 0);
-		printf("Elapsed time kernel: %.10f miliseconds\n", elapsed);
-		printf("Elapsed time Device->Host: %.10f miliseconds\n", (float) 0);
-    }
-	return elapsed;
+		double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
+		printf("%.10f;%.10f;%.10f;%ld;\n", (float) 0, elapsed_time, (float) 0, timestamp);
+	}
+	else if(verbose_print)
+	{
+		double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
+		printf("Elapsed time Host->Device: %.10f milliseconds\n", (float) 0);
+		printf("Elapsed time kernel: %.10f milliseconds\n", elapsed_time );
+		printf("Elapsed time Device->Host: %.10f milliseconds\n", (float) 0);
+	}
 }
 
 
@@ -147,8 +152,11 @@ void clean(
 
 	free(AES_data->key->value);
 	free(AES_data->key);
-	free(AES_data->input_text);
-	free(AES_data->encrypted_text);
+	free(AES_data->plaintext);
+	free(AES_data->expanded_key);
+	free(AES_data->cyphertext);
+	free(AES_data->iv);
 	free(AES_data->sbox);
+	free(AES_data->rcon);
 	free(AES_data);
 }

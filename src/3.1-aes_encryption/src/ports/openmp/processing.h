@@ -6,8 +6,8 @@
 #ifndef PROCESSING_H_
 #define PROCESSING_H_
 
+#include "obpmark.h"
 #include "device.h"
-#include <omp.h>
 
 #define STATE_PARAM	uint8_t state[4][4]
 #define INSTATE_PARAM uint8_t in_state[4][4]
@@ -24,6 +24,6 @@
 #define TIME_PARAM AES_time_t *t
 
 void AES_KeyExpansion(KEY_PARAM, EXPKEY_PARAM, SBOX_PARAM, RCON_PARAM);
-void AES_encrypt(DATA_PARAM, TIME_PARAM, int iteration);
+void AES_encrypt(DATA_PARAM, uint64_t block);
 
 #endif // OBPMARK_AES_H_

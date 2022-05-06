@@ -3,6 +3,7 @@
  * \brief Benchmark #3.1 device definition.
  * \author Marc Sole (BSC)
  */
+ 
 #ifndef DEVICE_H_
 #define DEVICE_H_
 
@@ -10,23 +11,96 @@
 #include "obpmark_time.h"
 #include "benchmark.h"
 
-/* Typedefs */
-#ifdef CUDA
-/* CUDA version */
-#elif OPENCL
-/* OPENCL version */
-#elif HIP
-/* HIP version */
-#else
-/* Sequential C version & OPENMP version */
-/**
- * \brief Allowed AES key lengths.
- */
+/* Common Typedefs */
 typedef enum {
 	AES_KEY128 = 128,
 	AES_KEY192 = 192,
 	AES_KEY256 = 256
 } AES_keysize_t;
+
+/* Device Typedefs */
+#ifdef CUDA
+/* CUDA version */
+
+#include <cuda_runtime.h>
+
+typedef struct {
+    uint8_t *value;
+    AES_keysize_t size;
+    uint32_t Nb;
+    uint32_t Nk;
+    uint32_t Nr;
+} AES_key_t;
+
+struct AES_values_t
+{
+	AES_key_t *key;
+	uint8_t *plaintext;
+	size_t data_length;
+	uint8_t *expanded_key;
+	uint8_t *cyphertext;
+	uint8_t *iv;
+	uint8_t *sbox;
+	uint8_t *rcon;
+};
+
+struct AES_data_t{
+    AES_values_t *host;
+    AES_key_t *host_key;
+    AES_values_t *dev;
+};
+
+
+typedef struct {
+	cudaEvent_t *start;
+	cudaEvent_t *stop;
+    cudaEvent_t *start_memory_copy_device;
+	cudaEvent_t *stop_memory_copy_device;
+	cudaEvent_t *start_memory_copy_host;
+	cudaEvent_t *stop_memory_copy_host;
+} AES_time_t; 
+
+#elif OPENCL
+static const std::string type_def_kernel = "typedef short int uint16_t;\ntypedef unsigned char uint8_t;\ntypedef unsigned int uint32_t;\n";
+/* OPENCL version */
+#include <CL/cl.hpp>
+
+typedef struct {
+    cl::Buffer *value;
+    AES_keysize_t size;
+    uint32_t Nb;
+    uint32_t Nk;
+    uint32_t Nr;
+} AES_key_t;
+
+struct AES_data_t
+{
+    cl::Program *program;
+    cl::Context *context;
+	cl::Device default_device;
+    cl::CommandQueue *queue;
+
+	AES_key_t *key;
+    cl::Buffer *plaintext;
+	size_t data_length;
+    cl::Buffer *expanded_key;
+    cl::Buffer *cyphertext;
+    cl::Buffer *iv;
+    cl::Buffer *sbox;
+    cl::Buffer *rcon;
+};
+
+typedef struct {
+	time_t t_test;
+	time_t t_host_device;
+    //FIXME Switch to openCL timing when verify in other platform
+	time_t t_device_host;
+	//cl::Event *t_device_host;
+
+} AES_time_t; 
+
+#elif OPENMP
+/* OPENMP version */
 
 typedef struct {
     uint8_t *value;
@@ -39,29 +113,87 @@ typedef struct {
 struct AES_data_t
 {
 	AES_key_t *key;
-	uint8_t *input_text;
+	uint8_t *plaintext;
 	size_t data_length;
 	uint8_t *expanded_key;
-	uint8_t *encrypted_text;
+	uint8_t *cyphertext;
+	uint8_t *iv;
 	uint8_t *sbox;
 	uint8_t *rcon;
 };
 
+typedef struct {
+    double t_test;
+} AES_time_t; 
+
+#elif HIP
+
+typedef struct {
+    uint8_t *value;
+    AES_keysize_t size;
+    uint32_t Nb;
+    uint32_t Nk;
+    uint32_t Nr;
+} AES_key_t;
+
+struct AES_values_t
+{
+	AES_key_t *key;
+	uint8_t *plaintext;
+	size_t data_length;
+	uint8_t *expanded_key;
+	uint8_t *cyphertext;
+	uint8_t *iv;
+	uint8_t *sbox;
+	uint8_t *rcon;
+};
+
+struct AES_data_t{
+    AES_values_t *host;
+    AES_key_t *host_key;
+    AES_values_t *dev;
+};
 
 
 typedef struct {
-	time_t t_test;
-	time_t t_block;
-	// detailed timing
-	time_t t_key_expand;
-	time_t t_encrypt;
+	hipEvent_t *start;
+	hipEvent_t *stop;
+    hipEvent_t *start_memory_copy_device;
+	hipEvent_t *stop_memory_copy_device;
+	hipEvent_t *start_memory_copy_host;
+	hipEvent_t *stop_memory_copy_host;
+} AES_time_t; 
 
+#else
+/* Sequential C version */
+
+typedef struct {
+    uint8_t *value;
+    AES_keysize_t size;
+    uint32_t Nb;
+    uint32_t Nk;
+    uint32_t Nr;
+} AES_key_t;
+
+struct AES_data_t
+{
+	AES_key_t *key;
+	uint8_t *plaintext;
+	size_t data_length;
+	uint8_t *expanded_key;
+	uint8_t *cyphertext;
+	uint8_t *iv;
+	uint8_t *sbox;
+	uint8_t *rcon;
+};
+
+typedef struct {
+	time_t t_test;
 } AES_time_t; 
 
 #endif
-/* Functions */
-// FIXME add brief function descriptions 
 
+/* Functions */
 /**
  * \brief Basic init function to initialize  the target device.
  */
@@ -88,7 +220,7 @@ void init(
 bool device_memory_init(
 	AES_data_t *AES_data,
     unsigned int key_size,
-    unsigned int data_size
+    unsigned int data_length
 	);
 
 /**
@@ -96,8 +228,10 @@ bool device_memory_init(
  */
 void copy_memory_to_device(
 	AES_data_t *AES_data,
+	AES_time_t *t,
 	uint8_t *input_key,
 	uint8_t *input_text,
+	uint8_t *input_iv,
 	uint8_t *input_sbox,
 	uint8_t *input_rcon
 	);
@@ -115,16 +249,19 @@ void process_benchmark(
  */
 void copy_memory_to_host(
 	AES_data_t *AES_data,
+	AES_time_t *t,
 	uint8_t *output
 	);
 
 /**
  * \brief Function that summarize the execution time of the benchmark.
  */
-float get_elapsed_time(
-//	image_data_t *image_data, 
+void get_elapsed_time(
 	AES_time_t *t, 
-	bool csv_format
+	bool csv_format,
+	bool database_format,
+	bool verbose_print,
+	long int timestamp
 	);
 
 

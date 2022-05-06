@@ -1,7 +1,7 @@
 /**
  * \file benchmark.h
- * \brief Benchmark #1.1 top-level header
- * \author Ivan Rodriquez (BSC)
+ * \brief Benchmark #3.1 top-level header
+ * \author Marc Sole (BSC)
  */
 #ifndef BENCHMARK_H_
 #define BENCHMARK_H_
@@ -19,7 +19,11 @@
 #ifdef CUDA
 #define DEVICESELECTED		0
 #define BLOCK_SIZE_PLANE 	256
-#define BLOCK_SIZE 		16
+#ifdef CUDA_FINE
+#define BLOCK_SIZE 		64
+#else
+#define BLOCK_SIZE      1024
+#endif
 
 #elif OPENCL
 #define DEVICESELECTED		0
@@ -27,12 +31,20 @@
 #define BLOCK_SIZE		16
 
 #elif OPENMP
+/* OPENMP version */
+#include <omp.h>
 #define DEVICESELECTED		0
 
 #elif HIP
-
-#else
+#include "hip/hip_runtime.h"
 #define DEVICESELECTED		0
+#define BLOCK_SIZE_PLANE 	256
+#ifdef CUDA_FINE
+#define BLOCK_SIZE 		64
+#else
+#define BLOCK_SIZE      1024
+#endif
+
 #endif
 
 /* Lookup Tables */
