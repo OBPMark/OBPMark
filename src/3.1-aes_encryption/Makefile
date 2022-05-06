@@ -201,13 +201,17 @@ hip: main_hip
 hip_conf:
 	mkdir -p $(HIP_TARGET)
 
-lib_hip.o: hip_conf $(HIP_SRC)/lib_hip.cpp
-	$(HIP) $(CFLAGS) $(HIPFLAGS) -D$(DATATYPE) -DBLOCK_SIZE=$(BLOCKSIZE) -DHIP -c $(HIP_SRC)/lib_hip.cpp -o $(HIP_TARGET)/lib_hip.o
+GRAIN?=CUDA_COARSE
 
-main_hip: hip_conf main.cpp lib_hip.o lib_cpu.o
-	mkdir -p $(BIN_PATH) 
-	$(HIP) $(CFLAGS) $(HIPFLAGS) -D$(DATATYPE) -DHIP $(SRC_FOLDER)/main.cpp $(BUILD_PATH)/lib_hip.o  $(SEQ_FOLDER)/lib_cpu.o -o $(HIP_EXEC)_$(shell echo $(DATATYPE) | tr A-Z a-z)_$(BLOCKSIZESQUARED) 
+hip_device.o: hip_conf $(HIP_SRC)/device.cpp
+	$(HIPCC) $(HIPCCFLAGS) -DHIP -D$(GRAIN) -c $(HIP_SRC)/device.cpp -o $(HIP_TARGET)/hip_device.o $(CFLAGS)
 
+hip_processing.o: hip_conf $(HIP_SRC)/processing.cpp
+	$(HIPCC)  $(HIPCCFLAGS) -DHIP -D$(GRAIN) -c $(HIP_SRC)/processing.cpp -o $(HIP_TARGET)/lib_processing.o $(CFLAGS)
+
+main_hip: hip_conf hip_device.o hip_processing.o  $(COMMON_OBJECTS)
+	mkdir -p $(BIN_PATH)
+	$(HIPCC) -DHIP -D$(GRAIN) $(SRC_FOLDER)/main.cpp -x none $(HIP_TARGET)/hip_device.o  $(HIP_TARGET)/lib_processing.o $(COMMON_OBJECTS_PATH) -o $(HIP_EXEC) $(CFLAGS) $(HIPCCFLAGS)
 ##################################### CLEAN ##################################
 .PHONY: clean
 clean:

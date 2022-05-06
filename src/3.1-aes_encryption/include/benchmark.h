@@ -36,9 +36,15 @@
 #define DEVICESELECTED		0
 
 #elif HIP
-
-#else
+#include "hip/hip_runtime.h"
 #define DEVICESELECTED		0
+#define BLOCK_SIZE_PLANE 	256
+#ifdef CUDA_FINE
+#define BLOCK_SIZE 		64
+#else
+#define BLOCK_SIZE      1024
+#endif
+
 #endif
 
 /* Lookup Tables */

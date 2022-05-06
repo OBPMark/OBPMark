@@ -3,6 +3,7 @@
  * \brief Benchmark #3.1 device definition.
  * \author Marc Sole (BSC)
  */
+ 
 #ifndef DEVICE_H_
 #define DEVICE_H_
 
@@ -123,6 +124,44 @@ struct AES_data_t
 
 typedef struct {
     double t_test;
+} AES_time_t; 
+
+#elif HIP
+
+typedef struct {
+    uint8_t *value;
+    AES_keysize_t size;
+    uint32_t Nb;
+    uint32_t Nk;
+    uint32_t Nr;
+} AES_key_t;
+
+struct AES_values_t
+{
+	AES_key_t *key;
+	uint8_t *plaintext;
+	size_t data_length;
+	uint8_t *expanded_key;
+	uint8_t *cyphertext;
+	uint8_t *iv;
+	uint8_t *sbox;
+	uint8_t *rcon;
+};
+
+struct AES_data_t{
+    AES_values_t *host;
+    AES_key_t *host_key;
+    AES_values_t *dev;
+};
+
+
+typedef struct {
+	hipEvent_t *start;
+	hipEvent_t *stop;
+    hipEvent_t *start_memory_copy_device;
+	hipEvent_t *stop_memory_copy_device;
+	hipEvent_t *start_memory_copy_host;
+	hipEvent_t *stop_memory_copy_host;
 } AES_time_t; 
 
 #else
