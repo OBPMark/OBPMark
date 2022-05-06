@@ -62,7 +62,6 @@ __global__ void AES_KeyExpansion(DATA_PARAM)
             }
             expanded_key[i] = expanded_key[i-Nk] ^ temp;
         }
-    __syncthreads();
 }
 
 __device__ void AES_AddRoundKey(STATES_PARAM, ROUNDKEY_PARAM, NB_PARAM,  unsigned int round_number)

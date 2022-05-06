@@ -154,12 +154,11 @@ void process_benchmark(
 	)
 {    
     int data_block = AES_data->host->data_length/(4*AES_data->host_key->Nb);
+    int n_blocks = data_block/BLOCK_SIZE+(data_block%BLOCK_SIZE==0?0:1);
 #ifdef CUDA_FINE
-    int n_blocks = data_block/64+(data_block%64==0?0:1);
-    dim3 threads(64,AES_data->host_key->Nb,4);
+    dim3 threads(BLOCK_SIZE,AES_data->host_key->Nb,4);
 #else 
-    int n_blocks = data_block/1024+(data_block%1024==0?0:1);
-    dim3 threads(1024,1,1);
+    dim3 threads(BLOCK_SIZE,1,1);
 #endif
     int key_threads = AES_data->host_key->Nk;
     cudaEventRecord(*t->start);
