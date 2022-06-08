@@ -32,6 +32,6 @@ printf("\n")
 #define HalfBlockSize J_BlockSize/2
 
 /* Returns the processed size */
-struct FCompressedData SecondExtension(unsigned long int* Samples);
+struct FCompressedData SecondExtension(unsigned int* Samples);
 
 #endif

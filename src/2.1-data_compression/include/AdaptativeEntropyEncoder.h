@@ -2,6 +2,7 @@
 #define AEE_H
 
 #include "Config.h"
+#include "lib_functions.h"
 
 
 // Note: the print debug is only safe on non-parallel operations
@@ -28,6 +29,6 @@ printf("\n")
 #endif
 
 
-struct FCompressedData AdaptativeEntropyEncoder(unsigned long int* Samples, struct ZeroBlockProcessed ZeroNum);
+struct FCompressedData AdaptativeEntropyEncoder(struct DataObject* device_object , unsigned int* Samples, struct ZeroBlockProcessed ZeroNum);
 
 #endif

@@ -4,7 +4,7 @@
 #include "SecondExtension.h"
 
 
-unsigned int GetSizeSecondExtension(unsigned long int* HalvedSamples)
+unsigned int GetSizeSecondExtension(unsigned int* HalvedSamples)
 {
     unsigned int size = 0;
     for(int i = 0; i < HalfBlockSize; ++i)
@@ -15,9 +15,9 @@ unsigned int GetSizeSecondExtension(unsigned long int* HalvedSamples)
 }
 
 
-struct FCompressedData SecondExtension(unsigned long int* Samples)
+struct FCompressedData SecondExtension(unsigned int* Samples)
 {
-    unsigned long int HalvedSamples[HalfBlockSize] = { 0 };
+    unsigned int HalvedSamples[HalfBlockSize] = { 0 };
     
     // Halving the data using the SE Option algorithm. See: https://public.ccsds.org/Pubs/121x0b2ec1.pdf
     for(unsigned int i = 0; i < HalfBlockSize; ++i)
@@ -30,7 +30,7 @@ struct FCompressedData SecondExtension(unsigned long int* Samples)
     struct FCompressedData CompressedData;
     CompressedData.size = J_BlockSize * 32;
     CompressedData.data = NULL;
-    CompressedData.CompressionIdentifier = SECOND_EXTENSION_ID;
+    CompressedData.CompressionIdentifier = SECOND_EXTENSION_ID - 1;
 
 
     // Checks if the compressed size is minor than the uncompressed size 
@@ -42,19 +42,20 @@ struct FCompressedData SecondExtension(unsigned long int* Samples)
     }
 
     // Resulting size is in bounds, we annotate the output PackedArray using the Fundamental Sequence algorithm
-    unsigned long int PackedArray[J_BlockSize] = { 0 };    
-    unsigned int sample = 0; 
-    for(unsigned int i = 0; i < HalfBlockSize; ++i)
+    //unsigned int PackedArray[J_BlockSize] = { 0 };    
+    //unsigned int sample = 0; 
+    /*for(unsigned int i = 0; i < HalfBlockSize; ++i)
     {
         PackedArray[sample/32] |= 1 << (sample%32);
         sample += HalvedSamples[i] + 1;
-    }
+    }*/
     
-    PRINT_SE_COMPRESSED_ARRAY(PackedArray);
+    PRINT_SE_COMPRESSED_ARRAY(HalvedSamples);
 
     CompressedData.size = CompressedSize;
-    CompressedData.data = (unsigned long int*) malloc (sizeof( unsigned long int ) * J_BlockSize);
-    memcpy(CompressedData.data, PackedArray, sizeof(PackedArray));
+    CompressedData.data = (unsigned int*) malloc (sizeof( unsigned int ) * J_BlockSize);
+    CompressedData.CompressionIdentifierInternal = SECOND_EXTENSION_ID;
+    memcpy(CompressedData.data, HalvedSamples, sizeof( unsigned int ) * HalfBlockSize);
 
     SE_PRINT(("Second Extension (Size: %d bits): OK.\n", CompressedSize));
     

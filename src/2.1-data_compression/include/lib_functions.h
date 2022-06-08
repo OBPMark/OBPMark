@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "BitOutputUtils.h"
 
 #define true 1
 #define false 0
@@ -50,16 +51,16 @@ struct DataObject
 
 	unsigned char *compresion_identifier_best_cpu;
 	unsigned int  *size_block_best_cpu;
-	unsigned long int *data_in_blocks_best_cpu;
+	unsigned int *data_in_blocks_best_cpu;
 
 
 	struct timespec start_app;
     struct timespec end_app;
     #elif CUDA
 	// CUDA PART
-    unsigned long int *input_data;
-	unsigned long int *output_data;
-	unsigned long int *input_data_post_process;
+    unsigned int *input_data;
+	unsigned int *output_data;
+	unsigned int *input_data_post_process;
 	int *missing_value;
 	int *missing_value_inverse;
 	int *zero_block_list;
@@ -67,17 +68,17 @@ struct DataObject
 
 	unsigned char *compresion_identifier;
 	unsigned int  *size_block;
-	unsigned long int *data_in_blocks;
+	unsigned int *data_in_blocks;
 
 	unsigned char *compresion_identifier_best;
 	unsigned int  *size_block_best;
 	unsigned int *bit_block_best;
-	unsigned long int *data_in_blocks_best;
-	unsigned long int *data_in_blocks_best_post_process;
+	unsigned int *data_in_blocks_best;
+	unsigned int *data_in_blocks_best_post_process;
 
 	unsigned char *compresion_identifier_best_cpu;
 	unsigned int  *size_block_best_cpu;
-	unsigned long int *data_in_blocks_best_cpu;
+	unsigned int *data_in_blocks_best_cpu;
 	//int *zero_block_list_cpu;
 	//int *zero_block_list_inverse_cpu;
 
@@ -98,8 +99,8 @@ struct DataObject
     struct timespec end_app;
 	#endif
 	// comon variables
-	unsigned long int *InputDataBlock;
-	unsigned long int *OutputDataBlock;
+	unsigned int *InputDataBlock;
+	struct OutputBitStream *OutputDataBlock;
 	unsigned int TotalSamples;
 	unsigned int TotalSamplesStep;
 };

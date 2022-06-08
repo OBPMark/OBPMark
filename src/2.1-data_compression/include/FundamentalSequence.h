@@ -17,7 +17,13 @@ for(int i = (J_BlockSize*32) - 1; i >= 0; --i) \
 } \
 printf("\n")
 #else
-#define PRINT_FS_COMPRESSED_ARRAY(x) 
+#define PRINT_FS_COMPRESSED_ARRAY(x)  \
+printf("Compressed bit array: "); \
+for(int i = (J_BlockSize*32) - 1; i >= 0; --i) \
+{ \
+    printf("%d" ,(x[i/32] & (1 << (i%32) )) != 0); \
+} \
+printf("\n")
 #endif
 
 #ifdef FS_PRINT_STATE
@@ -27,6 +33,6 @@ printf("\n")
 #endif
 
 /* Returns the processed size */
-struct FCompressedData FundamentalSequence(unsigned long int* Samples);
+struct FCompressedData FundamentalSequence(unsigned int* Samples);
 
 #endif

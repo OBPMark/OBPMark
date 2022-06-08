@@ -4,7 +4,7 @@
 #include "FundamentalSequence.h"
 
 
-unsigned int GetSizeFundamentalSequence(unsigned long int* Samples)
+unsigned int GetSizeFundamentalSequence(unsigned int* Samples)
 {
     unsigned int size = 0;
     for(int i = 0; i < J_BlockSize; ++i)
@@ -15,7 +15,7 @@ unsigned int GetSizeFundamentalSequence(unsigned long int* Samples)
 }
 
 
-struct FCompressedData FundamentalSequence(unsigned long int* Samples)
+struct FCompressedData FundamentalSequence(unsigned int* Samples)
 {   
     struct FCompressedData CompressedData;
     CompressedData.size = J_BlockSize * 32;
@@ -32,19 +32,11 @@ struct FCompressedData FundamentalSequence(unsigned long int* Samples)
 
     // Resulting size is in bounds, we annotate the output PackedArray using the Fundamental Sequence algorithm
     // See: https://public.ccsds.org/Pubs/121x0b2ec1.pdf
-    unsigned long int PackedArray[J_BlockSize] = { 0 };    
-    unsigned int sample = 0; 
-    for(unsigned int i = 0; i < J_BlockSize; ++i)
-    {
-        PackedArray[sample/32] |= 1 << (sample%32);
-        sample += Samples[i] + 1;
-    }
-    
-    PRINT_FS_COMPRESSED_ARRAY(PackedArray);
 
     CompressedData.size = CompressedSize;
-    CompressedData.data = (unsigned long int*) malloc (sizeof( unsigned long int ) * J_BlockSize);
-    memcpy(CompressedData.data, PackedArray, sizeof(PackedArray));
+    CompressedData.CompressionIdentifierInternal = FUNDAMENTAL_SEQUENCE_ID;
+    CompressedData.data = (unsigned int*) malloc (sizeof( unsigned int ) * J_BlockSize);
+    memcpy(CompressedData.data, Samples, sizeof( unsigned int ) * J_BlockSize);
 
     FS_PRINT(("Fundamental Sequence (Size: %d bits): OK.\n", CompressedSize));
     

@@ -2,6 +2,7 @@
 #define NC_H
 
 #include "Config.h"
+#include "BitOutputUtils.h"
 
 
 //#define NC_DEBUG 
@@ -27,6 +28,6 @@ printf("\n")
 #endif
 
 
-struct FCompressedData NoCompression(unsigned long int* Samples);
+struct FCompressedData NoCompression(unsigned int* Samples);
 
 #endif

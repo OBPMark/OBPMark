@@ -29,7 +29,7 @@ void execute_benchmark(struct DataObject *device_object)
     for(int step = 0; step < STEPS; ++step)
     {
         // Output initialization Block
-        unsigned long int OutputPreprocessedValue[device_object->TotalSamples];
+        unsigned int OutputPreprocessedValue[device_object->TotalSamples];
         
         // If CheckZeroBlock is false after preprocessing a block, it means that the block contains non zero values
         bool AllZerosInBlock = true;
@@ -42,6 +42,7 @@ void execute_benchmark(struct DataObject *device_object)
         // Pre-processing the input data values, precalculating ZeroBlock offsets
         for(unsigned int block = 0; block < r_samplesInterval; ++block)
         {
+            
             // Preprocessing the samples 
             for(unsigned int i = 0; i < J_BlockSize; ++i)
             {
@@ -92,29 +93,13 @@ void execute_benchmark(struct DataObject *device_object)
         // The header simply consists on the selected number of bits, so we can decompress the no-compression method.
         PRINT_HEADER(n_bits);
 
-        // Add header to output array. The number of bits can be up to 32
-        for(unsigned char bit = 0; bit < 6; ++bit)
-        {
-            if((n_bits & (1 << (bit%8) )) != 0)
-            {
-                device_object->OutputDataBlock[(acc_size+bit)/32] |= 1 << ((acc_size+bit)%32);
-            }
-        }
-        acc_size += 6;
-
         // Compressing each block
         // The formatting for each compressed block is further specificed in the AdaptativeEntropyEncoder.c file.
         for(unsigned int block = 0; block < r_samplesInterval; ++block)
         {  
-            struct FCompressedData it = AdaptativeEntropyEncoder(OutputPreprocessedValue + (J_BlockSize*block), ZBProcessed[block]);
-            // Rearranging compressed blocks
-            for(int bit = 0; bit < it.size; ++bit)
-            {
-                if((it.data[bit/32] & (1 << (bit%32) )) != 0)
-                {
-                    device_object->OutputDataBlock[(acc_size+bit)/32] |= 1 << ((acc_size+bit)%32);
-                }
-            }
+            printf("##########################\n");
+			printf("block ID %d\n", block);
+            struct FCompressedData it = AdaptativeEntropyEncoder(device_object, OutputPreprocessedValue + (J_BlockSize*block), ZBProcessed[block]);
             acc_size += it.size;
         }
 
@@ -126,13 +111,23 @@ void execute_benchmark(struct DataObject *device_object)
     clock_gettime(CLOCK_MONOTONIC_RAW, &device_object->end_app);
 
     // Debug loop - uncomment if needed
-    /*
-    for(int i = acc_size - 1; i >= 0; --i)
+    
+    /*for(int i = acc_size - 1; i >= 0; --i)
     {
         printf("%d" ,(device_object->OutputDataBlock[i/32] & (1 << (i%32) )) != 0);
     }
-    printf("\n");
-    */
+    printf("\n");*/
+    
+   // Store loop - uncomment if needed stores the output data in a binary file
+    
+    FILE *fp;
+    fp = fopen("output.bin", "wb");
+    // acc_size is the number of bits in the output file. So we need to get the number of elements in the array that use 2 bytes
+    unsigned int number_of_elements = device_object->OutputDataBlock->num_total_bytes + 1; // add 1 to account for last remaining byte
+    printf("Number of elements: %d\n", number_of_elements);
+    fwrite(device_object->OutputDataBlock->OutputBitStream, 1, number_of_elements, fp); 
+    fclose(fp);
+
 }
 
 
@@ -156,6 +151,7 @@ void get_elapsed_time(struct DataObject *device_object, bool csv_format)
 void clean(struct DataObject *device_object)
 {
     free(device_object->InputDataBlock);
+    free(device_object->OutputDataBlock->OutputBitStream);
     free(device_object->OutputDataBlock);
     free(device_object);
 }

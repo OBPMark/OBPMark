@@ -27,6 +27,6 @@ printf("\n")
 
 
 /* Returns the processed size */
-struct FCompressedData SampleSplitting(unsigned long int* Samples, unsigned int k);
+struct FCompressedData SampleSplitting(unsigned int* Samples, unsigned int k);
 
 #endif

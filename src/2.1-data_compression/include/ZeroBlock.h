@@ -28,6 +28,6 @@ printf("\n")
 
 
 /* Returns the processed size */
-struct FCompressedData ZeroBlock(unsigned long int* Samples, unsigned int NumberOfZeros);
+struct FCompressedData ZeroBlock(unsigned int* Samples, unsigned int NumberOfZeros);
 
 #endif
