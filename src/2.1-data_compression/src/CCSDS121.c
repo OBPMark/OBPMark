@@ -7,14 +7,10 @@
 #endif
 
 #include <stdio.h>
-//#include <time.h>
 #include <stdlib.h>
 #include <string.h>
 #include "Config.h"
-//#include "Preprocessor.h"
-//#include "AdaptativeEntropyEncoder.h"
 #include "lib_functions.h"
-#include "BitOutputUtils.h"
 
 
 void ConfigErrorControl() 
@@ -78,12 +74,6 @@ int main()
     {
         // Reading the binary file
         read_binary_file("data.dat", ccsds_data->InputDataBlock);
-        // print the r_samplesInterval first elements
-        /*for(unsigned int i = 0; i < J_BlockSize * r_samplesInterval; ++i)
-        {
-            printf("%u\n", ccsds_data->InputDataBlock[i]);
-        }
-        exit(-1);*/
     }
 
     // Output allocation

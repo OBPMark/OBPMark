@@ -21,8 +21,6 @@ bool device_memory_init(struct DataObject *device_object)
 
 void execute_benchmark(struct DataObject *device_object)
 {
-    unsigned int acc_size = 0;
-
     clock_gettime(CLOCK_MONOTONIC_RAW, &device_object->start_app);
 
     // Repeating the operations n times
@@ -99,8 +97,7 @@ void execute_benchmark(struct DataObject *device_object)
         {  
             printf("##########################\n");
 			printf("block ID %d\n", block);
-            struct FCompressedData it = AdaptativeEntropyEncoder(device_object, OutputPreprocessedValue + (J_BlockSize*block), ZBProcessed[block]);
-            acc_size += it.size;
+            AdaptativeEntropyEncoder(device_object, OutputPreprocessedValue + (J_BlockSize*block), ZBProcessed[block]);
         }
 
         // The previous loop compresses each block selecting the best compression algorithm per block (decoder).
@@ -109,20 +106,9 @@ void execute_benchmark(struct DataObject *device_object)
     }
 
     clock_gettime(CLOCK_MONOTONIC_RAW, &device_object->end_app);
-
-    // Debug loop - uncomment if needed
-    
-    /*for(int i = acc_size - 1; i >= 0; --i)
-    {
-        printf("%d" ,(device_object->OutputDataBlock[i/32] & (1 << (i%32) )) != 0);
-    }
-    printf("\n");*/
-    
-   // Store loop - uncomment if needed stores the output data in a binary file
     
     FILE *fp;
     fp = fopen("output.bin", "wb");
-    // acc_size is the number of bits in the output file. So we need to get the number of elements in the array that use 2 bytes
     unsigned int number_of_elements = device_object->OutputDataBlock->num_total_bytes + 1; // add 1 to account for last remaining byte
     printf("Number of elements: %d\n", number_of_elements);
     fwrite(device_object->OutputDataBlock->OutputBitStream, 1, number_of_elements, fp); 

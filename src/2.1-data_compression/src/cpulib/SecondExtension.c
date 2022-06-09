@@ -32,7 +32,6 @@ struct FCompressedData SecondExtension(unsigned int* Samples)
     CompressedData.data = NULL;
     CompressedData.CompressionIdentifier = SECOND_EXTENSION_ID - 1;
 
-
     // Checks if the compressed size is minor than the uncompressed size 
     const unsigned int CompressedSize = GetSizeSecondExtension(HalvedSamples);
     if(CompressedSize > J_BlockSize * 32)
@@ -40,15 +39,6 @@ struct FCompressedData SecondExtension(unsigned int* Samples)
         SE_PRINT(("Second Extension (Compressed size: %d bits > %d bits): Error.\n", CompressedSize, J_BlockSize * 32));
         return CompressedData;
     }
-
-    // Resulting size is in bounds, we annotate the output PackedArray using the Fundamental Sequence algorithm
-    //unsigned int PackedArray[J_BlockSize] = { 0 };    
-    //unsigned int sample = 0; 
-    /*for(unsigned int i = 0; i < HalfBlockSize; ++i)
-    {
-        PackedArray[sample/32] |= 1 << (sample%32);
-        sample += HalvedSamples[i] + 1;
-    }*/
     
     PRINT_SE_COMPRESSED_ARRAY(HalvedSamples);
 

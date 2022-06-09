@@ -29,6 +29,6 @@ printf("\n")
 #endif
 
 
-struct FCompressedData AdaptativeEntropyEncoder(struct DataObject* device_object , unsigned int* Samples, struct ZeroBlockProcessed ZeroNum);
+void AdaptativeEntropyEncoder(struct DataObject* device_object , unsigned int* Samples, struct ZeroBlockProcessed ZeroNum);
 
 #endif
