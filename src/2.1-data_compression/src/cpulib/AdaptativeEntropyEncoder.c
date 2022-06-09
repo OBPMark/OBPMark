@@ -104,7 +104,7 @@ struct FCompressedData AdaptativeEntropyEncoder(struct DataObject* device_object
     //FinalProcessedBlock.data[0] = CompressionTechniqueIdentifier << (compression_technique_identifier_size);
     printf("Compression Technique Identifier: %d\n", CompressionTechniqueIdentifier);
     // if the selected technique is the zero block or the second extension, the compression_technique_identifier_size is +1
-    if(CompressionTechniqueIdentifier == ZERO_BLOCK_ID || CompressionTechniqueIdentifier == SECOND_EXTENSION_ID)
+    if(BestCompression.CompressionIdentifierInternal == ZERO_BLOCK_ID || BestCompression.CompressionIdentifierInternal == SECOND_EXTENSION_ID)
     {
         compression_technique_identifier_size += 1;
     }
@@ -132,9 +132,20 @@ struct FCompressedData AdaptativeEntropyEncoder(struct DataObject* device_object
     }
     else if(BestCompression.CompressionIdentifierInternal == FUNDAMENTAL_SEQUENCE_ID)
     {
+        unsigned int k = 0;
         for(int i = 0; i < J_BlockSize; ++i)
         {
-            writeWord(device_object->OutputDataBlock,  1, BestCompression.data[i]+1);
+            writeValue(device_object->OutputDataBlock, 0 , BestCompression.data[i] >> k);
+            // write 1 with 1 bit 
+            writeValue(device_object->OutputDataBlock, 1, 1);
+
+        }
+
+        // write the word
+        //
+        for(int i = 0; i < J_BlockSize; ++i)
+        {
+            writeWord(device_object->OutputDataBlock, BestCompression.data[i], k);
         }
     }
     else if(BestCompression.CompressionIdentifierInternal == SECOND_EXTENSION_ID)
