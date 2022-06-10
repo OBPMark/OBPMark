@@ -2,29 +2,10 @@
 #define FSPACK_H
 
 #include "Config.h"
+#include "lib_functions.h"
 
 /* FS Debug log, uncomment for debug logging */
-// #define FS_DEBUG 
 // #define FS_PRINT_STATE
-
-
-#ifdef FS_DEBUG
-#define PRINT_FS_COMPRESSED_ARRAY(x) \
-printf("Compressed bit array: "); \
-for(int i = (J_BlockSize*32) - 1; i >= 0; --i) \
-{ \
-    printf("%d" ,(x[i/32] & (1 << (i%32) )) != 0); \
-} \
-printf("\n")
-#else
-#define PRINT_FS_COMPRESSED_ARRAY(x)  \
-printf("Compressed bit array: "); \
-for(int i = (J_BlockSize*32) - 1; i >= 0; --i) \
-{ \
-    printf("%d" ,(x[i/32] & (1 << (i%32) )) != 0); \
-} \
-printf("\n")
-#endif
 
 #ifdef FS_PRINT_STATE
   #define FS_PRINT(a) printf a
@@ -32,7 +13,9 @@ printf("\n")
   #define FS_PRINT(a) (void)0
 #endif
 
-/* Returns the processed size */
+/* Preprocesses the data for the algorithm */
 struct FCompressedData FundamentalSequence(unsigned int* Samples);
+/* Writes bits following the corresponding algorithm */
+void FundamentalSequenceWriter(struct DataObject* device_object, struct FCompressedData* BestCompression);
 
 #endif

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "BitOutputUtils.h"
 #include "NoCompression.h"
 
 
@@ -38,4 +39,12 @@ struct FCompressedData NoCompression(unsigned int* Samples)
     NC_PRINT(("No Compression (Size: %d bits): OK.\n", CompressedSize));
 
     return CompressedData;
+}
+
+void NoCompressionWriter(struct DataObject* device_object, struct FCompressedData* BestCompression)
+{
+    for(int i = 0; i < J_BlockSize; ++i)
+    {
+        writeWord(device_object->OutputDataBlock,  BestCompression->data[i], n_bits);
+    }
 }

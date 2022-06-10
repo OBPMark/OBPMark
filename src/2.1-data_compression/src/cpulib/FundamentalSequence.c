@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "BitOutputUtils.h"
 #include "FundamentalSequence.h"
 
 
@@ -30,9 +31,6 @@ struct FCompressedData FundamentalSequence(unsigned int* Samples)
         return CompressedData;
     }
 
-    // Resulting size is in bounds, we annotate the output PackedArray using the Fundamental Sequence algorithm
-    // See: https://public.ccsds.org/Pubs/121x0b2ec1.pdf
-
     CompressedData.size = CompressedSize;
     CompressedData.CompressionIdentifierInternal = FUNDAMENTAL_SEQUENCE_ID;
     CompressedData.data = (unsigned int*) malloc (sizeof( unsigned int ) * J_BlockSize);
@@ -41,4 +39,14 @@ struct FCompressedData FundamentalSequence(unsigned int* Samples)
     FS_PRINT(("Fundamental Sequence (Size: %d bits): OK.\n", CompressedSize));
     
     return CompressedData;
+}
+
+
+void FundamentalSequenceWriter(struct DataObject* device_object, struct FCompressedData* BestCompression)
+{
+    for(int i = 0; i < J_BlockSize; ++i)
+    {
+        writeValue(device_object->OutputDataBlock, 0 , BestCompression->data[i]);
+        writeValue(device_object->OutputDataBlock, 1, 1);
+    }
 }

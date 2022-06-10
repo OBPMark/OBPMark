@@ -2,22 +2,10 @@
 #define SSPACK_H
 
 #include "Config.h"
+#include "lib_functions.h"
 
 /* SS Debug log, uncomment for debug logging */
-// #define SS_DEBUG 
 // #define SS_PRINT_STATE
-
-#ifdef SS_DEBUG
-#define PRINT_SS_COMPRESSED_ARRAY(x) \
-printf("Compressed bit array: "); \
-for(int i = (J_BlockSize*32) - 1; i >= 0; --i) \
-{ \
-    printf("%d" ,(x[i/32] & (1 << (i%32) )) != 0); \
-} \
-printf("\n")
-#else
-#define PRINT_SS_COMPRESSED_ARRAY(x) 
-#endif
 
 #ifdef SS_PRINT_STATE
   #define SS_PRINT(a) printf a
@@ -25,8 +13,9 @@ printf("\n")
   #define SS_PRINT(a) (void)0
 #endif
 
-
-/* Returns the processed size */
+/* Preprocesses the data for the algorithm */
 struct FCompressedData SampleSplitting(unsigned int* Samples, unsigned int k);
+/* Writes bits following the corresponding algorithm */
+void SampleSplittingWriter(struct DataObject* device_object, struct FCompressedData* BestCompression);
 
 #endif

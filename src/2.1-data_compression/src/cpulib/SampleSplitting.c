@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "BitOutputUtils.h"
 #include "SampleSplitting.h"
 #include "FundamentalSequence.h"
 
@@ -56,4 +57,22 @@ struct FCompressedData SampleSplitting(unsigned int* Samples, unsigned int k)
 
     return CompressedData;
 
+}
+
+
+void SampleSplittingWriter(struct DataObject* device_object, struct FCompressedData* BestCompression)
+{
+    // Get the K from the sample split
+    int k = BestCompression->CompressionIdentifierInternal - SAMPLE_SPLITTING_ID;
+    // MSB shifted k right dictates the 0 to write + a one (following fundamental sequence)
+    for(int i = 0; i < J_BlockSize; ++i)
+    {
+        writeValue(device_object->OutputDataBlock, 0 , BestCompression->data[i] >> k);
+        writeValue(device_object->OutputDataBlock, 1, 1);
+    }
+    // Append the LSB part
+    for(int i = 0; i < J_BlockSize; ++i)
+    {
+        writeWord(device_object->OutputDataBlock, BestCompression->data[i], k);
+    }
 }

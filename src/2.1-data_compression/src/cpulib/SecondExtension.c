@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "BitOutputUtils.h"
 #include "SecondExtension.h"
 
 
@@ -22,9 +23,8 @@ struct FCompressedData SecondExtension(unsigned int* Samples)
     // Halving the data using the SE Option algorithm. See: https://public.ccsds.org/Pubs/121x0b2ec1.pdf
     for(unsigned int i = 0; i < HalfBlockSize; ++i)
     {
-        // fixmevori: Non-accumulative consecutive members? 
         HalvedSamples[i] = (((Samples[2*i] + Samples[2*i + 1]) * (Samples[2*i] + Samples[2*i + 1] + 1)) / 2) + Samples[2*i + 1];
-        PRINT_HALVED_ARRAY_ELEMENT(i, HalvedSamples[i]);
+        SE_PRINT(("HalvedSample %d: %ld\n", i, HalvedSamples[i]));
     }
 
     struct FCompressedData CompressedData;
@@ -40,8 +40,6 @@ struct FCompressedData SecondExtension(unsigned int* Samples)
         return CompressedData;
     }
     
-    PRINT_SE_COMPRESSED_ARRAY(HalvedSamples);
-
     CompressedData.size = CompressedSize;
     CompressedData.data = (unsigned int*) malloc (sizeof( unsigned int ) * J_BlockSize);
     CompressedData.CompressionIdentifierInternal = SECOND_EXTENSION_ID;
@@ -50,4 +48,12 @@ struct FCompressedData SecondExtension(unsigned int* Samples)
     SE_PRINT(("Second Extension (Size: %d bits): OK.\n", CompressedSize));
     
     return CompressedData;
+}
+
+void SecondExtensionWriter(struct DataObject* device_object, struct FCompressedData* BestCompression)
+{
+    for(int i = 0; i < HalfBlockSize; ++i)
+    {
+        writeWord(device_object->OutputDataBlock,  BestCompression->data[i], sizeof(unsigned int) * 8);
+    }
 }

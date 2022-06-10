@@ -32,25 +32,11 @@
 /* RANDOM DATA GENERATION */
 #define RANDOM_DATA_GENERATION false
 // Note: the print debug is only safe on non-parallel operations
-// #define CONFIG_DEBUG 
 // #define CONFIG_PRINT_STATE
 
 
 /* Ensure definition */
 #define ensure(x) if(!(x)) { printf("Ensure error in %s @ line %d: \"%s\" wasn't ensured.\n", __FILE__, __LINE__, #x); exit(0); }
-
-
-#ifdef CONFIG_DEBUG
-#define PRINT_HEADER(x) \
-printf("Header data field: "); \
-for(int i = 5; i >= 0; --i) \
-{ \
-    printf("%d" ,(x & (1 << (i%8) )) != 0); \
-} \
-printf("\n")
-#else
-#define PRINT_HEADER(x) 
-#endif
 
 
 #ifdef CONFIG_PRINT_STATE

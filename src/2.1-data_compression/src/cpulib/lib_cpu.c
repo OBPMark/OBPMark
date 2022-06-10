@@ -87,16 +87,12 @@ void execute_benchmark(struct DataObject *device_object)
             }
         }
 
-        // Compression formatting: [header n_bits] [compressed blocks]
-        // The header simply consists on the selected number of bits, so we can decompress the no-compression method.
-        PRINT_HEADER(n_bits);
-
         // Compressing each block
         // The formatting for each compressed block is further specificed in the AdaptativeEntropyEncoder.c file.
         for(unsigned int block = 0; block < r_samplesInterval; ++block)
         {  
-            printf("##########################\n");
-			printf("block ID %d\n", block);
+            CONFIG_PRINT(("##########################\n"));
+			CONFIG_PRINT(("Block ID: %d\n", block));
             AdaptativeEntropyEncoder(device_object, OutputPreprocessedValue + (J_BlockSize*block), ZBProcessed[block]);
         }
 
@@ -109,11 +105,10 @@ void execute_benchmark(struct DataObject *device_object)
     
     FILE *fp;
     fp = fopen("output.bin", "wb");
-    unsigned int number_of_elements = device_object->OutputDataBlock->num_total_bytes + 1; // add 1 to account for last remaining byte
-    printf("Number of elements: %d\n", number_of_elements);
+    unsigned int number_of_elements = device_object->OutputDataBlock->num_total_bytes + 1; // Add 1 to account for last remaining byte
+    CONFIG_PRINT(("Number of elements: %d\n", number_of_elements));
     fwrite(device_object->OutputDataBlock->OutputBitStream, 1, number_of_elements, fp); 
     fclose(fp);
-
 }
 
 

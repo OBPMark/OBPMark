@@ -1,16 +1,13 @@
 #include "BitOutputUtils.h"
 
 
-
-
-
 void writeWord(struct OutputBitStream *status, unsigned int word, int number_bits)
 {
     for (int i = number_bits - 1; i >=0; --i)
     {
         status->OutputBitStream[status->num_total_bytes] |= ((word >>i) & 0x1) << (7 - status->num_bits);
         status->num_bits++;
-        // check if the byte is full
+        // Check if the byte is complete
         if (status->num_bits >= 8)
         {
             status->num_bits = 0;
@@ -18,6 +15,7 @@ void writeWord(struct OutputBitStream *status, unsigned int word, int number_bit
         }
     }
 }
+
 
 void writeWordChar(struct OutputBitStream *status, unsigned char word, int number_bits)
 {
@@ -25,7 +23,7 @@ void writeWordChar(struct OutputBitStream *status, unsigned char word, int numbe
     {
         status->OutputBitStream[status->num_total_bytes] |= ((word >>i) & 0x1) << (7 - status->num_bits);
         status->num_bits++;
-        // check if the byte is full
+        // Check if the byte is complete
         if (status->num_bits >= 8)
         {
             status->num_bits = 0;
@@ -34,26 +32,25 @@ void writeWordChar(struct OutputBitStream *status, unsigned char word, int numbe
     }
 }
 
-// write to the OutputBitStream the variable value (that is a bit) with the number of bits
-unsigned int writeValue(struct OutputBitStream *status, unsigned char value, int number_bits)
+
+void writeValue(struct OutputBitStream *status, unsigned char value, int number_bits)
 {
-    // check if value is binary 0 or binary 1 if not return false
+    // Check if value is 0 or 1 if not return
     if (value != 0 && value != 1)
     {
-        return FALSE;
+        return;
     }
+    
     value = 0x1 & value;
     for (unsigned int i = 0; i < number_bits; ++i)
     {
         status->OutputBitStream[status->num_total_bytes] |= value << (7 - status->num_bits);
         status->num_bits++;
-        // check if the byte is full
+        // Check if the byte is complete
         if (status->num_bits >= 8)
         {
             status->num_bits = 0;
             status->num_total_bytes++;
         }
-
     }
-    return TRUE;
 }
