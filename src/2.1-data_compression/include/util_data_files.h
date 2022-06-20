@@ -26,4 +26,10 @@ int load_data_from_files(
     unsigned int r_samplesInterval
 	);
 
+int store_data_to_files(
+    char * filename,
+    unsigned char *data,
+    unsigned int num_elements
+    );
+
 #endif // UTIL_DATA_FILES_H_

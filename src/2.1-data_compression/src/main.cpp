@@ -90,11 +90,7 @@ void init_benchmark(
 	{
 		// write the output image to a file call "output.bin"
 
-		FILE *fp;
-        fp = fopen(output_file, "wb");
-        unsigned int number_of_elements = output_bit_stream->num_total_bytes + 1; // Add 1 to account for last remaining byte
-        fwrite(output_bit_stream->OutputBitStream, 1, number_of_elements, fp); 
-        fclose(fp);
+		store_data_to_files(output_file, output_bit_stream->OutputBitStream, output_bit_stream->num_total_bytes + 1);
 	}
 
 	/* Clean and free device object */

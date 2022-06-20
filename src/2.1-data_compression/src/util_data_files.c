@@ -32,3 +32,18 @@ int load_data_from_files(
     fclose(file);
     return FILE_LOADING_SUCCESS;
 }
+
+
+int store_data_to_files(
+    char * filename,
+    unsigned char *data,
+    unsigned int num_elements
+    )
+{
+
+        FILE *fp;
+        fp = fopen(filename, "wb");
+        fwrite(data, 1, num_elements, fp); 
+        fclose(fp);
+        return FILE_LOADING_SUCCESS;
+}
