@@ -8,8 +8,10 @@
 #define DEVICE_H_
 
 #include "obpmark.h"
+#include "obpmark_time.h"
 #include "output_format_utils.h"
 #include "benchmark.h"
+#include "math.h"
 
 /* Typedefs */
 #ifdef CUDA
@@ -53,6 +55,7 @@ typedef struct {
 struct compression_data_t
 {
 	unsigned int *InputDataBlock;
+	unsigned int *OutputPreprocessedValue;
 	struct OutputBitStream *OutputDataBlock;
 	unsigned int n_bits;
 	unsigned int j_blocksize;

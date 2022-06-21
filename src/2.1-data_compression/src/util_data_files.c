@@ -9,7 +9,7 @@
 #include "util_data_files.h"
 
 
-int load_data_from_files(
+int load_data_from_file(
 
 	char * filename,
 	unsigned int *data, 
@@ -34,7 +34,7 @@ int load_data_from_files(
 }
 
 
-int store_data_to_files(
+int store_data_to_file(
     char * filename,
     unsigned char *data,
     unsigned int num_elements

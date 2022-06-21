@@ -19,9 +19,9 @@ long int get_timestamp(){
 void print_usage(const char *exec_name)
 {
 	printf("usage: %s -s [size] -n [size] -j [size] -r [size]\n", exec_name);
-	printf(" -s size : number of frames\n");
-	printf(" -n size : width of the input image in pixels\n");
-	printf(" -r size : height of the input image in pixels \n");
+	printf(" -s size : number of steps\n");
+	printf(" -n size : number of bits\n");
+	printf(" -r size : size of the interval sample \n");
 	printf(" -j size : block size\n");
     printf(" -p : preprocessor_active\n");
 	printf(" -f : file that contains input data\n");
@@ -72,25 +72,25 @@ int arguments_handler(
 
     // Ensures that the config parameters are set correctly
     // Steps must be a positive number greater than 0
-    if(*steps <= 0)
+    if(*steps <= MINIMUMSTEPS)
     {
         printf("error: steps must be a positive number greater than 0\n");
         return ARG_ERROR;
     }
     // n_bits must be a positive number greater than 0 and not greater than 32
-    if(*n_bits <= 0 || *n_bits > 32)
+    if(*n_bits <= MINIMUMBITSIZE || *n_bits > MAXIMUNBITSIZE)
     {
         printf("error: n_bits must be a positive number greater than 0 and not greater than 32\n");
         return ARG_ERROR;
     }
     // blocksize must be 8 or 16 or 32 or 64
-    if(*j_blocksize != 8 && *j_blocksize != 16 && *j_blocksize != 32 && *j_blocksize != 64)
+    if(*j_blocksize != JBLOCKSIZE1 && *j_blocksize != JBLOCKSIZE2 && *j_blocksize != JBLOCKSIZE3 && *j_blocksize != JBLOCKSIZE4)
     {
         printf("error: blocksize must be 8 or 16 or 32 or 64\n");
         return ARG_ERROR;
     }
     // r_samplesInterval must be a positive number greater than 0
-    if(*r_samplesInterval <= 0)
+    if(*r_samplesInterval <= MINIMUMRSAMPLES)
     {
         printf("error: r_samplesInterval must be a positive number greater than 0\n");
         return ARG_ERROR;

@@ -54,3 +54,50 @@ void writeValue(struct OutputBitStream *status, unsigned char value, int number_
         }
     }
 }
+
+
+void ZeroBlockWriter (struct OutputBitStream *status, unsigned int size)
+{
+    writeValue(status,  0, size - 1);
+    writeValue(status, 1,1);
+}
+
+void NoCompressionWriter(struct OutputBitStream *status,unsigned int  j_blocksize, unsigned int n_bits, unsigned int* data)
+{
+    for(int i = 0; i < j_blocksize; ++i)
+    {
+        writeWord(status,  data[i], n_bits);
+    }
+}
+
+void FundamentalSequenceWriter(struct OutputBitStream *status ,unsigned int  j_blocksize,  unsigned int* data)
+{
+    for(int i = 0; i < j_blocksize; ++i)
+    {
+        writeValue(status, 0 , data[i]);
+        writeValue(status, 1, 1);
+    }
+}
+
+void SecondExtensionWriter(struct OutputBitStream *status, unsigned int  HalfBlockSize, unsigned int* data)
+{
+    for(int i = 0; i < HalfBlockSize; ++i)
+    {
+        writeWord(status,  data[i], sizeof(unsigned int) * 8);
+    }
+}
+
+void SampleSplittingWriter(struct OutputBitStream *status, unsigned int  j_blocksize, unsigned int k, unsigned int* data)
+{
+    // MSB shifted k right dictates the 0 to write + a one (following fundamental sequence)
+    for(int i = 0; i < j_blocksize; ++i)
+    {
+        writeValue(status, 0 , data[i] >> k);
+        writeValue(status, 1, 1);
+    }
+    // Append the LSB part
+    for(int i = 0; i < j_blocksize; ++i)
+    {
+        writeWord(status, data[i], k);
+    }
+}

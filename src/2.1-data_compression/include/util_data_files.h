@@ -17,7 +17,7 @@
 #define FILE_LOADING_SUCCESS 0
 
 
-int load_data_from_files(
+int load_data_from_file(
 
 	char * filename,
 	unsigned int *data, 
@@ -26,7 +26,7 @@ int load_data_from_files(
     unsigned int r_samplesInterval
 	);
 
-int store_data_to_files(
+int store_data_to_file(
     char * filename,
     unsigned char *data,
     unsigned int num_elements

@@ -17,9 +17,9 @@ EXEC_PATH	:= $(BIN_PATH)/$(EXEC_NAME)
 COMMON_PATH = ../../src/common
 
 _COMMON_INCLUDES = 
-_COMMON_SOURCES  = util_data_rand.c util_arg.c util_data_files.c output_format_util.c
-COMMON_OBJECTS   = util_data_rand.o util_arg.o util_data_files.o output_format_util.o
-COMMON_OBJECTS_PATH = $(COM_TARGET)/util_data_rand.o $(COM_TARGET)/util_arg.o $(COM_TARGET)/util_data_files.o $(COM_TARGET)/output_format_util.o
+_COMMON_SOURCES  = util_data_rand.c util_arg.c util_data_files.c output_format_utils.c
+COMMON_OBJECTS   = util_data_rand.o util_arg.o util_data_files.o output_format_utils.o
+COMMON_OBJECTS_PATH = $(COM_TARGET)/util_data_rand.o $(COM_TARGET)/util_arg.o $(COM_TARGET)/util_data_files.o $(COM_TARGET)/output_format_utils.o
 
 COMMON_INCLUDES = $(pathsubst %,$(COMMON_PATH)/%,$(_COMMON_INCLUDES))
 COMMON_SOURCES  = $(pathsubst %,$(COMMON_PATH)/%,$(_COMMON_SOURCES))
@@ -90,8 +90,8 @@ util_arg.o: common_conf $(SRC_FOLDER)/util_arg.c
 util_data_files.o: common_conf $(SRC_FOLDER)/util_data_files.c
 	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/util_data_files.c -o $(COM_TARGET)/util_data_files.o
 
-output_format_util.o: common_conf $(SRC_FOLDER)/output_format_util.c
-	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/output_format_util.c -o $(COM_TARGET)/output_format_util.o
+output_format_utils.o: common_conf $(SRC_FOLDER)/output_format_utils.c
+	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/output_format_utils.c -o $(COM_TARGET)/output_format_utils.o
 
 ################################### SEQUENTIAL ################################
 # Shortcuts

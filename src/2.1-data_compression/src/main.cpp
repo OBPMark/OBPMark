@@ -20,10 +20,10 @@
 
 void print_output_result(struct OutputBitStream *output_bit_stream)
 {
-	printf("Total number of bytes: %u\n", output_bit_stream.num_total_bytes);
-    for (unsigned int i = 0; i < output_bit_stream.num_total_bytes + 1; i++)
+	printf("Total number of bytes: %u\n", output_bit_stream->num_total_bytes);
+    for (unsigned int i = 0; i < output_bit_stream->num_total_bytes + 1; i++)
     {
-        printf("%u, ", output_bit_stream.OutputBitStream[i]);
+        printf("%u, ", output_bit_stream->OutputBitStream[i]);
     }
     printf("\n");
 }
@@ -59,15 +59,15 @@ void init_benchmark(
     compression_data->j_blocksize = j_blocksize;
     compression_data->r_samplesInterval = r_samplesInterval;
     compression_data->preprocessor_active = preprocessor_active;
-    compression_data->total_samples = total_samples;
-    compression_data->total_samples_step = total_samples_step;
+    compression_data->TotalSamples = total_samples;
+    compression_data->TotalSamplesStep = total_samples_step;
     compression_data->step = step;
     
     /* Device object init */
 	init(compression_data, t, 0, DEVICESELECTED, device);
     
 
-	if(!csv_mode){
+	if(!csv_mode && !database_mode){
 		printf("Using device: %s\n", device);
 	}
     /* Initialize memory on the device and copy data */
@@ -90,7 +90,7 @@ void init_benchmark(
 	{
 		// write the output image to a file call "output.bin"
 
-		store_data_to_files(output_file, output_bit_stream->OutputBitStream, output_bit_stream->num_total_bytes + 1);
+		store_data_to_file(output_file, output_bit_stream->OutputBitStream, output_bit_stream->num_total_bytes + 1);
 	}
 
 	/* Clean and free device object */
@@ -104,7 +104,7 @@ int main(int argc, char **argv)
     srand(8111995);
 
 	int ret;
-    bool csv_mode = false;OutputBitStream
+    bool csv_mode = false;
 	bool print_output = false;
 	bool verbose_output = false;
 	bool database_mode = false;
@@ -122,18 +122,18 @@ int main(int argc, char **argv)
 
     
 
-    ret = arguments_handler(argc, argv, &steps, &n_bits,&r_samplesInterval, &r_samplesInterval, &preprocessor_active, &csv_mode, &database_mode, &print_output, &verbose_output, input_file);
+    ret = arguments_handler(argc, argv, &steps, &n_bits,&j_blocksize, &r_samplesInterval, &preprocessor_active, &csv_mode, &database_mode, &print_output, &verbose_output, input_file);
 	if(ret == ARG_ERROR) {
 		exit(-1);
 	}
 
-    const unsigned int TotalSamples = r_samplesInterval * r_samplesInterval; 
+    const unsigned int TotalSamples = j_blocksize * r_samplesInterval; 
     const unsigned int TotalSamplesStep = TotalSamples * steps;
     /* Init Input_data */
     Input_data = ( unsigned int *)malloc(sizeof( unsigned int ) * TotalSamplesStep);
     /* Init Output_data */
     Output_data = (struct OutputBitStream *)malloc (sizeof(struct OutputBitStream));
-    Output_data->OutputBitStream = calloc(TotalSamplesStep*4, sizeof(unsigned char));
+    Output_data->OutputBitStream = (unsigned char *)calloc(TotalSamplesStep*4, sizeof(unsigned char));
     Output_data->num_bits = 0;
     Output_data->num_total_bytes = 0;
 

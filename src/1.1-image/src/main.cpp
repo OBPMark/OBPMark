@@ -63,7 +63,7 @@ void init_benchmark(
 	/* Device object init */
 	init(image_data, t, 0, DEVICESELECTED, device);
 
-	if(!csv_mode){
+	if(!csv_mode && !database_mode){
 		printf("Using device: %s\n", device);
 	}
 
