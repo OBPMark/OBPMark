@@ -52,6 +52,8 @@
 
 /* Device defines */
 #ifdef CUDA
+#define NUMBER_STREAMS 4
+#define MAXSIZE_NBITS 32
 #define DEVICESELECTED		0
 #define BLOCK_SIZE_PLANE 	256 
 #define BLOCK_SIZE 		16

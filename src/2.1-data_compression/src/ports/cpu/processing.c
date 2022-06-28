@@ -372,6 +372,7 @@ void preprocess_data(
                 }
                 if (compression_data->OutputPreprocessedValue[i + (block * compression_data->j_blocksize)] != 0) *AllZerosInBlock = false;
             }
+
             // Zero Block post processing
             if( *AllZerosInBlock == true )
             {

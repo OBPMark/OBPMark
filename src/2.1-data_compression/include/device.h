@@ -18,8 +18,51 @@
 /* CUDA version */
 struct compression_data_t
 {
+
+	unsigned int *input_data;
+	unsigned int *output_data;
+	unsigned int *input_data_post_process;
+	int *missing_value;
+	int *missing_value_inverse;
+	int *zero_block_list;
+	int *zero_block_list_inverse;
+
+	unsigned char *compresion_identifier;
+	unsigned char *compresion_identifier_internal;
+	unsigned int *halved_samples;
+	unsigned int  *size_block;
+	unsigned int *data_in_blocks;
+
+	unsigned char *compresion_identifier_best;
+	unsigned char *compresion_identifier_internal_best;
+	unsigned int  *size_block_best;
+	unsigned int *bit_block_best;
+	unsigned int *data_in_blocks_best;
+
+	unsigned char *compresion_identifier_best_cpu;
+	unsigned char *compresion_identifier_best_internal_cpu;
+	unsigned int  *size_block_best_cpu;
+	unsigned int *data_in_blocks_best_cpu;
+
+	// general part
+
+	unsigned int *InputDataBlock;
+	unsigned int *OutputPreprocessedValue;
+	struct OutputBitStream *OutputDataBlock;
+	unsigned int n_bits;
+	unsigned int j_blocksize;
+	unsigned int r_samplesInterval;
+	unsigned int steps;
+	bool preprocessor_active;
+	unsigned int TotalSamples;
+	unsigned int TotalSamplesStep;
 };
 typedef struct {
+	cudaEvent_t *start_memory_copy_device;
+	cudaEvent_t *stop_memory_copy_device;
+	cudaEvent_t *start_memory_copy_host;
+	cudaEvent_t *stop_memory_copy_host;
+	time_t t_test;
 }compression_time_t;
 
 #elif OPENCL
@@ -33,6 +76,7 @@ struct compression_data_t
 {
 };
 typedef struct {
+	
 }compression_time_t;
 
 #elif OPENMP
@@ -60,7 +104,7 @@ struct compression_data_t
 	unsigned int n_bits;
 	unsigned int j_blocksize;
 	unsigned int r_samplesInterval;
-	unsigned int step;
+	unsigned int steps;
 	bool preprocessor_active;
 	unsigned int TotalSamples;
 	unsigned int TotalSamplesStep;

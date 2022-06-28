@@ -61,7 +61,7 @@ void init_benchmark(
     compression_data->preprocessor_active = preprocessor_active;
     compression_data->TotalSamples = total_samples;
     compression_data->TotalSamplesStep = total_samples_step;
-    compression_data->step = step;
+    compression_data->steps = step;
     
     /* Device object init */
 	init(compression_data, t, 0, DEVICESELECTED, device);

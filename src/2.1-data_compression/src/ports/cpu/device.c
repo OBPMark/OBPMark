@@ -68,7 +68,7 @@ struct ZeroBlockProcessed *ZBProcessed= (ZeroBlockProcessed *) calloc(compressio
 
 
 
-for (step = 0; step < compression_data->step; ++step)
+for (step = 0; step < compression_data->steps; ++step)
 {
 	bool AllZerosInBlock = true;
     unsigned int ZeroCounterPos = 0;
