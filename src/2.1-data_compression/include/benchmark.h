@@ -59,9 +59,11 @@
 #define BLOCK_SIZE 		16
 
 #elif OPENCL
+#define NUMBER_STREAMS 4
+#define MAXSIZE_NBITS 32
 #define DEVICESELECTED		0
-#define BLOCK_SIZE_PLANE	256
-#define BLOCK_SIZE		16
+#define BLOCK_SIZE_PLANE 	256 
+#define BLOCK_SIZE 		16
 
 #elif OPENMP
 #define DEVICESELECTED		0

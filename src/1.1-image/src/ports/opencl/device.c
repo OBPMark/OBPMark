@@ -54,13 +54,13 @@ void init(
         printf(" No devices found. Check OpenCL installation!\n");
         exit(1);
     }
-    cl::Device default_device=all_devices[device];
+    cl::Device* default_device= new cl::Device (all_devices[device]);
     //std::cout<< "Using device: "<<default_device.getInfo<CL_DEVICE_NAME>()<<"\n";
-    strcpy(device_name,default_device.getInfo<CL_DEVICE_NAME>().c_str() );
+    strcpy(device_name,default_device->getInfo<CL_DEVICE_NAME>().c_str() );
     // context
-    image_data->context = new cl::Context(default_device);
-    image_data->queue = new cl::CommandQueue(*image_data->context,default_device,NULL); //CL_QUEUE_PROFILING_ENABLE
     image_data->default_device = default_device;
+    image_data->context = new cl::Context(*image_data->default_device);
+    image_data->queue = new cl::CommandQueue(*image_data->context,*image_data->default_device,NULL); //CL_QUEUE_PROFILING_ENABLE
     
     // events
     t->t_device_host = new cl::Event();
@@ -73,8 +73,8 @@ void init(
     sources.push_back({kernel_code.c_str(),kernel_code.length()});
 
     image_data->program = new cl::Program(*image_data->context,sources);
-    if(image_data->program->build({image_data->default_device})!=CL_SUCCESS){
-        std::cout<<" Error building: "<<image_data->program->getBuildInfo<CL_PROGRAM_BUILD_LOG>(image_data->default_device)<<"\n";
+    if(image_data->program->build({*image_data->default_device})!=CL_SUCCESS){
+        std::cout<<" Error building: "<<image_data->program->getBuildInfo<CL_PROGRAM_BUILD_LOG>(*image_data->default_device)<<"\n";
         exit(1);
     }
     
@@ -167,7 +167,7 @@ void process_benchmark(
     /* Queue 0 focus in the copy of the input image, Queue 1 focus in the 1º part of the computation, Queue 2 focus in the 2º part*/
     cl::CommandQueue queues[NUMBER_STREAMS];
     for (unsigned int i = 0; i < NUMBER_STREAMS; ++i) {
-         queues[i] = cl::CommandQueue(*image_data->context,image_data->default_device,NULL);//CL_QUEUE_PROFILING_ENABLE
+         queues[i] = cl::CommandQueue(*image_data->context,*image_data->default_device,NULL);//CL_QUEUE_PROFILING_ENABLE
     }
     // status signals
     cl::Event evt_cp;
@@ -606,6 +606,7 @@ void clean(
     delete image_data->binned_frame;
     delete image_data->image_output;
     delete image_data->scrub_mask;
+    delete image_data->default_device;
     // pointer to memory
     delete t->t_device_host;
 }

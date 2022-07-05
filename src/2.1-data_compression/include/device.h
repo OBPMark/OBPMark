@@ -67,16 +67,64 @@ typedef struct {
 
 #elif OPENCL
 /* OPENCL version */
-/* define the types to have the same as the cuda version */
-#define uint32_t_cl unsigned int
-#define uint16_t_cl unsigned short
-#define uint8_t_cl unsigned char
-static const std::string type_def_kernel = "#define uint32_t_cl unsigned int\nt#define uint16_t_cl unsigned short\n#define uint8_t_cl unsigned char\n";
+static const std::string type_def_kernel = std::string("#define ZERO_BLOCK_ID ") + std::to_string(ZERO_BLOCK_ID) + std::string(" \n") +
+		std::string("#define FUNDAMENTAL_SEQUENCE_ID ") + std::to_string(FUNDAMENTAL_SEQUENCE_ID) + std::string(" \n") + 
+		std::string("#define SECOND_EXTENSION_ID ") + std::to_string(SECOND_EXTENSION_ID) + std::string(" \n") +
+		std::string("#define SAMPLE_SPLITTING_ID ") + std::to_string(SAMPLE_SPLITTING_ID) + std::string(" \n") +
+		std::string("#define NO_COMPRESSION_ID ") + std::to_string(NO_COMPRESSION_ID) + std::string(" \n");
 struct compression_data_t
 {
+	cl::Context *context;
+	cl::CommandQueue *queue;
+	cl::Device *default_device;
+	cl::Program* program;
+
+	cl::Buffer *input_data;
+	cl::Buffer *output_data;
+	cl::Buffer *input_data_post_process;
+	cl::Buffer *missing_value;
+	cl::Buffer *missing_value_inverse;
+	cl::Buffer *zero_block_list;
+	cl::Buffer *zero_block_list_inverse;
+
+	cl::Buffer *compresion_identifier;
+	cl::Buffer *compresion_identifier_internal;
+	cl::Buffer *halved_samples;
+	cl::Buffer  *size_block;
+	cl::Buffer *data_in_blocks;
+
+	cl::Buffer *compresion_identifier_best;
+	cl::Buffer *compresion_identifier_internal_best;
+	cl::Buffer  *size_block_best;
+	cl::Buffer *bit_block_best;
+	cl::Buffer *data_in_blocks_best;
+
+	unsigned char *compresion_identifier_best_cpu;
+	unsigned char *compresion_identifier_best_internal_cpu;
+	unsigned int  *size_block_best_cpu;
+	unsigned int *data_in_blocks_best_cpu;
+
+	// general part
+
+	unsigned int *InputDataBlock;
+	unsigned int *OutputPreprocessedValue;
+	struct OutputBitStream *OutputDataBlock;
+	unsigned int n_bits;
+	unsigned int j_blocksize;
+	unsigned int r_samplesInterval;
+	unsigned int steps;
+	bool preprocessor_active;
+	unsigned int TotalSamples;
+	unsigned int TotalSamplesStep;
+	
 };
 typedef struct {
-	
+	cl::Event *t_host_device;
+	cl::Event *t_device_host_1;
+	cl::Event *t_device_host_2;
+	cl::Event *t_device_host_3;
+	cl::Event *t_device_host_4;
+	time_t t_test;
 }compression_time_t;
 
 #elif OPENMP

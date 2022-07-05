@@ -47,12 +47,12 @@ typedef struct {
 #define uint32_t_cl unsigned int
 #define uint16_t_cl unsigned short
 #define uint8_t_cl unsigned char
-static const std::string type_def_kernel = "#define uint32_t_cl unsigned int\nt#define uint16_t_cl unsigned short\n#define uint8_t_cl unsigned char\n";
+static const std::string type_def_kernel = "#define uint32_t_cl unsigned int\n#define uint16_t_cl unsigned short\n#define uint8_t_cl unsigned char\n";
 struct image_data_t
 {
 	cl::Context *context;
 	cl::CommandQueue *queue;
-	cl::Device default_device;
+	cl::Device *default_device;
 	cl::Program* program;
 
 	cl::Buffer *frames;
