@@ -131,8 +131,23 @@ typedef struct {
 /* OPENMP version */
 struct compression_data_t
 {
+	unsigned int *InputDataBlock;
+	unsigned int *OutputPreprocessedValue;
+	struct OutputBitStream *OutputDataBlock;
+	unsigned int n_bits;
+	unsigned int j_blocksize;
+	unsigned int r_samplesInterval;
+	unsigned int steps;
+	bool preprocessor_active;
+	unsigned int TotalSamples;
+	unsigned int TotalSamplesStep;
+	unsigned int* size;
+    unsigned int* data;
+	unsigned char* CompressionIdentifier;
+	unsigned int* CompressionIdentifierInternal;
 };
 typedef struct {
+	time_t t_test;
 }compression_time_t;
 
 #elif HIP
