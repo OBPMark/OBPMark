@@ -50,9 +50,11 @@
 #define SAMPLE_SPLITTING_ID 3
 #define NO_COMPRESSION_ID 32
 
+#define MAX_NUMBER_OF_BLOCKS 4096
+
 /* Device defines */
 #ifdef CUDA
-#define NUMBER_STREAMS 4
+#define NUMBER_STREAMS 2
 #define MAXSIZE_NBITS 32
 #define DEVICESELECTED		0
 #define BLOCK_SIZE_PLANE 	256 

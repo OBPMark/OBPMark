@@ -70,16 +70,16 @@ struct ZeroBlockProcessed *ZBProcessed= (ZeroBlockProcessed *) calloc(compressio
 
 for (step = 0; step < compression_data->steps; ++step)
 {
-	bool AllZerosInBlock = true;
+	if(compression_data->debug_mode){printf("Step %d\n",step);}
     unsigned int ZeroCounterPos = 0;
 	// for each step init zero counter
 	for(int i = 0; i < compression_data->r_samplesInterval; ++i) { ZeroCounter[i].counter = 0; ZeroCounter[i].position = -1; }
-    preprocess_data(compression_data,&AllZerosInBlock,&ZeroCounterPos,ZeroCounter, step);
+    preprocess_data(compression_data,&ZeroCounterPos,ZeroCounter, step);
 	// ZeroBlock processed array per position
 	for(int i = 0; i < compression_data->r_samplesInterval; ++i) { ZBProcessed[i].NumberOfZeros = -1; }
-	process_zeroblock(compression_data,&AllZerosInBlock,&ZeroCounterPos,ZeroCounter,ZBProcessed);
+	process_zeroblock(compression_data,&ZeroCounterPos,ZeroCounter,ZBProcessed);
 	// Compressing each block
-	process_blocks(compression_data, ZBProcessed);
+	process_blocks(compression_data, ZBProcessed, step);
 
 }
 

@@ -44,7 +44,8 @@ void init_benchmark(
 	bool print_output,
 	bool database_mode,
 	bool verbose_print,
-	long int timestamp
+	long int timestamp,
+    bool debug_mode
 	)
 {
 
@@ -62,6 +63,7 @@ void init_benchmark(
     compression_data->TotalSamples = total_samples;
     compression_data->TotalSamplesStep = total_samples_step;
     compression_data->steps = step;
+    compression_data->debug_mode = debug_mode;
     
     /* Device object init */
 	init(compression_data, t, 0, DEVICESELECTED, device);
@@ -108,6 +110,7 @@ int main(int argc, char **argv)
 	bool print_output = false;
 	bool verbose_output = false;
 	bool database_mode = false;
+    bool debug_mode = false;
     int file_loading_output = 0;
 
     unsigned int steps = 0;
@@ -122,7 +125,7 @@ int main(int argc, char **argv)
 
     
 
-    ret = arguments_handler(argc, argv, &steps, &n_bits,&j_blocksize, &r_samplesInterval, &preprocessor_active, &csv_mode, &database_mode, &print_output, &verbose_output, input_file);
+    ret = arguments_handler(argc, argv, &steps, &n_bits,&j_blocksize, &r_samplesInterval, &preprocessor_active, &csv_mode, &database_mode, &print_output, &verbose_output, &debug_mode, input_file);
 	if(ret == ARG_ERROR) {
 		exit(-1);
 	}
@@ -138,9 +141,9 @@ int main(int argc, char **argv)
     Output_data->num_total_bytes = 0;
 
     /* Load data from files */
-    file_loading_output = load_data_from_file(input_file, Input_data, j_blocksize, r_samplesInterval);
+    file_loading_output = load_data_from_file(input_file, Input_data, j_blocksize, r_samplesInterval, steps);
     /* Init device and run test */
-    init_benchmark(Input_data, Output_data, TotalSamples, TotalSamplesStep, steps, n_bits, j_blocksize, r_samplesInterval, preprocessor_active, csv_mode, print_output, database_mode, verbose_output, get_timestamp());
+    init_benchmark(Input_data, Output_data, TotalSamples, TotalSamplesStep, steps, n_bits, j_blocksize, r_samplesInterval, preprocessor_active, csv_mode, print_output, database_mode, verbose_output, get_timestamp(), debug_mode);
     
     /* Free input data */
     free(Input_data);

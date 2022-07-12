@@ -38,6 +38,7 @@ int arguments_handler(
 	bool *database_mode,
 	bool *print_output,
 	bool *verbose_output,
+	bool *debug_mode,
 	char *input_file
 	);
 

@@ -15,6 +15,7 @@ __global__ void
 process_input_preprocessor(
     const unsigned int * input_data, 
     unsigned  int *input_data_post_process, 
+    int* zero_block_list_status,
     int* zero_block_list, 
     int* zero_block_list_inverse, 
     int block_size, 
@@ -29,6 +30,7 @@ __global__ void
 process_input_no_preprocessor(
     const unsigned  int * input_data, 
     unsigned  int *input_data_post_process, 
+    int* zero_block_list_status,
     int* zero_block_list, 
     int* zero_block_list_inverse, 
     int block_size, 
@@ -92,7 +94,6 @@ adaptative_entropy_encoder_second_extension(
     int *zero_block_list, 
     unsigned int *data_in_blocks ,
     unsigned int *size_block ,
-    unsigned int *halved_samples,
     unsigned char *compresion_identifier, 
     unsigned char *compresion_identifier_internal,
     unsigned int id ,

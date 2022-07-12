@@ -24,12 +24,12 @@ struct compression_data_t
 	unsigned int *input_data_post_process;
 	int *missing_value;
 	int *missing_value_inverse;
+	int *zero_block_list_status;
 	int *zero_block_list;
 	int *zero_block_list_inverse;
 
 	unsigned char *compresion_identifier;
 	unsigned char *compresion_identifier_internal;
-	unsigned int *halved_samples;
 	unsigned int  *size_block;
 	unsigned int *data_in_blocks;
 
@@ -56,6 +56,7 @@ struct compression_data_t
 	bool preprocessor_active;
 	unsigned int TotalSamples;
 	unsigned int TotalSamplesStep;
+	bool debug_mode;
 };
 typedef struct {
 	cudaEvent_t *start_memory_copy_device;
@@ -116,6 +117,7 @@ struct compression_data_t
 	bool preprocessor_active;
 	unsigned int TotalSamples;
 	unsigned int TotalSamplesStep;
+	bool debug_mode;
 	
 };
 typedef struct {
@@ -145,6 +147,7 @@ struct compression_data_t
     unsigned int* data;
 	unsigned char* CompressionIdentifier;
 	unsigned int* CompressionIdentifierInternal;
+	bool debug_mode;
 };
 typedef struct {
 	time_t t_test;
@@ -171,6 +174,7 @@ struct compression_data_t
 	bool preprocessor_active;
 	unsigned int TotalSamples;
 	unsigned int TotalSamplesStep;
+	bool debug_mode;
 };
 typedef struct {
 	time_t t_test;

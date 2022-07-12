@@ -15,7 +15,8 @@ int load_data_from_file(
 	unsigned int *data, 
 	
 	unsigned int j_blocksize,
-    unsigned int r_samplesInterval
+    unsigned int r_samplesInterval,
+    unsigned int steps
 	)
 {
     FILE *file = fopen(filename, "rb");
@@ -25,7 +26,7 @@ int load_data_from_file(
         return FILE_LOADING_ERROR;
     }
     // read each of the elements in the file
-    for (int i = 0; i < j_blocksize * r_samplesInterval; i++)
+    for (int i = 0; i < j_blocksize * r_samplesInterval * steps; i++)
     {
         fread(&data[i], sizeof(short int), 1, file);
     }

@@ -15,7 +15,7 @@
 
 
 __global__ void
-process_input_preprocessor(const unsigned int * input_data, unsigned int *input_data_post_process, int* zero_block_list, int* zero_block_list_inverse, int block_size, int number_blocks, unsigned int n_bits)
+process_input_preprocessor(const unsigned int * input_data, unsigned int *input_data_post_process, int* zero_block_list_status, int* zero_block_list, int* zero_block_list_inverse, int block_size, int number_blocks, unsigned int n_bits)
 {
     // iter over the numer of blocks
     const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -39,11 +39,11 @@ process_input_preprocessor(const unsigned int * input_data, unsigned int *input_
             input_data_post_process[x + (i * block_size)] =  0 <= prediction_error && prediction_error <= theta ? 2 * prediction_error :  (-theta <= prediction_error && prediction_error < 0 ? ((2 * abs(prediction_error)) -1): preprocess_sample);
 
             // Zero block detection
-            total_value += input_data[x + (i * block_size)];
+            total_value += input_data_post_process[x + (i * block_size)];
 
         }
         // update the zero_block_data
-        
+        zero_block_list_status[i] =   total_value > 0 ? 0 : 1;
         zero_block_list[i] =  total_value > 0 ? 0 : 1;
         zero_block_list_inverse[i] = total_value > 0 ? 0 : 1;
        
@@ -55,7 +55,7 @@ process_input_preprocessor(const unsigned int * input_data, unsigned int *input_
 
 
 __global__ void
-process_input_no_preprocessor(const unsigned int * input_data, unsigned int *input_data_post_process, int* zero_block_list, int* zero_block_list_inverse, int block_size, int number_blocks)
+process_input_no_preprocessor(const unsigned int * input_data, unsigned int *input_data_post_process,int* zero_block_list_status, int* zero_block_list, int* zero_block_list_inverse, int block_size, int number_blocks)
 {
     // iter over the numer of blocks
     const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -71,6 +71,7 @@ process_input_no_preprocessor(const unsigned int * input_data, unsigned int *inp
 
         }
         // update the zero_block_data
+        zero_block_list_status[i] =   total_value > 0 ? 0 : 1;
         zero_block_list[i] =   total_value > 0 ? 0 : 1;
         zero_block_list_inverse[i] = total_value > 0 ? 0 : 1;
     }
@@ -93,6 +94,7 @@ zero_block_list_completition(int* zero_block_list, int* zero_block_list_inverse,
                 zero_block_list[i*2] = -1;
                 zero_block_list[i*2 + 1] = -1;
                 atomicAdd(&missing_value[stream],2);
+                
             }
             else if(zero_block_list[i*2] == 1)
             {
@@ -135,6 +137,7 @@ zero_block_list_completition(int* zero_block_list, int* zero_block_list_inverse,
         int step = 0;
         while(missing_value[stream] != 0) // TODO:FIXMI JAQUER only works in predetermine case 
         {
+            //if (stream == 0){printf("%d\n",missing_value[stream]);}
             if(i != 0)
             {   
                 if(zero_block_list[(i*2) - (step % 2)] != -1 && zero_block_list[(i*2) + 1 - (step % 2)] == -1)
@@ -185,11 +188,7 @@ adaptative_entropy_encoder_no_compresion(unsigned int *input_data_post_process, 
             // copy the data
             //printf("i:%d x:%d: %d\n",i,x,input_data_post_process[base_position_data + x]);
             data_in_blocks[base_position_data + x] = input_data_post_process[base_position_data + x];
-            /*for (unsigned int x = 0; x < block_size ;++x)
-            {
-               
-                data_in_blocks[base_position_data + x] = input_data_post_process[x + (i * block_size)];
-            }*/
+           
         }
     }
 
@@ -205,7 +204,7 @@ adaptative_entropy_encoder_zero_block(unsigned int *input_data_post_process, int
         if(zero_block_list[i] != 0)
         {
             // compute ROS
-            if (zero_block_list[i] < 5)
+            /*if (zero_block_list[i] < 5)
             {
                 size_block[i + (id * number_blocks)] = zero_block_list[i];
                 
@@ -222,11 +221,12 @@ adaptative_entropy_encoder_zero_block(unsigned int *input_data_post_process, int
             else
             {
                 size_block[i + (id * number_blocks)] = zero_block_list[i] + 1;
-            }
+            }*/
+            size_block[i + (id * number_blocks)] = zero_block_list[i];
             compresion_identifier[i + (id * block_size)] = ZERO_BLOCK_ID; // NO COMPRESION ID
             compresion_identifier_internal[i + (id * block_size)] = ZERO_BLOCK_ID;
             const int base_position_data = (id * block_size * number_blocks) + (i * block_size);
-            data_in_blocks[(base_position_data)] = 1;
+            data_in_blocks[(base_position_data)] = 0;
             
         }
     }
@@ -234,9 +234,10 @@ adaptative_entropy_encoder_zero_block(unsigned int *input_data_post_process, int
 }
 
 __global__ void
-adaptative_entropy_encoder_second_extension(unsigned int *input_data_post_process, int *zero_block_list, unsigned int *data_in_blocks ,unsigned int *size_block ,unsigned int *halved_samples,unsigned char *compresion_identifier, unsigned char *compresion_identifier_internal,unsigned int id ,int block_size, int number_blocks, int number_bits)
+adaptative_entropy_encoder_second_extension(unsigned int *input_data_post_process, int *zero_block_list, unsigned int *data_in_blocks ,unsigned int *size_block ,unsigned char *compresion_identifier, unsigned char *compresion_identifier_internal,unsigned int id ,int block_size, int number_blocks, int number_bits)
 {
     const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int halved_samples_internal[MAX_NUMBER_OF_BLOCKS];
     if ( i < number_blocks)
     {
         
@@ -248,10 +249,11 @@ adaptative_entropy_encoder_second_extension(unsigned int *input_data_post_proces
             compresion_identifier[i + (id * number_blocks)] = SECOND_EXTENSION_ID -1; // Second Extension
             compresion_identifier_internal[i + (id * number_blocks)] = SECOND_EXTENSION_ID; // Second Extension
             size_block[i + (id * number_blocks)] = block_size * 32;
+            // clear the data
             // calculate thing
             for(unsigned int x = 0; x < block_size/2;++x)
             {
-                halved_samples[x] = (( (input_data_post_process[((2*x) + (i * block_size))] + input_data_post_process[((2*x) + (i * block_size)) + 1]) * (input_data_post_process[((2*x) + (i * block_size))] + input_data_post_process[((2*x) + (i * block_size)) + 1] + 1)) / 2) + input_data_post_process[((2*x) + (i * block_size)) + 1];
+                halved_samples_internal[x] = (((input_data_post_process[((2*x) + (i * block_size))] + input_data_post_process[((2*x) + (i * block_size)) + 1]) * (input_data_post_process[((2*x) + (i * block_size))] + input_data_post_process[((2*x) + (i * block_size)) + 1] + 1)) / 2) + input_data_post_process[((2*x) + (i * block_size)) + 1];
             }
             // get size
             unsigned int size = 0;
@@ -259,18 +261,17 @@ adaptative_entropy_encoder_second_extension(unsigned int *input_data_post_proces
             // get size
             for(int x = 0; x <  block_size/2; ++x)
             {
-                size += halved_samples[x] + 1;
+                size += halved_samples_internal[x] + 1;
                 // store output
             }
             // store size
             if(size < (block_size * 32))
             {
-                
                 size_block[i + (id * number_blocks)] = size;
                 for(int x = 0; x <  block_size/2; ++x)
                 {
                     // store output
-                    data_in_blocks[base_position_data + x] = halved_samples[x];
+                    data_in_blocks[base_position_data + x] = halved_samples_internal[x];
                 }
             }
 
@@ -327,11 +328,12 @@ adaptative_entropy_encoder_sample_spliting(unsigned  int *input_data_post_proces
                 // sample spliting when k != 0 and k >= n_bits -3
                 unsigned int size = 0;
                 for(int x = 0; x < block_size; ++x)
-                {
+                {   
                     // get the size
                     size += (k + (input_data_post_process[(x + (i * block_size))] >> k)) + 1;
                     data_in_blocks[base_position_data + x]  = input_data_post_process[(x + (i * block_size))];
                 }
+
                 size_block[i + (id * number_blocks)] = size;
             }
         }
@@ -360,6 +362,7 @@ adaptative_entropy_encoder_block_selector(int *zero_block_list ,unsigned int *bi
                     best_id = method;
                 }
             }
+
             
             // best ID geted Now process
             //const int base_position_data = (best_id * block_size * number_blocks) + (i * block_size);
@@ -367,24 +370,14 @@ adaptative_entropy_encoder_block_selector(int *zero_block_list ,unsigned int *bi
             size_block_best[i] = size_block[i + (best_id * number_blocks)];
             compresion_identifier_best[i] = compresion_identifier[i + (best_id * number_blocks)];
             compresion_identifier_internal_best[i] = compresion_identifier_internal[i + (best_id * number_blocks)];
-            // copy data
-            /*for(unsigned int x = 0; x < block_size; ++x)
-            {
-                data_in_blocks_best[(i* block_size) + x] = data_in_blocks[base_position_data + x];
-            }*/
 
         }
         else
         {
             // is 0 block
-            //const int base_position_data = (best_id * block_size * number_blocks) + (i * block_size);
             size_block_best[i] = size_block[i + (best_id * number_blocks)];
-            compresion_identifier_best[i] = compresion_identifier[i + (best_id * number_blocks)];
-            // copy data
-            //for(unsigned int x = 0; x < block_size; ++x)
-            //{
-            //    data_in_blocks_best[(i* block_size) + x] = data_in_blocks[base_position_data + x];
-            //}
+            compresion_identifier_best[i] =   ZERO_BLOCK_ID; 
+            compresion_identifier_internal_best[i] = ZERO_BLOCK_ID;
         }
         
         
@@ -409,8 +402,8 @@ adaptative_entropy_encoder_block_selector_data_copy(int *zero_block_list, unsign
         }
         else
         {
-            const int base_position_data = (0 * block_size * number_blocks) + (i * block_size);
-            data_in_blocks_best[(i* block_size) + x] = data_in_blocks[base_position_data + x];
+            //const int base_position_data = (0 * block_size * number_blocks) + (i * block_size);
+            data_in_blocks_best[(i* block_size)] = 1;
         }
     }
     

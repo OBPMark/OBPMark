@@ -23,7 +23,8 @@ int load_data_from_file(
 	unsigned int *data, 
 	
 	unsigned int j_blocksize,
-    unsigned int r_samplesInterval
+    unsigned int r_samplesInterval,
+    unsigned int steps
 	);
 
 int store_data_to_file(

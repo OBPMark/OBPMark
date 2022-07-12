@@ -43,6 +43,7 @@ int arguments_handler(
 	bool *database_mode,
 	bool *print_output,
 	bool *verbose_output,
+	bool *debug_mode,
 	char *input_file
 	)
 
@@ -62,6 +63,7 @@ int arguments_handler(
             case 'j' : args +=1; *j_blocksize = atoi(argv[args]);break;
             case 'p' : *preprocessor_active = true;break;
 			case 'c' : *csv_mode = true;break;
+			case 'D' : *debug_mode = true;break;
 			case 'C' : *database_mode = true;break;
 			case 'o' : *print_output = true;break;
 			case 't' : *verbose_output = true;break;

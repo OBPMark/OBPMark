@@ -95,6 +95,12 @@ bool device_memory_init(
         return false;
     }
 
+    err = cudaMalloc((void **)&compression_data->zero_block_list_status, sizeof(int) * compression_data->r_samplesInterval *  NUMBER_STREAMS);
+    if (err != cudaSuccess)
+    {
+        return false;
+    }
+    
     err = cudaMalloc((void **)&compression_data->zero_block_list, sizeof(int) * compression_data->r_samplesInterval *  NUMBER_STREAMS);
     if (err != cudaSuccess)
     {
@@ -120,12 +126,6 @@ bool device_memory_init(
     }
 
     err = cudaMalloc((void **)&compression_data->compresion_identifier_internal, sizeof(unsigned char) * compression_data->r_samplesInterval *  NUMBER_STREAMS * (2 + compression_data->n_bits));
-    if (err != cudaSuccess)
-    {
-        return false;
-    }
-
-    err = cudaMalloc((void **)&compression_data->halved_samples, sizeof(unsigned int) * compression_data->j_blocksize/2 *  NUMBER_STREAMS);
     if (err != cudaSuccess)
     {
         return false;
@@ -233,6 +233,7 @@ void process_benchmark(
     // Repeating the operations n times
     for(int step = 0; step < compression_data->steps; ++step)
     {
+       
         // check if preprocessing is required
         if(compression_data->preprocessor_active)
         {
@@ -241,11 +242,13 @@ void process_benchmark(
             dim3 dimGrid_prepro(ceil(float(compression_data->r_samplesInterval)/dimBlock_prepro.x));
             process_input_preprocessor<<<dimGrid_prepro,dimBlock_prepro,0, cuda_streams[step % NUMBER_STREAMS][0]>>>(compression_data->input_data + (compression_data->TotalSamples * step),
             compression_data->input_data_post_process + (compression_data->TotalSamples * (step % NUMBER_STREAMS)) ,
+            compression_data->zero_block_list_status + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS)),
             compression_data->zero_block_list + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS)),
             compression_data->zero_block_list_inverse + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS)),
             compression_data->j_blocksize,
             compression_data->r_samplesInterval,
             compression_data->n_bits);
+
         }
         else
         {
@@ -254,6 +257,7 @@ void process_benchmark(
             dim3 dimGrid_no_prepro(ceil(float(compression_data->r_samplesInterval)/dimBlock_no_prepro.x));
             process_input_no_preprocessor<<<dimGrid_no_prepro,dimBlock_no_prepro,0, cuda_streams[step % NUMBER_STREAMS][0]>>>(compression_data->input_data + (compression_data->TotalSamples * step),
                 compression_data->input_data_post_process + (compression_data->TotalSamples * (step % NUMBER_STREAMS)) ,
+                compression_data->zero_block_list_status + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS)),
                 compression_data->zero_block_list + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS)),
                 compression_data->zero_block_list_inverse + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS)),
                 compression_data->j_blocksize,
@@ -271,6 +275,7 @@ void process_benchmark(
             (step % NUMBER_STREAMS),
             compression_data->j_blocksize,
             compression_data->r_samplesInterval);
+
         // zero block finish 
         gpuErrchk( cudaPeekAtLastError() );
         // sync stream
@@ -282,7 +287,7 @@ void process_benchmark(
         dimBlock = dim3(BLOCK_SIZE,BLOCK_SIZE);
         dimGrid = dim3(ceil(float(compression_data->r_samplesInterval)/dimBlock.x), ceil(float(compression_data->j_blocksize)/dimBlock.y));
         adaptative_entropy_encoder_no_compresion<<<dimGrid,dimBlock,0, cuda_streams[step % NUMBER_STREAMS][0]>>>(compression_data->input_data_post_process + (compression_data->TotalSamples * (step % NUMBER_STREAMS)), 
-            compression_data->zero_block_list + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS) ) ,
+            compression_data->zero_block_list_status + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS) ) ,
             compression_data->data_in_blocks + (compression_data->r_samplesInterval * compression_data->j_blocksize  * (step % NUMBER_STREAMS) * (2 + compression_data->n_bits)),
             compression_data->size_block + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS) * (2 + compression_data->n_bits)),
             compression_data->compresion_identifier + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS) * (2 + compression_data->n_bits)),
@@ -309,10 +314,9 @@ void process_benchmark(
         gpuErrchk( cudaPeekAtLastError() );
         // launch second extension
        adaptative_entropy_encoder_second_extension<<<dimGrid,dimBlock,0, cuda_streams[step % NUMBER_STREAMS][1]>>>(compression_data->input_data_post_process + (compression_data->TotalSamples * (step % NUMBER_STREAMS)), 
-            compression_data->zero_block_list + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS) ) , 
+            compression_data->zero_block_list_status + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS) ) , 
             compression_data->data_in_blocks + (compression_data->r_samplesInterval * compression_data->j_blocksize  * (step % NUMBER_STREAMS) * (2 + compression_data->n_bits)),
             compression_data->size_block + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS) * (2 + compression_data->n_bits)),
-            compression_data->halved_samples + ((compression_data->j_blocksize)/2 * (step % NUMBER_STREAMS)),
             compression_data->compresion_identifier + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS) * (2 + compression_data->n_bits)),
             compression_data->compresion_identifier_internal + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS) * (2 + compression_data->n_bits)),
             1,
@@ -325,7 +329,7 @@ void process_benchmark(
         for (unsigned int bit = 0; bit < compression_data->n_bits; ++ bit)
         {
             adaptative_entropy_encoder_sample_spliting<<<dimGrid,dimBlock,0, cuda_streams[step % NUMBER_STREAMS][bit + 2]>>>(compression_data->input_data_post_process + (compression_data->TotalSamples * (step % NUMBER_STREAMS)), 
-                compression_data->zero_block_list + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS) ) , 
+                compression_data->zero_block_list_status + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS) ) , 
                 compression_data->data_in_blocks + (compression_data->r_samplesInterval * compression_data->j_blocksize  * (step % NUMBER_STREAMS) * (2 + compression_data->n_bits)),
                 compression_data->size_block + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS) * (2 + compression_data->n_bits)),
                 compression_data->compresion_identifier + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS) * (2 + compression_data->n_bits)),
@@ -346,7 +350,7 @@ void process_benchmark(
        
         gpuErrchk( cudaPeekAtLastError() );
         // block selector 
-        adaptative_entropy_encoder_block_selector<<<dimGrid,dimBlock,0, cuda_streams[step % NUMBER_STREAMS][0]>>>(compression_data->zero_block_list + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS)) , 
+        adaptative_entropy_encoder_block_selector<<<dimGrid,dimBlock,0, cuda_streams[step % NUMBER_STREAMS][0]>>>(compression_data->zero_block_list_status + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS)) , 
             compression_data->bit_block_best + (compression_data->j_blocksize * compression_data->r_samplesInterval * (step % NUMBER_STREAMS)),
             compression_data->size_block + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS) * (2 + compression_data->n_bits)),
             compression_data->compresion_identifier + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS) * (2 + compression_data->n_bits)),
@@ -361,7 +365,7 @@ void process_benchmark(
         gpuErrchk( cudaPeekAtLastError() );
         dimBlock = dim3(BLOCK_SIZE,BLOCK_SIZE);
         dimGrid = dim3(ceil(float(compression_data->r_samplesInterval)/dimBlock.x),ceil(float(compression_data->j_blocksize)/dimBlock.y));
-        adaptative_entropy_encoder_block_selector_data_copy<<<dimGrid,dimBlock,0, cuda_streams[step % NUMBER_STREAMS][0]>>>(compression_data->zero_block_list + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS)) ,
+        adaptative_entropy_encoder_block_selector_data_copy<<<dimGrid,dimBlock,0, cuda_streams[step % NUMBER_STREAMS][0]>>>(compression_data->zero_block_list_status + (compression_data->r_samplesInterval * (step % NUMBER_STREAMS)) ,
             compression_data->data_in_blocks + (compression_data->r_samplesInterval * compression_data->j_blocksize  * (step % NUMBER_STREAMS) * (2 + compression_data->n_bits)),   
             compression_data->bit_block_best + (compression_data->j_blocksize * compression_data->r_samplesInterval * (step % NUMBER_STREAMS)),
             compression_data->data_in_blocks_best + (compression_data->j_blocksize * compression_data->r_samplesInterval * (step % NUMBER_STREAMS)),
@@ -403,45 +407,88 @@ void process_benchmark(
     // go for all of the steps
     for(int step = 0; step < compression_data->steps; ++step)
     {    
-        unsigned int final_compression_technique_identifier_size = compression_technique_identifier_size;
+        if(compression_data->debug_mode){printf("Step %d\n",step);}
+        
         // go per each block
         for(unsigned int block = 0; block < compression_data->r_samplesInterval; ++block)
         {  
-           
-            if( compression_data->compresion_identifier_best_internal_cpu[block + (step * compression_data->r_samplesInterval)] == ZERO_BLOCK_ID ||  compression_data->compresion_identifier_best_internal_cpu[block + (step * compression_data->r_samplesInterval)] == SECOND_EXTENSION_ID)
-            {
-                final_compression_technique_identifier_size += 1;
-            }
+            if(compression_data->debug_mode){printf("Block %d\n",block);}
+            unsigned int final_compression_technique_identifier_size = compression_technique_identifier_size;
             // header
             const unsigned char CompressionTechniqueIdentifier = compression_data->compresion_identifier_best_cpu[block + (step * compression_data->r_samplesInterval)];
-            // print CompressionTechniqueIdentifier
-            writeWordChar(compression_data->OutputDataBlock, CompressionTechniqueIdentifier, compression_technique_identifier_size);
+            if( compression_data->compresion_identifier_best_internal_cpu[block + (step * compression_data->r_samplesInterval)] == ZERO_BLOCK_ID ||  compression_data->compresion_identifier_best_internal_cpu[block + (step * compression_data->r_samplesInterval)] == SECOND_EXTENSION_ID)
+            {
+                // print CompressionTechniqueIdentifier
+                final_compression_technique_identifier_size = compression_technique_identifier_size + 1;
+            }
+            writeWordChar(compression_data->OutputDataBlock, CompressionTechniqueIdentifier, final_compression_technique_identifier_size);
+            
+            
+           
             // block compression
             const unsigned char best_compression_technique_identifier = compression_data->compresion_identifier_best_internal_cpu[block + (step * compression_data->r_samplesInterval)];
             unsigned int *data_pointer = compression_data->data_in_blocks_best_cpu + (block * compression_data->j_blocksize + (step * compression_data->r_samplesInterval * compression_data->j_blocksize));
             const unsigned int size = compression_data->size_block_best_cpu[block + (step *  compression_data->r_samplesInterval)];
 
-
-            //printf("%u %d %d %d %d\n", best_compression_technique_identifier , block, step, size,  block * compression_data->j_blocksize + (step * compression_data->r_samplesInterval * compression_data->j_blocksize));
+           
+            // print data_pointer data
+            if(compression_data->debug_mode){
+                printf("CompressionTechniqueIdentifier and Size :%u, %u\n",final_compression_technique_identifier_size, CompressionTechniqueIdentifier);
+                unsigned int number_of_elements = 0;
+                if (best_compression_technique_identifier == ZERO_BLOCK_ID)
+                {
+                    for (int i = 0; i < compression_data->j_blocksize; ++i)
+                    {
+                        printf("%d ", 0);
+                    }
+                    printf("\n");
+                }
+                else
+                {
+                    if (best_compression_technique_identifier == SECOND_EXTENSION_ID)
+                    {
+                        number_of_elements = compression_data->j_blocksize/2;
+                    }
+                    else
+                    {
+                        
+                        number_of_elements = compression_data->j_blocksize;
+                        
+                    }
+                    for (int i = 0; i < number_of_elements; ++i)
+                    {
+                        printf("%d ", data_pointer[i]);
+                    }
+                    printf("\n");
+                }
+                
+           
+                
+            }
 
             if (best_compression_technique_identifier == ZERO_BLOCK_ID)
             {
+                if(compression_data->debug_mode){printf("Zero block with size %d\n",size);}
                 ZeroBlockWriter(compression_data->OutputDataBlock, size);
             }
             else if(best_compression_technique_identifier == NO_COMPRESSION_ID)
             {
+                if(compression_data->debug_mode){printf("No compression with size %d\n",size);}
                 NoCompressionWriter(compression_data->OutputDataBlock, compression_data->j_blocksize, compression_data->n_bits,data_pointer);
             }
             else if(best_compression_technique_identifier == FUNDAMENTAL_SEQUENCE_ID)
             {
+                if(compression_data->debug_mode){printf("Fundamental sequence with size %d\n",size);}
                 FundamentalSequenceWriter(compression_data->OutputDataBlock, compression_data->j_blocksize, data_pointer);
             }
             else if(best_compression_technique_identifier == SECOND_EXTENSION_ID)
             {
+                if(compression_data->debug_mode){printf("Second extension with size %d\n",size);}
                 SecondExtensionWriter(compression_data->OutputDataBlock, compression_data->j_blocksize/2,data_pointer);
             }
             else if(best_compression_technique_identifier >= SAMPLE_SPLITTING_ID)
             {
+                if(compression_data->debug_mode){printf("Sample splitting with K %d and size %d\n",best_compression_technique_identifier - SAMPLE_SPLITTING_ID, size);}
                 SampleSplittingWriter(compression_data->OutputDataBlock, compression_data->j_blocksize, best_compression_technique_identifier - SAMPLE_SPLITTING_ID, data_pointer);
             }
             else
@@ -521,11 +568,11 @@ void clean(
     cudaFree(compression_data->input_data_post_process);
     cudaFree(compression_data->missing_value);
     cudaFree(compression_data->missing_value_inverse);
+    cudaFree(compression_data->zero_block_list_status);
     cudaFree(compression_data->zero_block_list);
     cudaFree(compression_data->zero_block_list_inverse);
     cudaFree(compression_data->compresion_identifier);
     cudaFree(compression_data->compresion_identifier_internal);
-    cudaFree(compression_data->halved_samples);
     cudaFree(compression_data->size_block);
     cudaFree(compression_data->data_in_blocks);
     cudaFree(compression_data->compresion_identifier_best);
