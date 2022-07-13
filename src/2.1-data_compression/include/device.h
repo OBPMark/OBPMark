@@ -72,7 +72,8 @@ static const std::string type_def_kernel = std::string("#define ZERO_BLOCK_ID ")
 		std::string("#define FUNDAMENTAL_SEQUENCE_ID ") + std::to_string(FUNDAMENTAL_SEQUENCE_ID) + std::string(" \n") + 
 		std::string("#define SECOND_EXTENSION_ID ") + std::to_string(SECOND_EXTENSION_ID) + std::string(" \n") +
 		std::string("#define SAMPLE_SPLITTING_ID ") + std::to_string(SAMPLE_SPLITTING_ID) + std::string(" \n") +
-		std::string("#define NO_COMPRESSION_ID ") + std::to_string(NO_COMPRESSION_ID) + std::string(" \n");
+		std::string("#define NO_COMPRESSION_ID ") + std::to_string(NO_COMPRESSION_ID) + std::string(" \n") +
+		std::string("#define MAX_NUMBER_OF_BLOCKS ") + std::to_string(MAX_NUMBER_OF_BLOCKS) + std::string(" \n");
 struct compression_data_t
 {
 	cl::Context *context;
@@ -86,11 +87,11 @@ struct compression_data_t
 	cl::Buffer *missing_value;
 	cl::Buffer *missing_value_inverse;
 	cl::Buffer *zero_block_list;
+	cl::Buffer *zero_block_list_status;
 	cl::Buffer *zero_block_list_inverse;
 
 	cl::Buffer *compresion_identifier;
 	cl::Buffer *compresion_identifier_internal;
-	cl::Buffer *halved_samples;
 	cl::Buffer  *size_block;
 	cl::Buffer *data_in_blocks;
 
