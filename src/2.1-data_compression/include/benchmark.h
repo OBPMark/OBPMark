@@ -32,8 +32,8 @@
 /* Defines */
 
 #define MINIMUMBITSIZE		0
-#define MINIMUMSTEPS		0
 #define MINIMUMRSAMPLES		0
+#define MINIMUMSAMPLINGINTERVAL 4
 
 
 #define MAXIMUNBITSIZE      32

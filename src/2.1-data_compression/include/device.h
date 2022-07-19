@@ -148,6 +148,7 @@ struct compression_data_t
     unsigned int* data;
 	unsigned char* CompressionIdentifier;
 	unsigned int* CompressionIdentifierInternal;
+	int* DelayedStack;
 	bool debug_mode;
 };
 typedef struct {

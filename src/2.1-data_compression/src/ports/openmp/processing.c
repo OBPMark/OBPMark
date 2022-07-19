@@ -12,10 +12,10 @@
 /* preprocessor section */
 int DelayedStack = 0;
 
-int UnitDelayPredictor(int DataSample) 
+int UnitDelayPredictor(int DataSample,int* DelayedStack) 
 {
-    const int CachedDelayedStack = DelayedStack;
-    DelayedStack = DataSample;
+    const int CachedDelayedStack = *DelayedStack;
+    *DelayedStack = DataSample;
     return CachedDelayedStack;
 }
 
@@ -39,8 +39,8 @@ int PredictorErrorMapper(int PredictedValue, int PredictionError, unsigned int n
     return PreprocessedSample;
 }
 
-int Preprocessor(int x, unsigned int n_bits){
-    const int PredictedValue = UnitDelayPredictor(x);
+int Preprocessor(int x, unsigned int n_bits, int* DelayedStack){
+    const int PredictedValue = UnitDelayPredictor(x, DelayedStack);
     const int PredictionError = x - PredictedValue;
     const int PreprocessedSample = PredictorErrorMapper(PredictedValue, PredictionError,n_bits);
     return PreprocessedSample;
@@ -141,7 +141,7 @@ struct FCompressedData SecondExtension(compression_data_t *compression_data, uns
     CompressedData.size = CompressedSize;
     CompressedData.data = (unsigned int*) malloc (sizeof( unsigned int ) * compression_data->j_blocksize);
     CompressedData.CompressionIdentifierInternal = SECOND_EXTENSION_ID;
-    memcpy(CompressedData.data, HalvedSamples, sizeof( unsigned int ) * HalfBlockSize);
+    memcpy(CompressedData.data, HalvedSamples, sizeof( unsigned int ) * compression_data->j_blocksize);
     // free HalvedSamples
     free(HalvedSamples);
     
@@ -222,7 +222,7 @@ struct FCompressedData SampleSplitting(compression_data_t *compression_data, uns
 
     CompressedData.CompressionIdentifier = k + 1;
     CompressedData.size = CompressedSize;
-    CompressedData.data = (unsigned int*) malloc (sizeof( unsigned int ) * compression_data->j_blocksize);
+    CompressedData.data = (unsigned int*) calloc (sizeof( unsigned int ), compression_data->j_blocksize);
     CompressedData.CompressionIdentifierInternal = SAMPLE_SPLITTING_ID + k;
     memcpy(CompressedData.data, Samples, sizeof( unsigned int ) * compression_data->j_blocksize);
 
@@ -238,7 +238,6 @@ struct FCompressedData ZeroBlock(compression_data_t *compression_data, unsigned 
     // Output size sanitization
     const unsigned int CompressedSize = NumberOfZeros + 1;
 
-    //unsigned int PackedArray[compression_data->j_blocksize] = { 0 };
     // make a calloc for PackedArray
     unsigned int* PackedArray = (unsigned int*) calloc (sizeof( unsigned int ), compression_data->j_blocksize);
     PackedArray[0] = 1;
@@ -260,18 +259,17 @@ struct FCompressedData ZeroBlock(compression_data_t *compression_data, unsigned 
 void AdaptativeEntropyEncoder(
     compression_data_t *compression_data,
     unsigned int * Samples,
-    struct ZeroBlockProcessed *ZeroNum,
+    int NumberOfZeros,
     unsigned int block,
-    unsigned int step
-    )
+    unsigned int step)
 {
     // Data preprocessing
     struct FCompressedData BestCompression;
-    if(ZeroNum->NumberOfZeros == -1)
+    if(NumberOfZeros == -1)
     {
         const struct FCompressedData size_no_compression = NoCompression(compression_data, Samples);
         const struct FCompressedData size_se  = SecondExtension(compression_data, Samples);
-        
+        const unsigned int HalfBlockSize = compression_data->j_blocksize / 2;        
         BestCompression = MIN(size_no_compression, size_se);
         
         // Sample splitting k = i
@@ -282,7 +280,7 @@ void AdaptativeEntropyEncoder(
     }
     else
     {
-       BestCompression = ZeroBlock(compression_data, Samples, ZeroNum->NumberOfZeros);
+       BestCompression = ZeroBlock(compression_data, Samples, NumberOfZeros);
     }
 
     // write the value to external data, size and compression identifier
@@ -303,65 +301,78 @@ void AdaptativeEntropyEncoder(
 
 void preprocess_data(
 	compression_data_t *compression_data,
-	bool *AllZerosInBlock,
 	unsigned int *ZeroCounterPos,
 	struct ZeroBlockCounter * ZeroCounter,
     unsigned int step
 	)
 {
+    
+
+    bool AllZerosInBlock = false;
+    unsigned int number_of_consecutive_zero_blocks = 0;
     // Pre-processing the input data values, precalculating ZeroBlock offsets
-        for(unsigned int block = 0; block < compression_data->r_samplesInterval; ++block)
+    //#pragma omp parallel for
+    for(unsigned int block = 0; block < compression_data->r_samplesInterval; ++block)
+    {
+        AllZerosInBlock = true;
+        // Preprocessing the samples 
+        for(unsigned int i = 0; i < compression_data->j_blocksize; ++i)
         {
+            // print InputDataBlock
+            if(compression_data->preprocessor_active)
+            {
+                compression_data->OutputPreprocessedValue[i + (block * compression_data->j_blocksize) + (step * compression_data->r_samplesInterval * compression_data->j_blocksize)] = Preprocessor(compression_data->InputDataBlock[(i + (block * compression_data->j_blocksize)) + (step * compression_data->r_samplesInterval * compression_data->j_blocksize)], compression_data->n_bits, compression_data->DelayedStack);
+            }
+            else
+            {
+                compression_data->OutputPreprocessedValue[i + (block * compression_data->j_blocksize) + (step * compression_data->r_samplesInterval * compression_data->j_blocksize)] = compression_data->InputDataBlock[(i + (block * compression_data->j_blocksize)) + (step * compression_data->r_samplesInterval * compression_data->j_blocksize)];
+            }
+            if (compression_data->OutputPreprocessedValue[i + (block * compression_data->j_blocksize) + (step * compression_data->r_samplesInterval * compression_data->j_blocksize)] != 0) AllZerosInBlock = false;
             
-            // Preprocessing the samples 
-            for(unsigned int i = 0; i < compression_data->j_blocksize; ++i)
-            {
-                if(compression_data->preprocessor_active)
-                {
-                    compression_data->OutputPreprocessedValue[i + (block * compression_data->j_blocksize)] = Preprocessor(compression_data->InputDataBlock[(i + (block * compression_data->j_blocksize)) + (step * compression_data->r_samplesInterval * compression_data->j_blocksize)], compression_data->n_bits);
-                }
-                else
-                {
-                    compression_data->OutputPreprocessedValue[i + (block * compression_data->j_blocksize)] = compression_data->InputDataBlock[(i + (block * compression_data->j_blocksize)) + (step * compression_data->r_samplesInterval * compression_data->j_blocksize)];
-                }
-                if (compression_data->OutputPreprocessedValue[i + (block * compression_data->j_blocksize)] != 0) *AllZerosInBlock = false;
-            }
-
-            // Zero Block post processing
-            if( *AllZerosInBlock == true )
-            {
-                // Increasing the zero count in the record, we found another all-zero block
-                ZeroCounter[*ZeroCounterPos].counter++;
-                ZeroCounter[*ZeroCounterPos].position = block;
-
-            }
-            else if(ZeroCounter[*ZeroCounterPos].position != -1)
-            {
-                // Increasing ZeroCounterPos only if we found a non zero numbers
-                *ZeroCounterPos++;
-                *AllZerosInBlock = true;
-            }
         }
+        // Zero Block post processing
+        if( AllZerosInBlock == true )
+        {
+            // Increasing the zero count in the record, we found another all-zero block
+            ZeroCounter[*ZeroCounterPos].counter = number_of_consecutive_zero_blocks;
+            ZeroCounter[*ZeroCounterPos].position = block;
+            *ZeroCounterPos = *ZeroCounterPos + 1;
+            ++number_of_consecutive_zero_blocks;
+            
+            
+
+        }
+        else
+        {
+            number_of_consecutive_zero_blocks = 0;
+        }
+    }
 }
 
 void process_zeroblock(
 	compression_data_t *compression_data,
-	bool *AllZerosInBlock,
 	unsigned int *ZeroCounterPos,
 	struct ZeroBlockCounter *ZeroCounter,
 	struct ZeroBlockProcessed *ZBProcessed
 	)
 {
     // Processing the ZeroBlock Arrays: Adding the number of 0's to be written per block
+    #pragma omp parallel for
     for(unsigned int i = 0; i < *ZeroCounterPos; ++i)
     {        
-        for(unsigned int pos = 0; pos < ZeroCounter[i].counter; ++pos)
+        // Calculating ROS (Remainder of a segment)
+         
+        const unsigned int z_number = ZeroCounter[i].counter;
+        const unsigned int z_position = ZeroCounter[i].position;
+        ZBProcessed[z_position].NumberOfZeros = z_number;
+        /*for(unsigned int pos = 0; pos < ZeroCounter[i].counter; ++pos)
         {
             // Calculating ROS (Remainder of a segment)
-            const short int bSkip5th = !((ZeroCounter[i].counter < 9 && (ZeroCounter[i].position - pos) >= 4) || (ZeroCounter[i].counter >= 9 && (ZeroCounter[i].position - pos) >= 5));
-            const unsigned int z_number = ZeroCounter[i].counter - pos - bSkip5th;
-            ZBProcessed[ZeroCounter[i].position - pos].NumberOfZeros = z_number;
-        }
+            //const short int bSkip5th = !((ZeroCounter[i].counter < 9 && (ZeroCounter[i].position - pos) >= 4) || (ZeroCounter[i].counter >= 9 && (ZeroCounter[i].position - pos) >= 5));
+            //const unsigned int z_number = ZeroCounter[i].counter - pos - bSkip5th;
+            //printf("ZeroBlock: %d, POS %d\n", z_number, pos);
+            //ZBProcessed[ZeroCounter[i].position - pos].NumberOfZeros = z_number;
+        }*/
     }
 }
 
@@ -374,8 +385,11 @@ void process_blocks(
     unsigned int step
 	)
 {
+    
+    DelayedStack = 0; // Resetting the delayed stack every time we process a new step
+    #pragma omp parallel for
     for(unsigned int block = 0; block < compression_data->r_samplesInterval; ++block)
     {    
-        AdaptativeEntropyEncoder(compression_data, compression_data->OutputPreprocessedValue + (compression_data->j_blocksize*block), &ZBProcessed[block], block, step);
+        AdaptativeEntropyEncoder(compression_data, compression_data->OutputPreprocessedValue + (compression_data->j_blocksize*block) + (step * compression_data->r_samplesInterval * compression_data->j_blocksize), ZBProcessed[block].NumberOfZeros, block, step);
     }
 }

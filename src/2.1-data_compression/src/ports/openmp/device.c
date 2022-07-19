@@ -37,7 +37,7 @@ bool device_memory_init(
 	)
 {	
 	// do a calloc  OutputPreprocessedValue with size totalSamples
-	compression_data->OutputPreprocessedValue = (unsigned int *) calloc(compression_data->TotalSamples, sizeof(unsigned int));
+	compression_data->OutputPreprocessedValue = (unsigned int *) calloc(compression_data->TotalSamplesStep, sizeof(unsigned int));
 	compression_data->size = (unsigned int *) calloc(compression_data->r_samplesInterval * compression_data->steps, sizeof(unsigned int));
 	compression_data->data = (unsigned int *) calloc(compression_data->r_samplesInterval * compression_data->j_blocksize * compression_data->steps, sizeof(unsigned int));
 	compression_data->CompressionIdentifier = (unsigned char *) calloc(compression_data->r_samplesInterval * compression_data->steps, sizeof(unsigned char));
@@ -65,33 +65,41 @@ void process_benchmark(
 	T_START(t->t_test);
 	unsigned int step;
 	//create a arrat of ZeroBlockCounter with size r_samplesInterval
-	struct ZeroBlockCounter *ZeroCounter = (ZeroBlockCounter *) calloc(compression_data->r_samplesInterval, sizeof(ZeroBlockCounter));
-	struct ZeroBlockProcessed *ZBProcessed= (ZeroBlockProcessed *) calloc(compression_data->r_samplesInterval, sizeof(ZeroBlockProcessed));
+	//struct ZeroBlockCounter *ZeroCounter = (ZeroBlockCounter *) calloc(compression_data->r_samplesInterval, sizeof(ZeroBlockCounter));
+	//struct ZeroBlockProcessed *ZBProcessed= (ZeroBlockProcessed *) calloc(compression_data->r_samplesInterval, sizeof(ZeroBlockProcessed));
 
 	
-
-	#pragma omp parallel for private(step)
+	//#pragma omp parallel for private(step)
 	for (step = 0; step < compression_data->steps; ++step)
 	{
-		bool AllZerosInBlock = true;
+		// init preprocessed value
+		compression_data->DelayedStack = (int *)calloc(1, sizeof(int));
+
+		struct ZeroBlockCounter *ZeroCounter = (ZeroBlockCounter *) calloc(compression_data->r_samplesInterval, sizeof(ZeroBlockCounter));
+		struct ZeroBlockProcessed *ZBProcessed= (ZeroBlockProcessed *) calloc(compression_data->r_samplesInterval, sizeof(ZeroBlockProcessed));
 		unsigned int ZeroCounterPos = 0;
 		// for each step init zero counter
 		for(int i = 0; i < compression_data->r_samplesInterval; ++i) { ZeroCounter[i].counter = 0; ZeroCounter[i].position = -1; }
-		preprocess_data(compression_data,&AllZerosInBlock,&ZeroCounterPos,ZeroCounter, step);
+		preprocess_data(compression_data,&ZeroCounterPos,ZeroCounter, step);
 		// ZeroBlock processed array per position
 		for(int i = 0; i < compression_data->r_samplesInterval; ++i) { ZBProcessed[i].NumberOfZeros = -1; }
-		process_zeroblock(compression_data,&AllZerosInBlock,&ZeroCounterPos,ZeroCounter,ZBProcessed);
+		process_zeroblock(compression_data,&ZeroCounterPos,ZeroCounter,ZBProcessed);
 		// Compressing each block
 		process_blocks(compression_data, ZBProcessed, step);
-
+		// Free memory
+		free(compression_data->DelayedStack);
+		free(ZeroCounter);
+		free(ZBProcessed);
 	}
 
 	// compress the data
 	
 	for (step = 0; step < compression_data->steps; ++step)
 	{
+		if(compression_data->debug_mode){printf("Step %d\n",step);}
 		for(unsigned int block = 0; block < compression_data->r_samplesInterval; ++block)
     	{
+			if(compression_data->debug_mode){printf("Block %d\n",block);}
 			// get the CompressionIdentifierInternal
 			unsigned int CompressionIdentifierInternal = compression_data->CompressionIdentifierInternal[block + step * compression_data->r_samplesInterval];
 			// get the CompressionIdentifier
@@ -102,6 +110,7 @@ void process_benchmark(
 			unsigned int *data = compression_data->data + block * compression_data->j_blocksize + step * compression_data->r_samplesInterval * compression_data->j_blocksize;
 			// now prepare to write the compressed data
 			unsigned int compression_technique_identifier_size = 1;
+
 			// define the size of the compression technique identifier base of n_bits size
 			if (compression_data->n_bits < 3){
 				compression_technique_identifier_size = 1;
@@ -132,25 +141,61 @@ void process_benchmark(
 			const unsigned char CompressionTechniqueIdentifier = CompressionIdentifier;
 			writeWordChar(compression_data->OutputDataBlock, CompressionTechniqueIdentifier, compression_technique_identifier_size);
 
+			if(compression_data->debug_mode){
+				printf("CompressionTechniqueIdentifier and Size :%u, %u\n",compression_technique_identifier_size, CompressionTechniqueIdentifier);
+				unsigned int number_of_elements = 0;
+				if (CompressionIdentifierInternal == ZERO_BLOCK_ID)
+				{
+					for (int i = 0; i < compression_data->j_blocksize; ++i)
+					{
+						printf("%d ", 0);
+					}
+					printf("\n");
+				}
+				else
+				{
+					if (CompressionIdentifierInternal == SECOND_EXTENSION_ID)
+					{
+						number_of_elements = compression_data->j_blocksize/2;
+					}
+					else
+					{
+						
+						number_of_elements = compression_data->j_blocksize;
+						
+					}
+					for (int i = 0; i < number_of_elements; ++i)
+					{
+						printf("%d ", data[i]);
+					}
+					printf("\n");
+				}
+			}
+
 			// Write the compressed blocks based on the selected compression algorithm
 			if (CompressionIdentifierInternal == ZERO_BLOCK_ID)
 			{
+				if(compression_data->debug_mode){printf("Zero block with size %d\n",size);}
 				ZeroBlockWriter(compression_data->OutputDataBlock, size);
 			}
 			else if(CompressionIdentifierInternal == NO_COMPRESSION_ID)
 			{
+				if(compression_data->debug_mode){printf("No compression with size %d\n",size);}
 				NoCompressionWriter(compression_data->OutputDataBlock, compression_data->j_blocksize, compression_data->n_bits, data);
 			}
 			else if(CompressionIdentifierInternal == FUNDAMENTAL_SEQUENCE_ID)
 			{
+				if(compression_data->debug_mode){printf("Fundamental sequence with size %d\n",size);}
 				FundamentalSequenceWriter(compression_data->OutputDataBlock, compression_data->j_blocksize, data);
 			}
 			else if(CompressionIdentifierInternal == SECOND_EXTENSION_ID)
 			{
+				if(compression_data->debug_mode){printf("Second extension with size %d\n",size);}
 				SecondExtensionWriter(compression_data->OutputDataBlock, compression_data->j_blocksize/2,data);
 			}
 			else if(CompressionIdentifierInternal >= SAMPLE_SPLITTING_ID)
 			{
+				if(compression_data->debug_mode){printf("Sample splitting with K %d and size %d\n",CompressionIdentifierInternal - SAMPLE_SPLITTING_ID, size);}
 				SampleSplittingWriter(compression_data->OutputDataBlock, compression_data->j_blocksize, CompressionIdentifierInternal - SAMPLE_SPLITTING_ID, data);
 			}
 			else
@@ -163,8 +208,7 @@ void process_benchmark(
 
 	T_STOP(t->t_test);
 	// free ZeroCounter
-	free(ZeroCounter);
-	free(ZBProcessed);
+	
 
 }
 

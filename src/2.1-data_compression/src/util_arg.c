@@ -19,7 +19,7 @@ long int get_timestamp(){
 void print_usage(const char *exec_name)
 {
 	printf("usage: %s -s [size] -n [size] -j [size] -r [size]\n", exec_name);
-	printf(" -s size : number of steps\n");
+	printf(" -s size : number of samples\n");
 	printf(" -n size : number of bits\n");
 	printf(" -r size : size of the interval sample \n");
 	printf(" -j size : block size\n");
@@ -52,11 +52,11 @@ int arguments_handler(
 		print_usage(argv[0]);
 		return ARG_ERROR;
 	}
-
+	unsigned int size = 0;
 	for(unsigned int args = 1; args < argc; ++args)
 	{
 		switch (argv[args][1]) {
-			case 's' : args +=1; *steps = atoi(argv[args]);break;
+			case 's' : args +=1; size = atoi(argv[args]);break;
 			case 'n' : args +=1; *n_bits = atoi(argv[args]);break;
 			case 'r' : args +=1; *r_samplesInterval = atoi(argv[args]);break;
             case 'f' : args +=1; strcpy(input_file,argv[args]);break;
@@ -74,11 +74,22 @@ int arguments_handler(
 
     // Ensures that the config parameters are set correctly
     // Steps must be a positive number greater than 0
-    if(*steps <= MINIMUMSTEPS)
-    {
-        printf("error: steps must be a positive number greater than 0\n");
-        return ARG_ERROR;
-    }
+
+	// check size to define number of steps
+	if (size < *r_samplesInterval)
+	{
+		printf("Error: size must be greater than Samples Interval\n");
+		return ARG_ERROR;
+	}
+	// check size can be divided by samples interval without remainder
+	if (size % *r_samplesInterval != 0)
+	{
+		printf("Error: size must be divisible by Samples Interval\n");
+		return ARG_ERROR;
+	}
+	// update number of steps
+	*steps = size / (*r_samplesInterval * (*j_blocksize));
+	
     // n_bits must be a positive number greater than 0 and not greater than 32
     if(*n_bits <= MINIMUMBITSIZE || *n_bits > MAXIMUNBITSIZE)
     {
@@ -91,12 +102,12 @@ int arguments_handler(
         printf("error: blocksize must be 8 or 16 or 32 or 64\n");
         return ARG_ERROR;
     }
-    // r_samplesInterval must be a positive number greater than 0
-    if(*r_samplesInterval <= MINIMUMRSAMPLES)
-    {
-        printf("error: r_samplesInterval must be a positive number greater than 0\n");
-        return ARG_ERROR;
-    }
+    // r_samplesInterval must be a positive number greater than 0 and less that MAX_NUMBER_OF_BLOCKS
+	if(*r_samplesInterval <= MINIMUMSAMPLINGINTERVAL || *r_samplesInterval > MAX_NUMBER_OF_BLOCKS)
+	{
+		printf("error: Samples Interval must be a positive number greater than 0 and less that %d\n", MAX_NUMBER_OF_BLOCKS);
+		return ARG_ERROR;
+	}
 
 	// input_file must be a valid file
    

@@ -14,6 +14,7 @@
 #include "obpmark_time.h"
 
 
+
 #define min(x, y) (((x) < (y)) ? (x) : (y))
 
 
@@ -45,7 +46,6 @@ struct FCompressedData
  */
 void preprocess_data(
 	compression_data_t *compression_data,
-	bool *AllZerosInBlock,
 	unsigned int *ZeroCounterPos,
 	struct ZeroBlockCounter * ZeroCounter,
 	unsigned int step
@@ -56,7 +56,6 @@ void preprocess_data(
  */
 void process_zeroblock(
 	compression_data_t *compression_data,
-	bool *AllZerosInBlock,
 	unsigned int *ZeroCounterPos,
 	struct ZeroBlockCounter *ZeroCounter,
 	struct ZeroBlockProcessed *ZBProcessed
