@@ -73,16 +73,20 @@ def bitfile_to_png(file, bit_depth, brightness):
                 value = 0
             image_data[i] = value
             
-            
     # create the image array when the image is a square with the square root of the length of the bitfile, each value is the average of the RGB values
     img = np.zeros((int(np.sqrt(len(image_data))), int(np.sqrt(len(image_data))), 3), dtype=np_bit_depth)
+    # print the image shape
     # read each pixel
     for i in range(img.shape[0]):
         for j in range(img.shape[1]):
             # read each value of the bitfile and store it in the image array
             img[i,j] = image_data[i*img.shape[1] + j]
+            # print the image_data values
     # write the png file forcing that the png uses the same bit depth as the bitfile
-    cv2.imwrite(name +"_rec" + '.png', img.astype(np.uint16) )
+    if bit_depth > 8:
+        cv2.imwrite(name +"_rec" + '.png', img.astype(np.uint16) )
+    else:
+        cv2.imwrite(name +"_rec" + '.png', img.astype(np.uint8) )
 
 def bitfile_to_fits(file, bit_depth):
     # takes the binay file and converts it to a fits file
