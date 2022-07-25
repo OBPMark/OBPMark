@@ -85,6 +85,7 @@ def bitfile_to_png(file, bit_depth, brightness):
     # write the png file forcing that the png uses the same bit depth as the bitfile
     if bit_depth > 8:
         cv2.imwrite(name +"_rec" + '.png', img.astype(np.uint16) )
+        
     else:
         cv2.imwrite(name +"_rec" + '.png', img.astype(np.uint8) )
 
