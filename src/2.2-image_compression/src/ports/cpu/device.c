@@ -64,13 +64,30 @@ void process_benchmark(
 	unsigned int w_size_padded = compression_data->w_size + compression_data->pad_columns;
 	unsigned int pad_rows = compression_data->pad_rows;
 	unsigned int pad_colums = compression_data->pad_columns;
-    // read imput image
+    
+	// auxiliary structures
 
 	int  **image_data = NULL;
 	image_data = (int**)calloc(h_size_padded, sizeof(int *));
 	for(unsigned i = 0; i < h_size_padded; i++){
 		image_data[i] = (int *)calloc(w_size_padded, sizeof(int));
 	}
+
+	int  **transformed_image = NULL;
+	transformed_image = (int**)calloc(h_size_padded, sizeof(int *));
+	for(unsigned i = 0; i < h_size_padded; i++){
+		transformed_image[i] = (int *)calloc(w_size_padded, sizeof(int));
+	}
+
+	unsigned int total_blocks =  (h_size_padded / BLOCKSIZEIMAGE )*(w_size_padded/ BLOCKSIZEIMAGE);
+	long **block_string = NULL;
+	block_string = (long **)calloc(total_blocks,sizeof(long *));
+	for(unsigned int i = 0; i < total_blocks ; i++)
+	{
+		block_string[i] = (long *)calloc(BLOCKSIZEIMAGE * BLOCKSIZEIMAGE,sizeof(long));
+	}
+
+	// read the image data
 	for (unsigned int i = 0; i < h_size_padded; ++ i)
 	{
 		for (unsigned int j = 0; j < w_size_padded; ++j)
@@ -78,11 +95,7 @@ void process_benchmark(
 			image_data[i][j] = compression_data->input_image [i * h_size_padded + j];
 		}
 	}
-	int  **transformed_image = NULL;
-	transformed_image = (int**)calloc(h_size_padded, sizeof(int *));
-	for(unsigned i = 0; i < h_size_padded; i++){
-		transformed_image[i] = (int *)calloc(w_size_padded, sizeof(int));
-	}
+	
 	
 	// start the 2D DWT operation 
 	T_START(t->t_test);
@@ -101,6 +114,22 @@ void process_benchmark(
 	*/
 
 	coeff_regroup(transformed_image, h_size_padded, w_size_padded);
+
+	// build_block_string
+	/*
+	##########################################################################################################
+	# This fuction takes the rearrange image and creates total_blocks
+	# So a 8 by 8 data is store in block_string[0][0] to block_string[0][63]
+	# each position in x of block_string contains 64 data of the image
+	##########################################################################################################
+	*/
+	
+	build_block_string(transformed_image, h_size_padded, w_size_padded,block_string);
+
+
+	/*
+	##########################################################################################################
+	*/
 	// write the transformed image to a binary file
 	// open the file
 	FILE *fp = fopen("output.bin", "wb");
@@ -117,10 +146,18 @@ void process_benchmark(
 			fwrite(&transformed_image[i][j], sizeof(int), 1, fp);
 		}
 	}
-	
+	/*
+	##########################################################################################################
+	*/
 
 	T_STOP(t->t_bpe);
 	T_STOP(t->t_test);
+
+	// clean image
+	for(unsigned int i = 0; i < h_size_padded; i++){
+			free(transformed_image[i]);
+		}
+	free(transformed_image);
 }
 
 

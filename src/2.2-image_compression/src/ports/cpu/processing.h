@@ -21,11 +21,20 @@ void dwt2D_compression_computation(
     int  **image_data,
     int  **transformed_image
 	);
-
+/**
+ * \brief regroups the DWT levels to get the image in the correct format for the decompression. 
+ */
 void coeff_regroup(
     int  **transformed_image,
     unsigned int h_size_padded,
     unsigned int w_size_padded
+    );
+
+void build_block_string(
+    int **transformed_image, 
+    unsigned int h_size, 
+    unsigned int w_size, 
+    long **block_string
     );
 
 

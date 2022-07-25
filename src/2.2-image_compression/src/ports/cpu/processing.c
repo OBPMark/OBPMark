@@ -470,3 +470,30 @@ void coeff_regroup(
 	}
 	// finish conversion
 }
+
+
+void build_block_string(int **transformed_image, unsigned int h_size, unsigned int w_size, long **block_string)
+{
+	unsigned int block_h = h_size / BLOCKSIZEIMAGE;
+	unsigned int block_w = w_size / BLOCKSIZEIMAGE;
+
+	unsigned int total_blocks = block_h * block_w;
+	unsigned int counter = 0;
+	for (unsigned int i = 0; i < block_h; ++i)
+	{
+		for (unsigned int j = 0; j < block_w; ++j)
+		{
+			// outer loop to loop over the blocks
+			for (unsigned int x = 0; x < BLOCKSIZEIMAGE; ++x)
+			{
+				for (unsigned int y =0; y < BLOCKSIZEIMAGE; ++y)
+				{
+					// this loops is for acces each of the blocks
+					block_string[counter][x * BLOCKSIZEIMAGE + y] = transformed_image[i*BLOCKSIZEIMAGE +x][j*BLOCKSIZEIMAGE+y];
+				}
+				
+			}
+			++counter;
+		}
+	}
+}

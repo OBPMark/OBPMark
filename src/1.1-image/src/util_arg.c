@@ -23,7 +23,7 @@ void print_usage(const char *exec_name)
 	printf(" -w size : width of the input image in pixels\n");
 	printf(" -h size : height of the input image in pixels \n");
 	printf(" -r : random data\n");
-	printf(" -F : lotaion forder of the input data\n");
+	printf(" -F : location forder of the input data\n");
 	printf(" -c : print time in CSV\n");
 	printf(" -C : print time in CSV with timestamp\n");
 	printf(" -t : print time in verbose\n");
