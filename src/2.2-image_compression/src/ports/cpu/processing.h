@@ -19,22 +19,30 @@
 void dwt2D_compression_computation(
 	compression_image_data_t *compression_data,
     int  **image_data,
-    int  **transformed_image
+    int  **transformed_image,
+    unsigned int h_size_padded,
+	unsigned int w_size_padded
 	);
 /**
  * \brief regroups the DWT levels to get the image in the correct format for the decompression. 
  */
-void coeff_regroup(
-    int  **transformed_image,
-    unsigned int h_size_padded,
-    unsigned int w_size_padded
-    );
 
 void build_block_string(
     int **transformed_image, 
     unsigned int h_size, 
     unsigned int w_size, 
-    long **block_string
+    int **block_string
+    );
+
+
+
+/**
+ * \brief takes block_string and computes each of the blocks to compute the DC and AC coefficients. 
+ */
+void compute_bpe(
+    compression_image_data_t *compression_data,
+    int **block_string,
+    unsigned int total_blocks
     );
 
 

@@ -9,6 +9,7 @@
 #include "obpmark.h"
 #include "benchmark.h"
 #include "obpmark_time.h"
+#include "math.h"
 
 
 /* Typedefs */
@@ -90,6 +91,24 @@ struct compression_image_data_t
 
 
 };
+
+struct header_data_t
+{
+	// part 1A
+	bool start_img_flag = false; // 1 bit
+	bool end_img_flag = false; // 1 bit
+	unsigned char segment_count = 0; // 8 bits
+	unsigned char bit_depth_dc = 0; // 5 bits
+	unsigned char bit_depth_ac = 0; // 5 bits
+	bool part_2_flag = false; // 1 bit
+	bool part_3_flag = false; // 1 bit
+	bool part_4_flag = false; // 1 bit
+	// part 1B
+	unsigned char pad_rows = 0; // 3 bits
+	// with reserved bits the size of the header is 32 bits with 1A and 1B
+	// with only 1A the size of the header is 24 bits
+
+}; 
 
 typedef struct {
 	time_t t_test;

@@ -80,11 +80,11 @@ void process_benchmark(
 	}
 
 	unsigned int total_blocks =  (h_size_padded / BLOCKSIZEIMAGE )*(w_size_padded/ BLOCKSIZEIMAGE);
-	long **block_string = NULL;
-	block_string = (long **)calloc(total_blocks,sizeof(long *));
+	int **block_string = NULL;
+	block_string = (int **)calloc(total_blocks,sizeof(long *));
 	for(unsigned int i = 0; i < total_blocks ; i++)
 	{
-		block_string[i] = (long *)calloc(BLOCKSIZEIMAGE * BLOCKSIZEIMAGE,sizeof(long));
+		block_string[i] = (int *)calloc(BLOCKSIZEIMAGE * BLOCKSIZEIMAGE,sizeof(long));
 	}
 
 	// read the image data
@@ -101,19 +101,10 @@ void process_benchmark(
 	T_START(t->t_test);
 	T_START(t->t_dwt);
 	// pass to the 2D DWT
-	dwt2D_compression_computation(compression_data, image_data, transformed_image);
+	dwt2D_compression_computation(compression_data, image_data, transformed_image, h_size_padded, w_size_padded);
 	T_STOP(t->t_dwt);
 	T_START(t->t_bpe);
-	// Step 1 transform the image 
-	/*
-	##########################################################################################################
-	# This function take the image that has been processed for each of the levels of the DWT 2D and
-	# re-arrange the data so each 8 by 8 block contains a family of de DC component been the DC component
-	# in 0 0 of that block.
-	##########################################################################################################
-	*/
-
-	coeff_regroup(transformed_image, h_size_padded, w_size_padded);
+	
 
 	// build_block_string
 	/*
@@ -126,13 +117,24 @@ void process_benchmark(
 	
 	build_block_string(transformed_image, h_size_padded, w_size_padded,block_string);
 
-
+	// compute the BPE
+	compute_bpe(compression_data, block_string, total_blocks);
+	
+	// print the block_string
+	/*for (unsigned int i = 0; i < total_blocks; ++i)
+	{
+		for (unsigned int j = 0; j < BLOCKSIZEIMAGE * BLOCKSIZEIMAGE; ++j)
+		{
+			printf("%d ",block_string[i][j]);
+		}
+		printf("\n");
+	}*/
 	/*
 	##########################################################################################################
 	*/
 	// write the transformed image to a binary file
 	// open the file
-	FILE *fp = fopen("output.bin", "wb");
+	/*FILE *fp = fopen("output.bin", "wb");
 	if (fp == NULL)
 	{
 		printf("Error opening file!\n");
@@ -145,7 +147,7 @@ void process_benchmark(
 		{
 			fwrite(&transformed_image[i][j], sizeof(int), 1, fp);
 		}
-	}
+	}*/
 	/*
 	##########################################################################################################
 	*/

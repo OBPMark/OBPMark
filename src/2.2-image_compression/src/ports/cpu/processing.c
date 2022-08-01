@@ -8,6 +8,10 @@
 #include "processing.h"
 
 
+void coefficient_scaling (int **transformed_image,unsigned int h_size_padded,unsigned int w_size_padded);
+void coeff_regroup(int **transformed_image,unsigned int h_size_padded,unsigned int w_size_padded);
+
+
 /**
  * \brief Section that computes the DWT 1D 
  */
@@ -289,6 +293,7 @@ void dwt2D_compression_computation_float(
 
         }
     }
+	
     // copy the image
     //writeBMP(compression_data->filename_output, transformed_image,*compression_data->w_size,*compression_data->h_size );
     for(unsigned i = 0; i < h_size_padded; i++){
@@ -307,7 +312,9 @@ void dwt2D_compression_computation_float(
 void dwt2D_compression_computation(
 	compression_image_data_t *compression_data,
     int  **image_data,
-    int  **transformed_image
+    int  **transformed_image,
+	unsigned int h_size_padded,
+	unsigned int w_size_padded
 	)
 {
     
@@ -315,15 +322,28 @@ void dwt2D_compression_computation(
     if (compression_data->type_of_compression)
 	{
         dwt2D_compression_computation_float(compression_data, image_data, transformed_image);
+		// Step 1 transform the image 
+		/*
+		##########################################################################################################
+		# This function take the image that has been processed for each of the levels of the DWT 2D and
+		# re-arrange the data so each 8 by 8 block contains a family of de DC component been the DC component
+		# in 0 0 of that block.
+		##########################################################################################################
+		*/
+
+		coeff_regroup(transformed_image, h_size_padded, w_size_padded);
 	}
 	else{
 		// integer encoding
         dwt2D_compression_computation_integer(compression_data, image_data, transformed_image);
+		coefficient_scaling(transformed_image, h_size_padded, w_size_padded);
 	}
 
 }
 
-
+/**
+ * \brief Entry point of the reorder of the blocks.
+ */
 void coeff_regroup(
     int  **transformed_image,
     unsigned int h_size_padded,
@@ -472,7 +492,119 @@ void coeff_regroup(
 }
 
 
-void build_block_string(int **transformed_image, unsigned int h_size, unsigned int w_size, long **block_string)
+void coefficient_scaling (
+	int **transformed_image,
+	unsigned int h_size_padded,
+    unsigned int w_size_padded
+)
+{
+	// scaling the coefficients
+	unsigned short hh_1 = 1;
+	unsigned short hl_lh = 2;
+	unsigned short hh_2 = 2;
+	unsigned short hl_lh_2 = 4;
+	unsigned short hh_3 = 4;
+	unsigned short hl_lh_3 = 8;
+	unsigned short ll_4 = 8;
+
+	// HH1 band. 
+	for (unsigned int i = (h_size_padded>>1); i < h_size_padded; i++)
+	{
+		for(unsigned int j = (w_size_padded>>1); j < w_size_padded; j++)
+		{
+			transformed_image[i][j] = transformed_image[i][j] * hh_1;
+		}
+	}
+		
+	for (unsigned int i = 0; i < (h_size_padded>>1); i++)
+	{
+		for(unsigned int j = (w_size_padded>>1); j < w_size_padded; j++)
+		{
+			transformed_image[i][j] = transformed_image[i][j] *  hl_lh;
+		}
+	}
+		
+	// LH1
+	for (unsigned int i = (h_size_padded>>1); i < h_size_padded; i++)
+	{
+		for(unsigned int j = 0; j < (w_size_padded>>1); j++)
+		{
+			transformed_image[i][j] = transformed_image[i][j] *  hl_lh;
+		}
+	}
+		
+
+	// HH2 band. 
+	for (unsigned int i = (h_size_padded>>2); i < (h_size_padded>>1); i++)
+	{
+		for(unsigned int j = (w_size_padded>>2); j < (w_size_padded>>1); j++)
+		{
+			transformed_image[i][j] = transformed_image[i][j] *  hh_2;
+		}
+	}
+		
+
+	// HL2
+	for (unsigned int i = 0; i < (h_size_padded>>2); i++)
+	{
+		for(unsigned int j = (w_size_padded>>2); j < (w_size_padded>>1); j++)
+		{	
+			transformed_image[i][j] = transformed_image[i][j] *  hl_lh_2;
+		}
+	}
+		
+	// LH2
+
+	for (unsigned int i = (h_size_padded>>2); i < (h_size_padded>>1); i++)
+	{
+		for(unsigned int j = 0; j < (w_size_padded>>2); j++)
+		{
+			transformed_image[i][j] = transformed_image[i][j] *  hl_lh_2;
+		}
+	}
+		
+	// HH3 band. 
+	for (unsigned int i = (h_size_padded>>3); i < (h_size_padded>>2); i++)
+	{
+		for(unsigned int j = (w_size_padded>>3); j < (w_size_padded>>2); j++)
+		{
+			transformed_image[i][j] = transformed_image[i][j] *  hh_3;
+		}
+	}
+		
+
+	// HL3
+	for (unsigned int i = 0; i < (h_size_padded>>3); i++)
+	{
+		for(unsigned int j = (w_size_padded>>3); j < (w_size_padded>>2); j++)
+		{
+			transformed_image[i][j] = transformed_image[i][j] *  hl_lh_3;
+		}
+	}
+		
+	// LH3
+	for (unsigned int i = (h_size_padded>>3); i < (h_size_padded>>2); i++)
+	{
+		for(unsigned int j = 0; j < (w_size_padded>>3); j++)
+		{
+			transformed_image[i][j] = transformed_image[i][j] *  hl_lh_3;
+		}
+	}
+		
+
+	// LL3
+	for (unsigned int i = 0; i < (h_size_padded>>3); i++)
+	{
+		for(unsigned int j = 0; j < (w_size_padded>>3); j++)
+		{
+			transformed_image[i][j] = transformed_image[i][j] *  ll_4;
+		}	
+	}
+		
+}
+
+
+void build_block_string(int **transformed_image, unsigned int h_size, unsigned int w_size, int **block_string)
 {
 	unsigned int block_h = h_size / BLOCKSIZEIMAGE;
 	unsigned int block_w = w_size / BLOCKSIZEIMAGE;
@@ -496,4 +628,144 @@ void build_block_string(int **transformed_image, unsigned int h_size, unsigned i
 			++counter;
 		}
 	}
+}
+
+void dc_encoding(
+	compression_image_data_t *compression_data,
+	header_data_t *header_data,
+	int **block_string,
+	unsigned int segment_number
+	)
+
+{
+	int max_ac_value = 0;
+	short int quantization_factor = 0;
+	unsigned int k = 0; // k is the quantization factor 
+	for (unsigned int i = 0; i < compression_data->segment_size; ++i)
+	{
+		// loop over the blocks to get the dc value
+		unsigned int final_pos = i + (segment_number * compression_data->segment_size);
+		int dc_value = block_string[final_pos][0];
+		// calculate the dc bit size
+		unsigned int dc_bit_size = 0;
+		if (dc_value < 0)
+		{
+			// calculate the dc bit size counting the number of bits needed to represent the dc value
+			dc_bit_size = ceil(log2(abs(dc_value) + 1));
+		}
+		else
+		{
+			// calculate the dc bit size counting the number of bits needed to represent the dc value
+			
+			dc_bit_size = ceil(log2(dc_value + 1));
+			//dc_bit_size = ceil(log2(1 + dc_value)) + 1;
+		}
+		// if the dc bit size is greater than the max bit size, then set it to the max bit size
+		header_data->bit_depth_dc = (unsigned char) std::max(dc_bit_size, (unsigned int)(header_data->bit_depth_dc));
+		// check all of the ac values to see if they are greater than the max ac value
+		for (unsigned int j = 1; j < BLOCKSIZEIMAGE * BLOCKSIZEIMAGE; ++j)
+		{
+			if (std::abs(block_string[final_pos][j]) > std::abs(max_ac_value))
+			{
+				max_ac_value = block_string[final_pos][j];
+			}
+		}
+	}
+	// calculate the ac bit size
+	header_data->bit_depth_ac = (unsigned char)(std::ceil(std::log2(std::abs(max_ac_value))) + 1) ;
+	// finish getting the AC and DC bit sizes
+	// get the quantization value
+	if (header_data->bit_depth_dc <= 3)
+	{
+		quantization_factor = 0;
+	}
+	else if (((header_data->bit_depth_dc - (1 + header_data->bit_depth_ac >> 1)) <= 1) && (header_data->bit_depth_dc > 3) )
+	{
+		quantization_factor = header_data->bit_depth_dc - 3;
+	}
+	else if (((header_data->bit_depth_ac - (1 + header_data->bit_depth_ac >> 1)) > 10) && (header_data->bit_depth_dc > 3) )
+	{
+		quantization_factor = header_data->bit_depth_dc - 10;
+	}
+	else
+	{
+		quantization_factor = 1 + (1 + header_data->bit_depth_ac >> 1);
+	}
+
+	//shift of the DC component
+	k = (1 << quantization_factor) - 1;
+	for (unsigned int i = 0; i < compression_data->segment_size; ++i)
+	{
+		
+	}
+
+}
+
+
+void ac_encoding(
+	compression_image_data_t *compression_data,
+	header_data_t *header_data,
+	int **block_string,
+	unsigned int segment_number
+	)
+
+{
+	
+}
+
+
+void compute_bpe(
+    compression_image_data_t *compression_data,
+    int **block_string,
+    unsigned int total_blocks
+    )
+{
+ 	// calculate the number of segments that are generated by the block_string if have some left from the division we add 1 to the number of segments
+	unsigned int num_segments = 0;
+	if (total_blocks % compression_data->segment_size != 0)
+	{
+		num_segments = (total_blocks / compression_data->segment_size) + 1;
+	}
+	else
+	{
+		num_segments = total_blocks / compression_data->segment_size;
+	}
+	// create and allocate memory for the header
+	header_data_t *header_data = (header_data_t *)malloc(sizeof(header_data_t));
+	// for the first header add that is the first header and init the values to 0
+	header_data->start_img_flag = true;
+	header_data->end_img_flag = false;
+	header_data->bit_depth_dc = 1;
+	header_data->bit_depth_ac = 1;
+	header_data->part_2_flag = false;
+	header_data->part_3_flag = false;
+	header_data->part_4_flag = false;
+	header_data->pad_rows = 0;
+	// now loop over the number of segments and calculate the bpe for each segment
+	for (unsigned int i = 0; i < num_segments; ++i)
+	{
+		// update the segment number
+		header_data->segment_count = i;
+		// now loop over the number of blocks in each segment and calculate the bpe for each block	
+		// First calculate DC encoding
+		dc_encoding(compression_data,header_data, block_string, i);
+		// second calculate AC encoding
+		ac_encoding(compression_data,header_data, block_string, i);
+		// third update header
+			
+
+		
+		// check if we are at the last segment and if so add the last header
+		if (i == num_segments - 1)
+		{
+			header_data->end_img_flag = true;
+		}
+		// write the segment to the binary output with the header
+		// write header and clean up the header
+		void header_write(header_data_t *header_data, unsigned int segment_number);
+	}
+	// free the header data
+	free(header_data);
+
+
 }
