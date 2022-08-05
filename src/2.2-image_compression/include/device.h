@@ -110,6 +110,16 @@ struct header_data_t
 
 }; 
 
+
+struct block_data_t
+{
+	unsigned long shifted_dc;
+	unsigned long dc_reminder;
+	unsigned long mapped_dc;
+	unsigned long max_ac_bit_size;
+	unsigned long mapped_ac;
+};
+
 typedef struct {
 	time_t t_test;
 	time_t t_dwt;

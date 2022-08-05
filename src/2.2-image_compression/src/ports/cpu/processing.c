@@ -11,6 +11,9 @@
 void coefficient_scaling (int **transformed_image,unsigned int h_size_padded,unsigned int w_size_padded);
 void coeff_regroup(int **transformed_image,unsigned int h_size_padded,unsigned int w_size_padded);
 
+void ac_depth_encoder(block_data_t *block_data,compression_image_data_t *compression_data,header_data_t *header_data,unsigned int segment_number);
+void ac_gaggle_encode(block_data_t *block_data, compression_image_data_t *compression_data, header_data_t *header_data,unsigned int max_k,unsigned int id_length,unsigned int gaggle_number,unsigned int number_of_gaggles,bool reminder_gaggle,unsigned int N);
+void dpcm_ac_mapper(block_data_t *block_data,compression_image_data_t *compression_data,header_data_t *header_data,unsigned int segment_number,unsigned int N);
 
 /**
  * \brief Section that computes the DWT 1D 
@@ -630,8 +633,266 @@ void build_block_string(int **transformed_image, unsigned int h_size, unsigned i
 	}
 }
 
+unsigned long conv_to_twos_complement(
+	unsigned int value,
+	unsigned int num_bits
+)
+{
+	unsigned long temp;
+	unsigned long complement;
+	short i = 0;
+
+	if(num_bits == 1)
+	 return 0;
+
+	if((num_bits >= sizeof(unsigned long) * 8) || (num_bits == 0))
+	{
+		printf("BPE_DATA_ERROR: num_bits is out of range\n");
+	}
+
+	if (value >= 0)
+		return (unsigned long) value;
+	else
+	{
+		complement = ~(unsigned long) (-value);
+		temp = 0;
+		for ( i = 0; i < num_bits; i ++)
+		{
+			temp <<= 1;
+			temp ++;
+		}
+		complement &= temp;
+		complement ++;
+		return complement;
+	}
+}
+
+
+void coding_quantized_coefficients(
+	block_data_t *block_data,
+	unsigned int num_blocks,
+	unsigned int N
+)
+{
+	unsigned long x_min = - (1<<(N-1));
+	unsigned long x_max = ((1<<(N-1)) - 1);
+	unsigned long theta = 0;
+	long gamma = 0;
+
+	block_data[0].mapped_dc = block_data[0].shifted_dc; // reference sample
+	for(unsigned int i = 1; i < num_blocks; i ++)
+	{
+		// calculate theta
+		theta = std::min(block_data[i-1].shifted_dc - x_min, x_max + block_data[i-1].shifted_dc);
+		// calculate gamma
+		gamma = block_data[i].shifted_dc - block_data[i-1].shifted_dc;
+		
+		if ( 0 <= gamma && gamma <= theta)
+		{
+			block_data[i].mapped_dc = 2 * gamma;
+		}
+		else if (-theta <= gamma && gamma < 0)
+		{
+			block_data[i].mapped_dc = 2 * std::abs(gamma) -1;
+		}
+		else
+		{
+			block_data[i].mapped_dc =  theta + std::abs(gamma);
+		}
+	}
+
+}
+
+void dc_encoder(
+	block_data_t *block_data ,
+	compression_image_data_t *compression_data,
+	header_data_t *header_data,
+	unsigned int max_k,
+	unsigned int id_length,
+	unsigned int gaggle_id,
+	unsigned int number_of_gaggles,
+	bool reminder_gaggle,
+	unsigned int N 
+)
+{
+	const bool brute_force = false;
+	unsigned int start_position = 0;
+	unsigned int end_position = 0;
+	unsigned char encode_selection = 0;
+
+	if (brute_force)
+	{
+		// brute force coding is not implemented in this version doe to the lack of Header part 3 missin
+	}
+	else
+	{
+		//heuristic coding
+		int delta = 0;
+		unsigned int gaggle_size = GAGGLE_SIZE;
+		// encode selection
+		encode_selection = 0;
+		// calculate the start position of this gaggle
+		start_position = gaggle_id * GAGGLE_SIZE;
+		end_position = start_position + GAGGLE_SIZE;
+		// check if this is the first gaggle, so the start position is 1 instead of 0
+		if (gaggle_id == 0)
+		{
+			start_position = 1;
+		}
+		// check if this is the last gaggle, so the end position is remaining values instead of GAGGLE_SIZE
+		if (reminder_gaggle)
+		{
+			end_position = compression_data->segment_size;
+			gaggle_size = compression_data->segment_size - start_position;
+		}
+		// sum the delta of all the blocks in this gaggle
+		for (unsigned int i = start_position; i < end_position; i ++)
+		{
+			delta += block_data[i].mapped_dc;
+		}
+
+		// table of code options Table 4-10 in the document
+		if(64 * delta >= 23 * gaggle_size * (1 <<(N)))
+		{
+			encode_selection = UNCODED_VALUE;
+		}
+		else if (207 * gaggle_size > 128 * delta)
+		{
+			encode_selection = 0;
+		}
+		else if ((long)(gaggle_size * (1 << (N+5))) <= (long)(128 * delta + 49 * gaggle_size))
+		{
+			encode_selection = N - 2;
+		}
+		else
+		{
+			encode_selection = 0;
+			while ((long)(gaggle_size * (1 << (encode_selection + 7 ))) <= (long)(128 * delta + 49 * gaggle_size))
+			{
+				encode_selection ++;
+			}
+			encode_selection --; // to adust the value of encode_selection to the correct value
+		}
+
+	}
+
+
+	// print the header 
+	// TODO
+	// encode_selection with size id_length
+
+	// now print the output values
+	for (unsigned int i = start_position; i < start_position + GAGGLE_SIZE; i ++)
+	{
+		if ((encode_selection == UNCODED_VALUE) || (i == 0) )
+		{
+			// print the uncoded value. block_data[i].mapped_dc with size N
+			//TODO
+		}
+		else
+		{
+			// print the coded value.  1 with size (((block_data[i].mapped_dc + 1) >> encode_selection) + 1) // coding first part
+			// TODO
+		}
+	}
+	// now generate the second part if the encode_selection is not UNCODED_VALUE
+	if (encode_selection != UNCODED_VALUE)
+	{
+		for (unsigned int i = std::max(start_position, (unsigned int)(1)); i < (start_position + GAGGLE_SIZE); ++i )
+		{
+			// print the coded value.  block_data[i].mapped_dc with size encode_selection 
+			// TODO
+		}
+	}
+
+}
+
+
+void dc_entropy_coding(
+	block_data_t *block_data ,
+	compression_image_data_t *compression_data,
+	header_data_t *header_data,
+	unsigned int N,
+	unsigned int quantization_factor
+)
+{
+	unsigned int id_length = 0;
+	unsigned int max_k = 0;
+	unsigned int number_of_gaggles = 0;
+	bool reminder_gaggle = false;
+	
+	// get the id_length and max_k base of N
+	if (N == 2)
+	{
+		max_k = 0;
+		id_length = 1;
+	}
+	else if (N <= 4)
+	{
+		max_k = 2;
+		id_length = 2;
+	}
+	else if (N <= 8)
+	{
+		max_k = 6;
+		id_length = 3;
+	}
+	else if (N <= 10)
+	{
+		max_k = 8;
+		id_length = 4;
+	}
+	else {
+		printf("BPE_DATA_ERROR: N is out of range\n");
+	}
+	// calculate the number of gaggles in this segment, each gaggle has a size of GAGGLE_SIZE, if the number of blocks is not divisible by GAGGLE_SIZE, then there will be one more gaggle
+	number_of_gaggles = compression_data->segment_size / GAGGLE_SIZE;
+	if (compression_data->segment_size % GAGGLE_SIZE != 0)
+	{
+		number_of_gaggles ++;
+		reminder_gaggle = true;
+	}
+	// loop over the gaggles
+	for (unsigned int i = 0; i < number_of_gaggles; i ++)
+	{
+		dc_encoder(block_data, compression_data, header_data, max_k, id_length, i, number_of_gaggles,reminder_gaggle, N);
+	}
+
+	// additional bit planes of DC coefficients
+	if (header_data-> bit_depth_ac < quantization_factor)
+	{
+		unsigned int num_additional_bit_planes = 0;
+		if (!compression_data->type_of_compression)
+		{
+			// integer encoding
+			num_additional_bit_planes = quantization_factor - header_data->bit_depth_ac; // missing part 4 of the header data
+		}
+		else
+		{
+			// floating point encoding
+			num_additional_bit_planes = quantization_factor - header_data->bit_depth_ac;
+		}
+		// loop over each bit plane in order to decrease significance
+		for (unsigned int i = 0; i < num_additional_bit_planes; i++)
+		{
+			// loop over each block in the segment
+			for (unsigned int k = 0; k < compression_data->segment_size; k++)
+			{
+				// print (block_data[k].dc_reminder >> (quantization_factor - i -1)) with size 1;
+				// TODO
+			}
+		}
+	}
+
+
+}
+
+
+
+
 void dc_encoding(
 	compression_image_data_t *compression_data,
+	block_data_t *block_data,
 	header_data_t *header_data,
 	int **block_string,
 	unsigned int segment_number
@@ -641,8 +902,12 @@ void dc_encoding(
 	int max_ac_value = 0;
 	short int quantization_factor = 0;
 	unsigned int k = 0; // k is the quantization factor 
+	// create a new array of block_data_t to store the DC values
+	
+
 	for (unsigned int i = 0; i < compression_data->segment_size; ++i)
 	{
+		int max_ac_value_block = 0;
 		// loop over the blocks to get the dc value
 		unsigned int final_pos = i + (segment_number * compression_data->segment_size);
 		int dc_value = block_string[final_pos][0];
@@ -669,7 +934,12 @@ void dc_encoding(
 			{
 				max_ac_value = block_string[final_pos][j];
 			}
+			if (std::abs(block_string[final_pos][j]) > std::abs(max_ac_value_block))
+			{
+				max_ac_value_block = block_string[final_pos][j];
+			}
 		}
+	block_data[i].max_ac_bit_size = max_ac_value_block;
 	}
 	// calculate the ac bit size
 	header_data->bit_depth_ac = (unsigned char)(std::ceil(std::log2(std::abs(max_ac_value))) + 1) ;
@@ -696,23 +966,278 @@ void dc_encoding(
 	k = (1 << quantization_factor) - 1;
 	for (unsigned int i = 0; i < compression_data->segment_size; ++i)
 	{
-		
+		unsigned int final_pos = i + (segment_number * compression_data->segment_size);
+		unsigned long new_value_twos = conv_to_twos_complement(block_string[final_pos][0], header_data->bit_depth_dc);
+		block_data[i].shifted_dc = new_value_twos >> quantization_factor;
+		block_data[i].dc_reminder = (unsigned short)(new_value_twos & k);
 	}
+
+	// get the number of bits needed to represent the quantized dc values
+	unsigned int N = std::max(header_data->bit_depth_dc - quantization_factor, 1);
+
+	// maximum possible value of N is 10
+
+	// case for N = 1
+	if (N == 1)
+	{
+		for (unsigned int i = 0; i < compression_data->segment_size; ++i)
+		{
+			// write  block_data[i].shifted_dc with only one bit
+			// TODO
+		}
+	}
+	else
+	{
+		coding_quantized_coefficients(block_data, compression_data->segment_size, N);
+		dc_entropy_coding(block_data, compression_data, header_data, N, quantization_factor);
+	}
+
+	
 
 }
 
 
 void ac_encoding(
 	compression_image_data_t *compression_data,
+	block_data_t *block_data,
 	header_data_t *header_data,
 	int **block_string,
 	unsigned int segment_number
 	)
 
 {
+	unsigned char bit_plane = 0;
+	// check if the ac bit depth is bigger that 0
+	if (header_data->bit_depth_ac > 0) //if not not need to be coded
+	{
+		// if the ac bit depth is 1, the codiffication is binary 
+		if (header_data -> bit_depth_ac == 1)
+		{
+			for (unsigned int i = 0; i < compression_data->segment_size; ++i)
+			{
+				// write block_data[i].max_ac_bit_size[j] with only one bit
+				// TODO
+				
+			}
+			
+		}
+		else
+		{
+			
+			ac_depth_encoder(block_data, compression_data, header_data, segment_number);
+		}
+
+		for ( bit_plane = header_data-> bit_depth_ac; bit_plane > 0; bit_plane --)
+		{
+			// stage 0 to stage 3
+			bit_plane_encoding(block_data, block_string, compression_data, header_data, segment_number, bit_plane);
+			// stage 4
+
+		}
+	} 
 	
 }
 
+void ac_depth_encoder(
+	block_data_t *block_data,
+	compression_image_data_t *compression_data,
+	header_data_t *header_data,
+	unsigned int segment_number
+	)
+{
+	unsigned int N = 0;
+	unsigned int id_length = 0;
+	unsigned int max_k = 0;
+	unsigned int number_of_gaggles = 0;
+	bool reminder_gaggle = false;
+
+	// calculate N
+	while(header_data->bit_depth_ac >> N > 0)
+	{
+		N++;
+	}
+	
+	dpcm_ac_mapper(block_data, compression_data, header_data, segment_number, N);
+
+	// calculate id_length
+	if (N == 2)
+	{
+		max_k = 0;
+		id_length = 1;
+	}
+	else if (N <= 4)
+	{
+		max_k = 2;
+		id_length = 2;
+	}
+	else if (N <= 5)
+	{
+		max_k = 6;
+		id_length = 3;
+	}
+	else
+	{
+		printf("N is too big in AC encoding\n");
+		max_k = 0;
+		id_length = 0;
+	}
+
+	// gaggle encoding
+	// calculate the number of gaggles in this segment, each gaggle has a size of GAGGLE_SIZE, if the number of blocks is not divisible by GAGGLE_SIZE, then there will be one more gaggle
+	number_of_gaggles = compression_data->segment_size / GAGGLE_SIZE;
+	if (compression_data->segment_size % GAGGLE_SIZE != 0)
+	{
+		number_of_gaggles ++;
+		reminder_gaggle = true;
+	}
+	// loop over the gaggles
+	for (unsigned int i = 0; i < number_of_gaggles; i ++)
+	{
+		ac_gaggle_encode(block_data, compression_data, header_data, max_k, id_length, i, number_of_gaggles,reminder_gaggle, N);
+	}
+
+}
+
+void ac_gaggle_encode(
+	block_data_t *block_data,
+	compression_image_data_t *compression_data,
+	header_data_t *header_data,
+	unsigned int max_k,
+	unsigned int id_length,
+	unsigned int gaggle_number,
+	unsigned int number_of_gaggles,
+	bool reminder_gaggle,
+	unsigned int N
+	)
+{
+	const bool brute_force = false;
+	unsigned int start_position = 0;
+	unsigned int end_position = 0;
+	unsigned char encode_selection = 0;
+
+	if (brute_force)
+	{
+		// brute force coding is not implemented in this version doe to the lack of Header part 3 missin
+	}
+	else
+	{
+		//heuristic coding
+		int delta = 0;
+		unsigned int gaggle_size = GAGGLE_SIZE;
+		// encode selection
+		encode_selection = 0;
+		// calculate the start position of this gaggle
+		start_position = gaggle_number * GAGGLE_SIZE;
+		end_position = start_position + GAGGLE_SIZE;
+		// check if this is the first gaggle, so the start position is 1 instead of 0
+		if (gaggle_number == 0)
+		{
+			start_position = 1;
+		}
+		// check if this is the last gaggle, so the end position is remaining values instead of GAGGLE_SIZE
+		if (reminder_gaggle)
+		{
+			end_position = compression_data->segment_size;
+			gaggle_size = compression_data->segment_size - start_position;
+		}
+		// sum the delta of all the blocks in this gaggle
+		for (unsigned int i = start_position; i < end_position; i ++)
+		{
+			delta += block_data[i].mapped_ac;
+		}
+
+		// table of code options Table 4-10 in the document
+		if(64 * delta >= 23 * gaggle_size * (1 <<(N)))
+		{
+			encode_selection = UNCODED_VALUE;
+		}
+		else if (207 * gaggle_size > 128 * delta)
+		{
+			encode_selection = 0;
+		}
+		else if ((long)(gaggle_size * (1 << (N+5))) <= (long)(128 * delta + 49 * gaggle_size))
+		{
+			encode_selection = N - 2;
+		}
+		else
+		{
+			encode_selection = 0;
+			while ((long)(gaggle_size * (1 << (encode_selection + 7 ))) <= (long)(128 * delta + 49 * gaggle_size))
+			{
+				encode_selection ++;
+			}
+			encode_selection --; // to adust the value of encode_selection to the correct value
+		}
+
+	}
+
+
+	// print the header 
+	// TODO
+	// encode_selection with size id_length
+
+	// now print the output values
+	for (unsigned int i = start_position; i < start_position + GAGGLE_SIZE; i ++)
+	{
+		if ((encode_selection == UNCODED_VALUE) || (i == 0) )
+		{
+			// print the uncoded value. block_data[i].mapped_ac with size N
+			//TODO
+		}
+		else
+		{
+			// print the coded value.  1 with size (((block_data[i].mapped_ac + 1) >> encode_selection) + 1) // coding first part
+			// TODO
+		}
+	}
+	// now generate the second part if the encode_selection is not UNCODED_VALUE
+	if (encode_selection != UNCODED_VALUE)
+	{
+		for (unsigned int i = std::max(start_position, (unsigned int)(1)); i < (start_position + GAGGLE_SIZE); ++i )
+		{
+			// print the coded value.  block_data[i].mapped_ac with size encode_selection 
+			// TODO
+		}
+	}
+}
+
+
+void dpcm_ac_mapper(
+	block_data_t *block_data,
+	compression_image_data_t *compression_data,
+	header_data_t *header_data,
+	unsigned int segment_number,
+	unsigned int N
+	)
+{
+	unsigned long x_min = 0;
+	unsigned long x_max = ((1<<(N-1)) - 1);
+	unsigned long theta = 0;
+	long gamma = 0;
+
+	block_data[0].mapped_ac = block_data[0].max_ac_bit_size; // reference sample
+	for(unsigned int i = 1; i < compression_data->segment_size; i ++)
+	{
+		// calculate theta
+		theta = std::min(block_data[i-1].max_ac_bit_size - x_min, x_max + block_data[i-1].max_ac_bit_size);
+		// calculate gamma
+		gamma = block_data[i].max_ac_bit_size - block_data[i-1].max_ac_bit_size;
+		
+		if ( 0 <= gamma && gamma <= theta)
+		{
+			block_data[i].mapped_ac = 2 * gamma;
+		}
+		else if (-theta <= gamma && gamma < 0)
+		{
+			block_data[i].mapped_ac = 2 * std::abs(gamma) -1;
+		}
+		else
+		{
+			block_data[i].mapped_ac =  theta + std::abs(gamma);
+		}
+	}
+
+}
 
 void compute_bpe(
     compression_image_data_t *compression_data,
@@ -747,10 +1272,11 @@ void compute_bpe(
 		// update the segment number
 		header_data->segment_count = i;
 		// now loop over the number of blocks in each segment and calculate the bpe for each block	
+		block_data_t *block_data = (block_data_t *)malloc(sizeof(block_data_t) * compression_data->segment_size);
 		// First calculate DC encoding
-		dc_encoding(compression_data,header_data, block_string, i);
+		dc_encoding(compression_data,block_data,header_data, block_string, i);
 		// second calculate AC encoding
-		ac_encoding(compression_data,header_data, block_string, i);
+		ac_encoding(compression_data,block_data,header_data, block_string, i);
 		// third update header
 			
 
@@ -762,10 +1288,26 @@ void compute_bpe(
 		}
 		// write the segment to the binary output with the header
 		// write header and clean up the header
-		void header_write(header_data_t *header_data, unsigned int segment_number);
+		//void header_write(header_data_t *header_data, unsigned int segment_number);
+		// free the block_data array
+		free(block_data);
 	}
 	// free the header data
 	free(header_data);
 
 
+}
+
+
+void bit_plane_encoding(
+	block_data_t *block_data,
+	int **block_string,
+	compression_image_data_t *compression_data,
+	header_data_t *header_data,
+	unsigned int segment_number,
+	unsigned int bit_plane_number
+	)
+{
+	
+	
 }

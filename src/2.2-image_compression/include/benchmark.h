@@ -30,8 +30,10 @@
 #endif
 
 /* Defines */
-#define LEVELS_DWT 3
+#define LEVELS_DWT     3
 #define BLOCKSIZEIMAGE 8
+#define GAGGLE_SIZE    16
+#define UNCODED_VALUE 0xFF
 
 /* Input Defines defines */
 #define MINIMUNWSIZE		17
@@ -44,6 +46,8 @@
 /* Bits defines */
 #define MAXIMUNBITSIZEINTEGER		25
 #define MAXIMUNBITSIZEFLOAT		    28
+
+
 
 
 /* Low pass filter defines */
