@@ -1812,5 +1812,6 @@ void convert_to_bits_segment(FILE *ofp, block_struct segment_data)
 }
 
 void clean(DataObject *device_object){
+	free(device_object->data_array);
 	delete device_object;
 }
