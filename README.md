@@ -28,7 +28,7 @@ Expect features and data to be missing. For an overview of the main current issu
 In the meanwhile, users are invited to test out the existing implementations (see list below) and report bugs and issues via the github interface.
 
 ## Changelog
-See separate file for [changelog.md][/changelog.md]
+See separate file for [changelog.md](changelog.md)
  
 # Contributors 
 Authors/Chairs:  
