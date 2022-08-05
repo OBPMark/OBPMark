@@ -1,5 +1,5 @@
 ### OBPMark (On Board Processing Benchmark)
-Current version: v0.2
+Current version: v0.3
 
 Contact: OBPMark@esa.int
 Website: OBPMark.org
@@ -28,6 +28,16 @@ Expect features and data to be missing. For an overview of the main current issu
 In the meanwhile, users are invited to test out the existing implementations (see list below) and report bugs and issues via the github interface.
 
 ## Changelog
+[2022-08-08] v0.3 release
+- Benchmark #1.1 "Image Correction and Calibration"
+	- OpenCL bug fixes.
+	
+- Benchmark #2.1 "CCSDS 121.0"
+	- Updated verified version of benchmark with several bug fixes.
+	
+- Overall: 
+	- Minor bugfixes.
+
 [2022-05-07] v0.2 release
 - Benchmark #1.1 "Image Correction and Calibration"
 	- Replaced input and verification data
@@ -78,9 +88,9 @@ The following folders are in the repository:
 The benchmarks are organised in the following structure ("Public Beta" current status also shown): 
 
 	src/1.1-image/				-- Available in C (sequential), OpenMP, OpenCL and CUDA.
-	src/1.2-radar/				-- TBA.
+	src/1.2-radar/				-- Currently under development, see "radar-dev" branch.
 	src/2.1-data_compression/		-- Available in C (sequential), OpenMP, OpenCL and CUDA.
-	src/2.2-image_compression/		-- Available in C (sequential), OpenMP, OpenCL and CUDA.
+	src/2.2-image_compression/		-- Currently under development, see "ccsds122-dev" branch.
 	src/2.3-hyperspectral_compression/	-- TBA.
 	src/3.1-aes_encryption/			-- Available in C (sequential), OpenMP, OpenCL and CUDA.
 	src/4.1-dvbs2x_modulation/		-- TBA.
