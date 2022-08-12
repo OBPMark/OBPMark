@@ -29,19 +29,19 @@ OUTFILE = datagen-1.2-radar
 ################################################################################
 
 datagen-1.2-radar: $(OBJECTS)
-	$(CC) $(CFLAGS) -o $(OUTFILE) $(OBJECTS)
+	$(CC) $(CFLAGS) -DOBPMARK_FRAME_DATA_2D -o $(OUTFILE) $(OBJECTS) -lm
 
 image_mem_util.o: $(COMMON_PATH)/image_mem_util.c $(INCLUDES)
-	$(CC) $(CFLAGS) -c $(COMMON_PATH)/image_mem_util.c
+	$(CC) $(CFLAGS) -DOBPMARK_FRAME_DATA_2D -c $(COMMON_PATH)/image_mem_util.c
 
 image_file_util.o: $(COMMON_PATH)/image_file_util.c $(INCLUDES)
-	$(CC) $(CFLAGS) -c $(COMMON_PATH)/image_file_util.c
+	$(CC) $(CFLAGS) -DOBPMARK_FRAME_DATA_2D -c $(COMMON_PATH)/image_file_util.c
 
 timing.o: $(COMMON_PATH)/timing.c $(INCLUDES)
-	$(CC) $(CFLAGS) -c $(COMMON_PATH)/timing.c
+	$(CC) $(CFLAGS) -DOBPMARK_FRAME_DATA_2D -c $(COMMON_PATH)/timing.c
 
 datagen-1.2-radar.o: datagen-1.2-radar.c $(INCLUDES)
-	$(CC) $(CFLAGS) -c datagen-1.2-radar.c
+	$(CC) $(CFLAGS) -DOBPMARK_FRAME_DATA_2D -c datagen-1.2-radar.c
 
 clean:
 	rm $(OUTFILE) $(OBJECTS) -f
