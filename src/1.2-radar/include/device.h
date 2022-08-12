@@ -18,8 +18,11 @@ typedef struct {
     float vr;
     float ro;
     float slope;
-    uint32_t asize;     //number of azimuth samples in a patch
-    uint32_t rsize;     //number of range samples in a patch 
+    uint32_t asize;     //total number of azimuth samples
+    uint32_t avalid;    //number of meaningfull azimuth samples in a patch
+    uint32_t apatch;    //total number of azimuth samples in a patch
+    uint32_t rsize;     //total number of range samples = samples in a patch 
+    uint32_t rvalid;    //valid range samples after range compress
     uint32_t npatch;    //number of patches in the image
 }radar_params_t;
 
@@ -37,6 +40,7 @@ struct radar_data_t
 	framefp_t output_data;
 	float *rrf; //range reference function
 	float *arf; // azimuth reference function
+	uint32_t *offsets; //Offset table for RCMC
     float *aux; //Auxiliar data to compute Doppler centroid
 	radar_params_t *params;
 };
@@ -75,8 +79,6 @@ void init(
 bool device_memory_init(
 	radar_data_t *radar_data,
 	radar_params_t *params,
-	unsigned int patch_height,
-	unsigned int patch_width,
     unsigned int out_height,
     unsigned int out_width
 	);

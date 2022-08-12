@@ -71,7 +71,9 @@ int write_output(char filename[], framefp_t *f)
 		return 0;
 	}
 	char aux[15];
-    fprintf(framefile, "P2\n%d %d\n", width, height);
+    fprintf(framefile, "P2\n%ld %ld\n", width, height);
+    fprintf(framefile, "255\n");
+
     for(x = 0; x<height; x++){
         for(y = 0; y<width; y++)
             fprintf(framefile, "%d ", (uint8_t) f->f[x*width+y]);
@@ -106,6 +108,7 @@ void init_benchmark(
 	long int timestamp
 	)
 {
+	/* Alloc data containers */
 	radar_time_t *t = (radar_time_t *)malloc(sizeof(radar_time_t));
 	radar_data_t *radar_data = (radar_data_t *)malloc(sizeof(radar_data_t));
 
@@ -120,8 +123,9 @@ void init_benchmark(
 	}
 
 	/* Initialize memory on the device and copy data */
-	device_memory_init(radar_data, params, input_data[0].h, input_data[0].w, output_img->h, output_img->w);
+	device_memory_init(radar_data, params, output_img->h, output_img->w);
 	copy_memory_to_device(radar_data, t, input_data, params);
+
 
 	/* Run the benchmark, by processing the full frame list */
     process_benchmark(radar_data,t);
@@ -138,7 +142,7 @@ void init_benchmark(
 		write_output(output_file, output_img);
 
 	/* Clean and free device object */
-	clean(radar_data, t);
+    clean(radar_data, t);
 }
 
 int main(int argc, char **argv)
@@ -171,6 +175,7 @@ int main(int argc, char **argv)
 	if(ret == ARG_ERROR) {
 		exit(-1);
 	}
+	/* Find output image size */
 	float ratio;
 	if ( in_width > in_height ){
 	    ratio = (float) in_width/ (float) in_height;
@@ -182,21 +187,28 @@ int main(int argc, char **argv)
         out_width = in_width / ml_factor;
         out_height = ceil((float)in_height/(ratio * ml_factor));
     }
+
+	/* Create data to hold input parameters */
 	params = (radar_params_t *) malloc(sizeof(radar_params_t));
 
 	/* Read/Generate input parameters */
 	if(random_data) benchmark_gen_rand_params(params,in_height, in_width);
     else if(load_params_from_file(params, in_height, in_width, input_folder) == FILE_LOADING_ERROR) exit(-1);
 
-    unsigned int lines = pow(2,ceil(log2(params->asize+1)));
-    unsigned int patchSize = lines * params->rsize * 2;
+	/* Fix output height according to valid azimuth samples */
+	float azi_factor =(float) params->asize/(float)out_height;
+	out_height = floor(params->avalid/azi_factor)*params->npatch;
+
+    /* Allocate input data */
+    unsigned int patchSize = params->apatch * params->rsize * 2;
 	input_data = (framefp_t*) malloc(sizeof(framefp_t)*params->npatch);
 	for(int i = 0; i<params->npatch; i++){
 	    input_data[i].f = (float*) malloc(sizeof(float) * patchSize);
-	    input_data[i].h = lines;
+	    input_data[i].h = params->apatch;
 	    input_data[i].w = params->rsize * 2;
 	}
 
+	/* Allocate output data */
 	output_img = (framefp_t*) malloc(sizeof(framefp_t));
     unsigned int out_size = out_height * out_width;
 

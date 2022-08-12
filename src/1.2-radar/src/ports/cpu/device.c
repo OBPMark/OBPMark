@@ -33,26 +33,27 @@ void init(
 bool device_memory_init(
 	radar_data_t *radar_data,
 	radar_params_t *params,
-	unsigned int patch_height,
-	unsigned int in_width,
     unsigned int out_height,
     unsigned int out_width
 	)
 {	
-    unsigned int patch_width = next_power_of2(in_width);
+    unsigned int patch_width = params->rsize<<1;
+    unsigned int patch_extended_width = next_power_of2(params->rsize)<<1;
+    unsigned int patch_height = params->apatch;
+
 	/* radar_data_t memory allocation */
 	//RANGE & AZIMUTH DATA
 	radar_data->range_data = (framefp_t *) malloc(sizeof(framefp_t) * params->npatch);
 	radar_data->azimuth_data = (framefp_t *) malloc(sizeof(framefp_t) * params->npatch);
 	for(int i = 0; i < params->npatch; i++)
     {
-        radar_data->range_data[i].f = (float*) calloc(patch_height*patch_width, sizeof(float));
+        radar_data->range_data[i].f = (float*) calloc(patch_height*patch_extended_width, sizeof(float));
         radar_data->range_data[i].h = patch_height;
-        radar_data->range_data[i].w = patch_width;
+        radar_data->range_data[i].w = patch_extended_width;
 
-        radar_data->azimuth_data[i].f = (float *) calloc(in_width * patch_height, sizeof(float));
-        radar_data->azimuth_data[i].h = in_width/2;
-        radar_data->azimuth_data[i].w = patch_height*2;
+        radar_data->azimuth_data[i].f = (float *) calloc(patch_width * patch_height, sizeof(float));
+        radar_data->azimuth_data[i].h = params->rvalid;
+        radar_data->azimuth_data[i].w = patch_height<<1;
     }
   	//OUTPUT DATA
   	radar_data->output_data.f = (float*) malloc(sizeof(float)*out_width*out_height);
@@ -63,13 +64,16 @@ bool device_memory_init(
   	radar_data->params = (radar_params_t*) malloc(sizeof(radar_params_t));
     
     //RANGE REF. FUNCTION
-    radar_data->rrf = (float*) calloc(patch_width, sizeof(float));
+    radar_data->rrf = (float*) calloc(patch_extended_width, sizeof(float));
 
 	//AZIMUTH REF. FUNCTION
-    radar_data->arf = (float*) malloc(sizeof(float)*patch_height*2);
+    radar_data->arf = (float*) calloc(patch_height<<1, sizeof(float));
 
     //DOPPLER AUXILIAR BUFFER
-    radar_data->aux = (float*) calloc(in_width, sizeof(float));
+    radar_data->aux = (float*) calloc(patch_width, sizeof(float));
+
+    //RCMC TABLE
+    radar_data->offsets = (uint32_t *) malloc(sizeof(uint32_t) * params->rvalid * patch_height);
 
     return true;
 }
@@ -83,16 +87,12 @@ void copy_memory_to_device(
 {
     /* Copy params */
     memcpy(radar_data->params, input_params, sizeof(radar_params_t));
-    uint32_t width = input_data[0].w;
-    uint32_t height = input_data[0].h;
-    uint32_t offset = radar_data->range_data[0].w;
+    uint32_t width = radar_data->params->rsize<<1;
+    uint32_t height = radar_data->params->apatch;
+    uint32_t line_width = next_power_of2(width);
     for (uint32_t i = 0; i < radar_data->params->npatch; i++ )
-    {
         for(uint32_t j = 0; j < height; j++)
-        {
-            memcpy(&radar_data->range_data[i].f[j*offset], &input_data[i].f[j*width], width * sizeof(float));
-        }
-    }
+            memcpy(&radar_data->range_data[i].f[j * line_width], &input_data[i].f[j * width], width * sizeof(float));
 }
 
 
@@ -173,6 +173,7 @@ void clean(
     free(radar_data->params);
     free(radar_data->rrf);
     free(radar_data->arf);
+    free(radar_data->offsets);
     free(radar_data->aux);
     free(radar_data);
 }

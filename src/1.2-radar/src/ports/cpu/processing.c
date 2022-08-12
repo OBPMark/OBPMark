@@ -24,7 +24,36 @@ uint32_t next_power_of2(uint32_t n)
     return v;
 }
 
-void print_data(framefp_t *output_image)
+void print_data(framefp_t *data, int npatch)
+{
+	char* output_file = (char*)"debug.txt";
+	FILE *framefile;
+	framefile = fopen(output_file, "w");
+	if(framefile == NULL) {
+		printf("error: failed to open file: %s\n", output_file);
+	}
+	unsigned int h_position; 
+	unsigned int w_position;
+    for(int i = 0; i < npatch; i++){
+        fprintf(framefile,"Patch %d/%d:\n", i+1, npatch);
+        std::complex<float> *c_data = (std::complex<float>*) data[i].f;
+
+        /* Print output */
+        for(h_position=0; h_position < data[i].h; h_position++)
+        {
+            for(w_position=0; w_position < data[i].w/2; w_position++)
+            {
+                std::complex<float> val = c_data[(h_position * (data[i].w/2) + w_position)];
+                fprintf(framefile, "% 20.10f", real(val));
+                fprintf(framefile, "%+20.10fi ", imag(val));
+
+            }
+            fprintf(framefile,"\n");
+        }
+    }
+}
+
+void print_output(framefp_t *output_image)
 {
 	unsigned int h_position; 
 	unsigned int w_position;
@@ -42,27 +71,58 @@ void print_data(framefp_t *output_image)
 	}
 }
 
-void ref_func(float *ref, float fc, float slope, float tau, float fs, uint32_t length)
+void print_params(radar_params_t *params)
+{
+    printf("Lambda: %.24f\n", params->lambda);
+    printf("PRF: %.24f\n", params->PRF);
+    printf("Tau: %.24f\n", params->tau);
+    printf("Fs: %.24f\n", params->fs);
+    printf("Vr: %.24f\n", params->vr);
+    printf("Ro: %.24f\n", params->ro);
+    printf("Slope: %.24f\n", params->slope);
+    printf("Asize: %d\n", params->asize);
+    printf("Avalid: %d\n", params->avalid);
+    printf("Apatch: %d\n", params->apatch);
+    printf("Rsize: %d\n", params->rsize);
+    printf("NPatch: %d\n", params->npatch);
+}
+
+void ref_func(float *ref, float fc, float slope, float tau, float fs, uint32_t length, uint32_t fftlen)
 {
     std::complex<float> *c_ref = (std::complex<float>*) ref;
     uint32_t nit = floor(tau * fs);
     float phase;
-    for(int i = 0; i < nit, i < length; i++)
+    for(int i = 0; i < nit && i < length; i++)
     {
         phase = (-((float)nit)/2+i) * 1/fs;
         phase = 2 * pi * fc * phase + pi * slope * phase * phase;
         c_ref[i] = std::polar(1.f,phase);
     }
-
-    uint32_t fftlen = next_power_of2(length);
     fft(ref, fftlen);
 }
 
 void SAR_range_ref(float *rrf, radar_params_t *params)
 {
-    float fc = c/params->lambda;
-    ref_func(rrf, fc, params->slope, params->tau, params->fs, params->rsize);
+    ref_func(rrf, 0, params->slope, params->tau, params->fs, params->rsize, next_power_of2(params->rsize));
 
+}
+
+void SAR_rcmc_table(radar_params_t *params, uint32_t *offsets, float fDc, uint32_t width)
+{
+    float delta, offset;
+    uint32_t ind;
+    
+    for (int i = 0; i < params->rvalid; i++)
+    {
+        for (int j = 0; j < width; j++)
+        {
+            delta = j * (params->PRF/params->avalid) + fDc;
+            offset = (1/sqrt(1-pow(params->lambda * delta / (2 * params->vr), 2))-1) * (params->ro + i * (c/(2*params->fs)));
+            offset = round (offset / (c/(2*params->fs))) * width;
+            ind = i * width + j;
+            offsets[ind] = ind + offset;
+        }
+    }
 }
 
 float SAR_DCE(float *aux, framefp_t data, radar_params_t *params)
@@ -75,9 +135,10 @@ float SAR_DCE(float *aux, framefp_t data, radar_params_t *params)
     float mean = 0;
     for (int i = 0; i < data.h-1; i++)
         for(int j = 0; j < width; j++){
-            c_aux[j] += std::conj(c_data[i*off+j]) * c_data[(i+1)*off+j]; 
+            c_aux[j] += std::conj(c_data[i*width+j]) * c_data[(i+1)*width+j]; 
             if (i == data.h-2) mean += std::arg(c_aux[j]);
         }
+    
     mean = mean/width;
     return mean*params->PRF/(2*pi);
 }
@@ -85,12 +146,12 @@ float SAR_DCE(float *aux, framefp_t data, radar_params_t *params)
 void SAR_azimuth_ref(float *arf, radar_params_t *params, float fDc)
 {
     //Compute parameters for azimuth
-    float rnge = params->ro+(params->rsize/2)*(c/(2*params->fs));         //range perpendicular to azimuth
+    float rnge = params->ro+(params->rvalid/2)*(c/(2*params->fs));        //range perpendicular to azimuth
     float rdc = rnge/sqrt(1-pow(params->lambda*fDc/(2*params->vr),2));    //squinted range
     float tauz = (rdc*(params->lambda/10) * 0.8) / params->vr;            //Tau in the azimuth
     float chirp = -(2*params->vr*params->vr)/params->lambda/rdc;          //Azimuth chirp rate
-    
-    ref_func(arf, fDc, chirp, tauz, params->PRF, next_power_of2(params->asize+1));
+
+    ref_func(arf, fDc, chirp, tauz, params->PRF, params->apatch, params->apatch);
 }
 
 void reference_multiplication(framefp_t *data, float *ref)
@@ -116,32 +177,27 @@ void SAR_range_compression(framefp_t *data, float *rrf)
     //return to freq domain with ifft
     for(int k = 0; k<data->h; k++)
         ifft(&data->f[k*data->w], data->w>>1);
+    
 }
 
-void SAR_rcmc(framefp_t *data, radar_params_t *params, float fDc)
+void SAR_rcmc(framefp_t *data, uint32_t *offsets)
 {
     std::complex<float> *c_data = (std::complex<float>*) data->f;
-    float delta, offset;
-    uint32_t ind, sh_ind;
 
     //fft data by rows
     for(int k = 0; k<data->h; k++)
         fft(&data->f[k*data->w], data->w>>1);
 
     //RCMC
-    for (int i = 0; i < params->rsize; i++)
-    {
-        for (int j = 0; j < (data->w>>1); j++)
+    uint32_t height = data->h;
+    uint32_t width = data->w>>1;
+
+    for (int i = 0; i < height; i++)
+        for (int j = 0; j < width; j++)
         {
-            delta = j * (params->PRF/params->asize) + fDc;
-            offset = (1/sqrt(1-pow(2,params->lambda * delta / (2 * params->vr)))-1) * (params->ro + i * (c/(2*params->fs)));
-            offset = round (offset / (c/(2*params->fs))) * (data->w>>1);
-            ind = i * (data->w>>1) + j;
-            sh_ind = ind + offset;
-            if (sh_ind < (data->h*data->w)) c_data[ind] =  c_data[sh_ind];
-            else c_data[ind] = 0;
+            uint32_t ind = i * width + j;
+            c_data[ind] = (offsets[ind]<(height*width)?c_data[offsets[ind]]:0);
         }
-    }
 }
 
 void SAR_azimuth_compression(framefp_t *data, float *arf)
@@ -158,10 +214,10 @@ void SAR_multilook(framefp_t *radar_data, framefp_t *image, radar_params_t *para
 {
     std::complex<float> *c_data = (std::complex<float>*) radar_data->f;
 
-    float sx = (float)(params->asize*params->npatch)/(float)image->h;
-    float sy = (float)params->rsize/(float)image->w;
-    uint32_t nfx = floor(params->asize/sx);
-    uint32_t nfy = floor(params->rsize/sy);
+    float sx = (float)params->asize/(float)image->w;
+    float sy = (float)params->rvalid/(float)image->w;
+    uint32_t nfx = floor(params->avalid/sx);
+    uint32_t nfy = floor(params->rvalid/sy);
 
     uint32_t isx = floor(sx);
     uint32_t isy = floor(sy);
@@ -172,11 +228,10 @@ void SAR_multilook(framefp_t *radar_data, framefp_t *image, radar_params_t *para
         for(int j = 0; j < nfy; j++){
             fimg = 0;
             for(int ix = 0; ix < isx; ix++)
-                for(int jy = 0; jy < isy; jy++){
-                    fimg += std::abs(c_data[(i*isx+ix)*(radar_data->w>>1)+j*isy+jy]);
-                }
-            value = abs(fimg/(isx*isy));
-            value = (value == 0)?0:log(value);
+                for(int jy = 0; jy < isy; jy++)
+                    fimg += std::abs(c_data[(i*isx+ix)*(next_power_of2(params->rsize))+j*isy+jy]);
+            value = fimg/(isx*isy);
+            value = (value == 0)?0:log2(value);
             image->f[offset+i*image->w+j] = value;
             *max = (*max<value)?value:*max;
             *min = (*min>value)?value:*min;
@@ -196,40 +251,36 @@ void quantize(framefp_t *image, float max, float min)
 void SAR_focus(radar_data_t *data){
     float max = FLT_MIN;
     float min = FLT_MAX;
-
     /* Compute Range Reference Function */
+//    print_params(data->params);
     SAR_range_ref(data->rrf, data->params);
 
     /* Compute Doppler Centroid */
     float fDc = SAR_DCE(data->aux, data->range_data[0], data->params);
 
+    /* Create RCMC table */
+    SAR_rcmc_table(data->params, data->offsets, fDc, data->params->apatch);
+
     /* Compute Azimuth Reference Function */
     SAR_azimuth_ref(data->arf, data->params, fDc);
-    for(int i = 0; i < 5; i++){
-        for(int j = 0; j<5; j++){
-            printf("%f ", data->range_data[1].f[i*data->range_data[1].w+j]);
-        }
-        printf("\n");
-    }
-    printf("\n");
 
     /* Begin Patch computation loop */
     for (int i = 0; i < data->params->npatch; i++)
     {
-//        /* Range Compression */
-//        SAR_range_compression(&data->range_data[i], data->rrf);
-//
-//        /* Transpose to operate with Azimuth data */
-//        complex_transpose(&data->range_data[i], &data->azimuth_data[i], data->range_data[i].h, data->params->rsize);
-//
-//        /* Range Cell Migration Correction */
-//        SAR_rcmc(&data->azimuth_data[i], data->params);
-//
-//        /* Azimuth Compression */
-//        SAR_azimuth_compression(&data->azimuth_data[i], data->arf);
-//
-//        /* Transpose back to Range data */
-//        complex_transpose(&data->azimuth_data[i], &data->range_data[i], data->azimuth_data[i].h, data->params->asize);
+        /* Range Compression */
+        SAR_range_compression(&data->range_data[i], data->rrf);
+
+        /* Transpose to operate with Azimuth data */
+        complex_transpose(&data->range_data[i], &data->azimuth_data[i], data->params->apatch, data->params->rvalid);
+
+        /* Range Cell Migration Correction */
+        SAR_rcmc(&data->azimuth_data[i], data->offsets);
+
+        /* Azimuth Compression */
+        SAR_azimuth_compression(&data->azimuth_data[i], data->arf);
+
+        /* Transpose back to Range data */
+        complex_transpose(&data->azimuth_data[i], &data->range_data[i], data->params->rvalid, data->params->apatch);
 
         /* Multilook */
         SAR_multilook(&data->range_data[i], &data->output_data, data->params, i, &max, &min);
