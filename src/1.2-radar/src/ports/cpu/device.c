@@ -55,10 +55,15 @@ bool device_memory_init(
         radar_data->azimuth_data[i].h = params->rvalid;
         radar_data->azimuth_data[i].w = patch_height<<1;
     }
+  	//MULTILOOK DATA
+  	radar_data->ml_data.f = (float*) malloc(sizeof(float)*out_width*out_height);
+  	radar_data->ml_data.w = out_width;
+  	radar_data->ml_data.h = out_height;
+  	
   	//OUTPUT DATA
-  	radar_data->output_data.f = (float*) malloc(sizeof(float)*out_width*out_height);
-  	radar_data->output_data.w = out_width;
-  	radar_data->output_data.h = out_height;
+  	radar_data->output_image.f = (uint8_t*) malloc(sizeof(uint8_t)*out_width*out_height);
+  	radar_data->output_image.w = out_width;
+  	radar_data->output_image.h = out_height;
 
   	//PARAMS
   	radar_data->params = (radar_params_t*) malloc(sizeof(radar_params_t));
@@ -112,12 +117,12 @@ void process_benchmark(
 void copy_memory_to_host(
 	radar_data_t *radar_data,
 	radar_time_t *t,
-	framefp_t *output_radar
+	frame8_t *output_radar
 	)
 {
-    uint32_t  width = radar_data->output_data.w;
-    uint32_t  height = radar_data->output_data.h;
-    memcpy(output_radar->f, radar_data->output_data.f, sizeof(float) * width * height);
+    uint32_t  width = radar_data->output_image.w;
+    uint32_t  height = radar_data->output_image.h;
+    memcpy(output_radar->f, radar_data->output_image.f, sizeof(uint8_t) * width * height);
 }
 
 
@@ -169,7 +174,8 @@ void clean(
     }
     free(radar_data->range_data);
     free(radar_data->azimuth_data);
-    free(radar_data->output_data.f);
+    free(radar_data->ml_data.f);
+    free(radar_data->output_image.f);
     free(radar_data->params);
     free(radar_data->rrf);
     free(radar_data->arf);

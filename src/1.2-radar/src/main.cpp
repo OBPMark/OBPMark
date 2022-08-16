@@ -14,7 +14,7 @@
 #include "util_data_rand.h"
 #include "util_data_files.h"
 
-void print_output_result(framefp_t *output_image)
+void print_output_result(frame8_t *output_image)
 {
 	unsigned int h_position; 
 	unsigned int w_position;
@@ -26,7 +26,7 @@ void print_output_result(framefp_t *output_image)
 		for(w_position=0; w_position < output_image->w; w_position++)
 		{
 			//FIXME chaneg to the 1D and 2D version
-			printf("%f, ",  output_image->f[(h_position * (output_image->w) + w_position)]);
+			printf("%d, ",  output_image->f[(h_position * (output_image->w) + w_position)]);
 		}
 		printf("\n");
 	}
@@ -51,13 +51,13 @@ void print_input_result(framefp_t *output_image)
 	}
 }
 
-int write_output(char filename[], framefp_t *f)
+int write_output(char filename[], frame8_t *f)
 {
 	FILE *framefile;
 	size_t bytes_written;
 	size_t height = f->h;
 	size_t width = f->w;
-	size_t bytes_expected = height * sizeof(char);
+	size_t bytes_expected = width * sizeof(char);
 	size_t bytes_total=0;
 	unsigned int x, y;
 //	uint8_t *vals = (uint8_t*) malloc(height*width);
@@ -70,35 +70,35 @@ int write_output(char filename[], framefp_t *f)
 		printf("error: failed to open file: %s\n", filename);
 		return 0;
 	}
-	char aux[15];
-    fprintf(framefile, "P2\n%ld %ld\n", width, height);
-    fprintf(framefile, "255\n");
+ //	char aux[15];
+ //   fprintf(framefile, "P2\n%ld %ld\n", width, height);
+ //   fprintf(framefile, "255\n");
 
-    for(x = 0; x<height; x++){
-        for(y = 0; y<width; y++)
-            fprintf(framefile, "%d ", (uint8_t) f->f[x*width+y]);
-        fprintf(framefile, "\n");
-    }
+ //   for(x = 0; x<height; x++){
+ //       for(y = 0; y<width; y++)
+ //           fprintf(framefile, "%d ", f->f[x*width+y]);
+ //       fprintf(framefile, "\n");
+ //   }
 
-//	for(x=0; x<height; x++)
-//	{
-//		bytes_written = sizeof(float) * fwrite(&f->f[x*width], sizeof(float), width, framefile);
-//		bytes_total += bytes_written;
-//		if(bytes_written != bytes_expected) {
-//			printf("error: writing file: %s, failed at row: %d, expected: %ld bytes, wrote: %ld bytes, total written: %ld bytes\n",
-//					filename, x, bytes_expected, bytes_written, bytes_total);
-//			return 0;
-//		}
-//	}
+	for(x=0; x<height; x++)
+	{
+		bytes_written = sizeof(uint8_t) * fwrite(&f->f[x*width], sizeof(uint8_t), width, framefile);
+		bytes_total += bytes_written;
+		if(bytes_written != bytes_expected) {
+			printf("error: writing file: %s, failed at row: %d, expected: %ld bytes, wrote: %ld bytes, total written: %ld bytes\n",
+					filename, x, bytes_expected, bytes_written, bytes_total);
+			return 0;
+		}
+	}
 
 	fclose(framefile);
-    printf("Wrote %ld bytes to file: %s, (expected %ld bytes)\n", bytes_total, filename, (bytes_expected*width));
+    printf("Wrote %ld bytes to file: %s, (expected %ld bytes)\n", bytes_total, filename, (bytes_expected*height));
 	return 1;
 }
 
 void init_benchmark(
     framefp_t *input_data, 
-    framefp_t *output_img,
+    frame8_t *output_img,
     radar_params_t *params, 
 
 	bool csv_mode, 
@@ -139,7 +139,7 @@ void init_benchmark(
 		print_output_result(output_img);
 	else 
 		// write the output image to a file call "output.bin"
-		write_output(output_file, output_img);
+        write_frame8(output_file, output_img, !csv_mode && !database_mode);
 
 	/* Clean and free device object */
     clean(radar_data, t);
@@ -164,7 +164,7 @@ int main(int argc, char **argv)
 	unsigned int out_width = 0;
 
 	framefp_t *input_data;
-    framefp_t *output_img;
+    frame8_t *output_img;
 	radar_params_t *params;
 
 
@@ -209,10 +209,10 @@ int main(int argc, char **argv)
 	}
 
 	/* Allocate output data */
-	output_img = (framefp_t*) malloc(sizeof(framefp_t));
+	output_img = (frame8_t*) malloc(sizeof(frame8_t));
     unsigned int out_size = out_height * out_width;
 
-    output_img->f = (float *) malloc(sizeof(float)*out_size);
+    output_img->f = (uint8_t *) malloc(sizeof(uint8_t)*out_size);
     output_img->w = out_width;
     output_img->h = out_height;
 	

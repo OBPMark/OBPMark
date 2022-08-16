@@ -30,6 +30,25 @@ typedef struct {
 #ifdef CUDA
 #elif OPENCL
 #elif OPENMP
+/* OPENMP version */
+
+struct radar_data_t
+{
+	framefp_t *range_data; //width: range, height: azimuth
+	framefp_t *azimuth_data; //width: azimuth, height: range
+	framefp_t ml_data;
+	frame8_t output_image;
+	float *rrf; //range reference function
+	float *arf; // azimuth reference function
+	uint32_t *offsets; //Offset table for RCMC
+    float *aux; //Auxiliar data to compute Doppler centroid
+	radar_params_t *params;
+};
+
+typedef struct {
+    double t_test;
+} radar_time_t; 
+
 #elif HIP
 #else
 /* Sequential C version */
@@ -37,7 +56,8 @@ struct radar_data_t
 {
 	framefp_t *range_data; //width: range, height: azimuth
 	framefp_t *azimuth_data; //width: azimuth, height: range
-	framefp_t output_data;
+	framefp_t ml_data;
+	frame8_t output_image;
 	float *rrf; //range reference function
 	float *arf; // azimuth reference function
 	uint32_t *offsets; //Offset table for RCMC
@@ -107,7 +127,7 @@ void process_benchmark(
 void copy_memory_to_host(
 	radar_data_t *radar_data,
 	radar_time_t *t,
-	framefp_t *output_radar
+	frame8_t *output_radar
 	);
 
 /**

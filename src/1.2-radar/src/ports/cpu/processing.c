@@ -238,12 +238,12 @@ void SAR_multilook(framefp_t *radar_data, framefp_t *image, radar_params_t *para
         }
 }
 
-void quantize(framefp_t *image, float max, float min)
+void quantize(framefp_t *data, frame8_t *image, float max, float min)
 {
     float scale = 256.f / (max-min);
     for (int i = 0; i < image->h; i++){
         for (int j = 0; j < image->w; j++){
-            image->f[i*image->w+j] = std::min(255.f,floor(scale * (image->f[i*image->w+j]-min)));
+            image->f[i*image->w+j] = std::min(255.f,floor(scale * (data->f[i*image->w+j]-min)));
         }
     }
 }
@@ -283,9 +283,9 @@ void SAR_focus(radar_data_t *data){
         complex_transpose(&data->azimuth_data[i], &data->range_data[i], data->params->rvalid, data->params->apatch);
 
         /* Multilook */
-        SAR_multilook(&data->range_data[i], &data->output_data, data->params, i, &max, &min);
+        SAR_multilook(&data->range_data[i], &data->ml_data, data->params, i, &max, &min);
     }
-    quantize(&data->output_data, max, min);
+    quantize(&data->ml_data, &data->output_image, max, min);
 }
 
 //From GPU4S_benchmarks
