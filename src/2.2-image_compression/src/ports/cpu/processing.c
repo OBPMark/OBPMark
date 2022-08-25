@@ -14,6 +14,15 @@ void coeff_regroup(int **transformed_image,unsigned int h_size_padded,unsigned i
 void ac_depth_encoder(block_data_t *block_data,compression_image_data_t *compression_data,header_data_t *header_data,unsigned int segment_number);
 void ac_gaggle_encode(block_data_t *block_data, compression_image_data_t *compression_data, header_data_t *header_data,unsigned int max_k,unsigned int id_length,unsigned int gaggle_number,unsigned int number_of_gaggles,bool reminder_gaggle,unsigned int N);
 void dpcm_ac_mapper(block_data_t *block_data,compression_image_data_t *compression_data,header_data_t *header_data,unsigned int segment_number,unsigned int N);
+void bit_plane_encoding(block_data_t *block_data,int **block_string,compression_image_data_t *compression_data,header_data_t *header_data,unsigned int segment_number,unsigned int bit_plane_number);
+void stages_encoding(block_data_t *block_data,int **block_string,compression_image_data_t *compression_data,header_data_t *header_data,unsigned int segment_number,unsigned int bit_plane_number);
+void coding_options(block_data_t *block_data,int **block_string,compression_image_data_t *compression_data,header_data_t *header_data,unsigned int segment_number,unsigned int bit_plane_number,unsigned int block_index,unsigned int blocks_in_gaggle,unsigned char *code_option_gaggle,bool *hit_flag);
+void gaggle_encode_1(block_data_t *block_data,int **block_string,compression_image_data_t *compression_data,header_data_t *header_data,unsigned int segment_number,unsigned int bit_plane_number,unsigned int block_index,unsigned int blocks_in_gaggle,unsigned char *code_option_gaggle,bool *hit_flag);
+void gaggle_encode_2(block_data_t *block_data,int **block_string,compression_image_data_t *compression_data,header_data_t *header_data,unsigned int segment_number,unsigned int bit_plane_number,unsigned int block_index,unsigned int blocks_in_gaggle,unsigned char *code_option_gaggle,bool *hit_flag);
+void gaggle_encode_3(block_data_t *block_data,int **block_string,compression_image_data_t *compression_data,header_data_t *header_data,unsigned int segment_number,unsigned int bit_plane_number,unsigned int block_index,unsigned int blocks_in_gaggle,unsigned char *code_option_gaggle,bool *hit_flag);
+
+
+
 
 /**
  * \brief Section that computes the DWT 1D 
@@ -28,17 +37,17 @@ void ccsds_wavelet_transform_1D(const int* A, int* B, const int size){
 		int sum_value_high = 0;
 		// specific cases
 		if(i == 0){
-			sum_value_high = A[1] - (int)( ((9.0/16.0) * (A[0] + A[2])) - ((1.0/16.0) * (A[2] + A[4])) + (1.0/2.0));
+			sum_value_high = A[1] - floor( ((9.0/16.0) * (A[0] + A[2])) - ((1.0/16.0) * (A[2] + A[4])) + (1.0/2.0));
 		}
 		else if(i == size -2){
-			sum_value_high = A[2*size - 3] - (int)( ((9.0/16.0) * (A[2*size -4] + A[2*size -2])) - ((1.0/16.0) * (A[2*size - 6] + A[2*size - 2])) + (1.0/2.0));
+			sum_value_high = A[2*size - 3] - floor( ((9.0/16.0) * (A[2*size -4] + A[2*size -2])) - ((1.0/16.0) * (A[2*size - 6] + A[2*size - 2])) + (1.0/2.0));
 		}
 		else if(i == size - 1){
-			sum_value_high = A[2*size - 1] - (int)( ((9.0/8.0) * (A[2*size -2])) -  ((1.0/8.0) * (A[2*size - 4])) + (1.0/2.0));
+			sum_value_high = A[2*size - 1] - floor( ((9.0/8.0) * (A[2*size -2])) -  ((1.0/8.0) * (A[2*size - 4])) + (1.0/2.0));
 		}
 		else{
 			// generic case
-			sum_value_high = A[2*i+1] - (int)( ((9.0/16.0) * (A[2*i] + A[2*i+2])) - ((1.0/16.0) * (A[2*i - 2] + A[2*i + 4])) + (1.0/2.0));
+			sum_value_high = A[2*i+1] - floor( ((9.0/16.0) * (A[2*i] + A[2*i+2])) - ((1.0/16.0) * (A[2*i - 2] + A[2*i + 4])) + (1.0/2.0));
 		}
 		
 		//store
@@ -51,11 +60,11 @@ void ccsds_wavelet_transform_1D(const int* A, int* B, const int size){
 	for (unsigned int i = 0; i < size; ++i){
 		int sum_value_low = 0;
 		if(i == 0){
-			sum_value_low = A[0] - (int)(- (B[size]/2.0) + (1.0/2.0));
+			sum_value_low = A[0] - floor(- (B[size]/2.0) + (1.0/2.0));
 		}
 		else
 		{
-			sum_value_low = A[2*i] - (int)( - (( B[i + size -1] +  B[i + size])/ 4.0) + (1.0/2.0) );
+			sum_value_low = A[2*i] - floor( - (( B[i + size -1] +  B[i + size])/ 4.0) + (1.0/2.0) );
 		}
 		
 		B[i] = sum_value_low;
@@ -121,6 +130,18 @@ void ccsds_wavelet_transform_2D (int** A, const int w_size, const int h_size){
 	for (unsigned int i = 0; i < h_size; ++i){   
         ccsds_wavelet_transform_1D(A[i], auxiliar + i * w_size, w_size/2);
     }
+	// write auxiliar to a file
+	/*FILE *fp;
+	fp = fopen("auxiliar.txt", "w");
+	for (unsigned int i = 0; i < h_size; ++i){
+		for (unsigned int j = 0; j < w_size; ++j){
+			fprintf(fp, "%d ", auxiliar[i * w_size + j]);
+			
+		}
+		fprintf(fp, "\n");
+	}
+	fclose(fp);
+	exit(0);*/
 	int *auxiliar_h_input = (int *)malloc(sizeof(int) * h_size);
 	int *auxiliar_h_output = (int *)malloc(sizeof(int) * h_size);
     for (unsigned int i = 0; i < w_size; ++i){
@@ -333,15 +354,13 @@ void dwt2D_compression_computation(
 		# in 0 0 of that block.
 		##########################################################################################################
 		*/
-
-		coeff_regroup(transformed_image, h_size_padded, w_size_padded);
 	}
 	else{
 		// integer encoding
         dwt2D_compression_computation_integer(compression_data, image_data, transformed_image);
 		coefficient_scaling(transformed_image, h_size_padded, w_size_padded);
 	}
-
+	coeff_regroup(transformed_image, h_size_padded, w_size_padded);
 }
 
 /**
@@ -625,8 +644,9 @@ void build_block_string(int **transformed_image, unsigned int h_size, unsigned i
 				{
 					// this loops is for acces each of the blocks
 					block_string[counter][x * BLOCKSIZEIMAGE + y] = transformed_image[i*BLOCKSIZEIMAGE +x][j*BLOCKSIZEIMAGE+y];
+					//block_string[counter][y] = transformed_image[i*BLOCKSIZEIMAGE +x][j*BLOCKSIZEIMAGE+y];
 				}
-				
+				//++counter;
 			}
 			++counter;
 		}
@@ -1032,7 +1052,7 @@ void ac_encoding(
 			// stage 0 to stage 3
 			bit_plane_encoding(block_data, block_string, compression_data, header_data, segment_number, bit_plane);
 			// stage 4
-
+			stages_encoding(block_data, block_string, compression_data, header_data, segment_number, bit_plane);
 		}
 	} 
 	
@@ -1308,6 +1328,660 @@ void bit_plane_encoding(
 	unsigned int bit_plane_number
 	)
 {
-	
-	
+
+	unsigned int temp_x = 0;
+	unsigned int  temp_y = 0;
+	unsigned char symbol = 0;
+	int temp_value = 0;
+	unsigned int start_position = segment_number * compression_data->segment_size;
+	unsigned int final_position = 0;
+	int bit_set_plane = (1 << (bit_plane_number - 1));
+
+	// loop over the blocks in the segment
+	for (unsigned int block_num = 0; block_num < compression_data->segment_size; ++block_num)
+	{	
+		symbol = 0;
+		final_position = start_position + block_num;
+		// check if something to code
+		if (block_data[block_num].mapped_ac < bit_plane_number)
+		{
+			continue;
+		}
+
+		// init block data variables
+		//block_data[i].type_p = 0;
+
+
+		// check the parents of the block_string
+		for (unsigned int j = 0; j < 3; ++j)
+		{
+			// missing  Header part 4
+
+			temp_x = final_position;
+			// get temp_y for each parent of the block_string, the first parent is in position 1, 
+			// the second in position BLOCKSIZEIMAGE and the third in position BLOCKSIZEIMAGE + 1
+
+			switch (j)
+			{
+			case 0: temp_y = 1; break;
+			case 1: temp_y = BLOCKSIZEIMAGE; break;
+			case 2: temp_y = BLOCKSIZEIMAGE + 1; break;
+			default: temp_y = 0; break;
+			}
+
+			if ((block_data[block_num].type_p & (1 << (2-block_num))) == 0 )
+			{
+				block_data[block_num].symbol_block[symbol].type = ENUM_TYPE_P;
+				block_data[block_num].symbol_block[symbol].symbol_len ++;
+				block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
+
+				if (ABSOLUTE(block_string[temp_x][temp_y]) >= (1 << (bit_set_plane - 1)) &&
+					ABSOLUTE(block_string[temp_x][temp_y]) < (1 << bit_set_plane))
+				{
+					block_data[block_num].type_p += (1 << (2 - block_num));
+					block_data[block_num].symbol_block[symbol].symbol_val += 1;
+					block_data[block_num].symbol_block[symbol].sign <<= 1;
+					block_data[block_num].symbol_block[symbol].sign += SIGN(block_string[temp_x][temp_y]);
+				}
+
+			}
+			else
+			{
+				temp_value = ((ABSOLUTE(block_string[temp_x][temp_y]))  & (bit_set_plane) ) > 0 ? 1 : 0;
+				if (!compression_data->type_of_compression) // integer compression
+				{
+					// header part 4 custom 2 bits TODO CHECK
+					block_data[block_num].parent_ref_symbol <<= 1;
+					block_data[block_num].parent_ref_symbol += temp_value;
+					block_data[block_num].parent_sym_len ++;
+				}
+				else
+				{
+					// float compression
+					block_data[block_num].parent_ref_symbol <<= 1;
+					block_data[block_num].parent_ref_symbol += temp_value;
+					block_data[block_num].parent_sym_len ++;
+				}
+			}
+		}
+		// check the children of the block_string
+		if (block_data[block_num].symbol_block[symbol].symbol_len != 0)
+		{
+			++symbol;
+		}
+		// now determine first part TranB
+		if (block_data[block_num].tran_b == 0)
+		{
+			bool break_flag = false;
+			for ( unsigned int k = 0; k < 3; k++)
+			{
+				// Header part 4 custom 2 bits
+				//
+				temp_x = (k >= 1 ? 1 : 0);
+				temp_x *= 2;
+				temp_y = (k != 1 ? 1 : 0);
+				temp_y *= 2;
+				for (unsigned int i = temp_x ; i < temp_x + 2; ++i)
+				{
+					for (unsigned int j = temp_y; j < temp_y + 2; ++j)
+					{
+						if (bit_set_plane & ABSOLUTE(block_string[final_position][(i * BLOCKSIZEIMAGE) + j]) > 0)
+						{
+							block_data[block_num].tran_b = 1;
+							block_data[block_num].symbol_block[symbol].symbol_len = 1;
+							block_data[block_num].symbol_block[symbol].symbol_val = 1;
+							block_data[block_num].symbol_block[symbol].type = ENUM_TYPE_TRAN_B;
+							symbol ++;
+							// goto DS_UPDATE;
+							// exit the loops
+							i = temp_x + 2;
+							j = temp_y + 2;
+							k = 3;
+							break_flag = true;
+						}
+					
+					}
+				}
+				if (!break_flag)
+				{
+					temp_x = (k >= 1 ? 1 : 0);
+					temp_x *= 4;
+					temp_y = (k != 1 ? 1 : 0);
+					temp_y *= 4;
+
+					for (unsigned int i = temp_x; i < temp_x + 4; ++i )
+					{
+						for (unsigned int j = temp_y; j < temp_y + 4; ++j)
+						{
+							if (bit_set_plane & ABSOLUTE(block_string[final_position][(i * BLOCKSIZEIMAGE) + j]) > 0)
+							{
+								block_data[block_num].tran_b = 1;
+								block_data[block_num].symbol_block[symbol].symbol_len = 1;
+								block_data[block_num].symbol_block[symbol].symbol_val = 1;
+								block_data[block_num].symbol_block[symbol].type = ENUM_TYPE_TRAN_B;
+								symbol ++;
+								// goto DS_UPDATE;
+								// exit the loops
+								i = temp_x + 4;
+								j = temp_y + 4;
+								k = 3;
+								break_flag = true;
+							}
+						}
+					}	
+				}
+			}
+		}
+
+		if (block_data[block_num].tran_b == 0)
+		{
+			block_data[block_num].symbol_block[symbol].symbol_len = 1;
+			block_data[block_num].symbol_block[symbol].symbol_val = 0;
+			block_data[block_num].symbol_block[symbol].type = ENUM_TYPE_TRAN_B;
+			continue;
+		}
+
+		// tran_b  end
+
+		if (block_data[block_num].symbol_block[symbol].symbol_len != 0)
+		{
+			++symbol;
+		}
+
+		if (block_data[block_num].tran_b == 1) // continue scan
+		{
+			for (unsigned int k = 0; k < 3; k++)
+			{
+				bool break_flag = false;
+				// Header part 4 custom 2 bits
+				// 
+				if ((block_data[block_num].tran_d & (1 << (2 - k))) == 0)
+				{
+
+					// Header part 4 custom 2 bits
+
+					temp_x = (k >= 1 ? 1 : 0);
+					temp_x *= 2;
+					temp_y = (k != 1 ? 1 : 0);
+					temp_y *= 2;
+
+					for (unsigned int i = temp_x ; i < temp_x + 2; ++i)
+					{
+						for (unsigned int j = temp_y; j < temp_y + 2; ++j)
+						{
+							if((bit_set_plane & ABSOLUTE(block_string[final_position][(i * BLOCKSIZEIMAGE) + j])) > 0)
+							{
+								block_data[block_num].tran_d += (1 << (2 - k));
+								block_data[block_num].symbol_block[symbol].type = ENUM_TYPE_TRAN_D;
+								block_data[block_num].symbol_block[symbol].symbol_len++;
+								block_data[block_num].symbol_block[symbol].symbol_val <= 1;
+								block_data[block_num].symbol_block[symbol].symbol_val++;
+								// finish loops
+								i = temp_x + 2;
+								j = temp_y + 2;
+								break_flag = true;
+
+							}
+						}
+					}
+
+					if (!break_flag)
+					{
+						temp_x = (k >= 1 ? 1 : 0);
+						temp_x *= 4;
+						temp_y = (k != 1 ? 1 : 0);
+						temp_y *= 4;
+
+						for (unsigned int i = temp_x; i < temp_x + 4; ++i )
+						{
+							for (unsigned int j = temp_y; j < temp_y + 4; ++j)
+							{
+								if (bit_set_plane & ABSOLUTE(block_string[final_position][(i * BLOCKSIZEIMAGE) + j]) > 0)
+								{
+									block_data[block_num].tran_d += (1 << (2 - k));
+									block_data[block_num].symbol_block[symbol].type = ENUM_TYPE_TRAN_D;
+									block_data[block_num].symbol_block[symbol].symbol_len++;
+									block_data[block_num].symbol_block[symbol].symbol_val <= 1;
+									block_data[block_num].symbol_block[symbol].symbol_val++;
+									symbol ++;
+									// exit the loops
+									i = temp_x + 4;
+									j = temp_y + 4;
+									break_flag = true;
+								}
+							}
+						}
+						// bit D is 0
+						if((block_data[block_num].tran_d & (1 << (2-k))) == 0)
+						{
+							block_data[block_num].symbol_block[symbol].type = ENUM_TYPE_TRAN_D;
+							block_data[block_num].symbol_block[symbol].symbol_len++;
+							block_data[block_num].symbol_block[symbol].symbol_val <= 1;
+
+
+						}	
+					}
+				}
+			}
+		}
+	    // if tran_d is 0 error
+		if (block_data[block_num].tran_d == 0)
+		{
+			printf("ERROR: BLOCKSCAN TRAN_D IS 0");
+		}
+
+		// now determine TypeCi is needed
+		for (unsigned int k = 0; k < 3; ++k)
+		{
+			if ((block_data[block_num].tran_d & (1 << (2-k))) != 0)
+			{
+				// Header part 4 custom 2 bits
+
+				temp_x = (k >= 1 ? 1 : 0);
+				temp_x *= 2;
+				temp_y = (k != 1 ? 1 : 0);
+				temp_y *= 2;
+				int p = 1;
+				for (unsigned int i = 0; i < 4; ++i)
+				{
+					if ((block_data[block_num].type_ci[k] << (1 << (3 -i))) != 1 )
+					{
+						p =0;
+						break;
+					}
+				}
+				// p = 0 case
+				if ( p == 0)
+				{
+					unsigned int counter = 0;
+					if (block_data[block_num].symbol_block[symbol].symbol_len != 0)
+					{
+						symbol++;
+					}
+					block_data[block_num].symbol_block[symbol].type = ENUM_TYPE_CI;
+					for (unsigned int i = temp_x ; i < temp_x + 2; ++i)
+					{
+						for (unsigned int j = temp_y; j < temp_y + 2; ++j)
+						{
+							if(((block_data[block_num].type_ci[k] & (1 << 3 - counter))) == 0)
+							{
+								if((bit_set_plane & ABSOLUTE(block_string[final_position][(i * BLOCKSIZEIMAGE) + j])) > 0)
+								{
+									block_data[block_num].type_ci[k] += (1 << (3 - counter));
+									block_data[block_num].symbol_block[symbol].symbol_len++;
+									block_data[block_num].symbol_block[symbol].symbol_val <= 1;
+									block_data[block_num].symbol_block[symbol].symbol_val++;
+									block_data[block_num].symbol_block[symbol].sign <<= 1;
+									block_data[block_num].symbol_block[symbol].sign += SIGN(block_string[final_position][(i * BLOCKSIZEIMAGE) + j]);
+								}
+								else
+								{
+									block_data[block_num].symbol_block[symbol].symbol_len++;
+									block_data[block_num].symbol_block[symbol].symbol_val <= 1;
+								}
+							}
+							else
+							{
+								temp_value = ((ABSOLUTE(block_string[final_position][(i * BLOCKSIZEIMAGE) + j]) & bit_set_plane) > 0 ? 1: 0);
+								
+								if (!compression_data->type_of_compression) // integer compression
+								{
+									// header part 4 custom 2 bits
+									block_data[block_num].children_ref_symbol <<= 1;
+									block_data[block_num].children_ref_symbol += temp_value;
+									block_data[block_num].children_sym_len ++;
+								}
+								else
+								{
+									// float compression
+									block_data[block_num].children_ref_symbol <<= 1;
+									block_data[block_num].children_ref_symbol += temp_value;
+									block_data[block_num].children_sym_len ++;
+								}
+							}
+							counter ++;
+						}
+					}
+				}
+				else
+				{
+					// p!= 0 refinement bits
+					for (unsigned int i = temp_x ; i < temp_x + 2; ++i)
+					{
+						for (unsigned int j = temp_y; j < temp_y + 2; ++j)
+						{
+							temp_value = ((ABSOLUTE(block_string[final_position][(i * BLOCKSIZEIMAGE) + j]) & bit_set_plane) > 0 ? 1: 0);
+							if (!compression_data->type_of_compression) // integer compression
+							{
+								// header part 4 custom 2 bits TODO CHECK
+								block_data[block_num].children_ref_symbol <<= 1;
+								block_data[block_num].children_ref_symbol += temp_value;
+								block_data[block_num].children_sym_len ++;
+							}
+							else
+							{
+								// float compression
+								block_data[block_num].children_ref_symbol <<= 1;
+								block_data[block_num].children_ref_symbol += temp_value;
+								block_data[block_num].children_sym_len ++;
+							}
+						}
+					}
+				}			
+			}
+		}
+
+		// now determine TranGi for the grand children
+		if (block_data[block_num].symbol_block[symbol].symbol_len != 0)
+		{
+			symbol++;
+		}
+		for (unsigned int k; k < 3; ++k)
+		{
+			// part 4 custom 2 bits
+
+			if (((block_data[block_num].tran_d & (1 << 2 - k)) != 0) && ((block_data[block_num].tran_gi & (1 << 2 - k)) == 0))
+			{
+				block_data[block_num].symbol_block[symbol].type = ENUM_TRAN_GI;
+				temp_x = (k >= 1 ? 1 : 0);
+				temp_x *= 4;
+				temp_y = (k != 1 ? 1 : 0);
+ 				temp_y *= 4;
+
+				bool break_flag = false;
+				for (unsigned int i = temp_x; i < temp_x + 4; ++i )
+				{
+					for (unsigned int j = temp_y; j < temp_y + 4; ++j)
+					{
+						if( (bit_set_plane & ABSOLUTE(block_string[final_position][(i * BLOCKSIZEIMAGE) + j])) > 0)
+						{
+							block_data[block_num].symbol_block[symbol].symbol_len++;
+							block_data[block_num].symbol_block[symbol].symbol_val <= 1;
+							block_data[block_num].symbol_block[symbol].symbol_val++;
+							block_data[block_num].symbol_block[symbol].sign <<= 1;
+							block_data[block_num].tran_gi += (1 << 2 - k);
+							// finish loop
+							i = temp_x + 4;
+							j = temp_y + 4;
+							break_flag = true;
+						}
+					}
+				}
+				if (!break_flag)
+				{
+					block_data[block_num].symbol_block[symbol].symbol_len++;
+					block_data[block_num].symbol_block[symbol].symbol_val <= 1;
+				}
+
+			}
+		}
+
+		// now determine TranHi for the grand children
+		if (block_data[block_num].symbol_block[symbol].symbol_len != 0)
+		{
+			symbol++;
+		}
+		for (unsigned int i = 0; i < 3; i++)
+		{
+			// part 4 custom 2 bits integer
+			
+			if (block_data[block_num].symbol_block[symbol].symbol_len != 0)
+			{
+				symbol++;
+			}
+			for (unsigned int j = 0; j < 4; j++)
+			{
+				temp_x = (i >= 1 ? 1 : 0) * 4 + (j >= 2 ? 1 : 0) * 2;
+				temp_y = (i != 1 ? 1 : 0) * 4 + (j % 2) * 2;
+				if (((block_data[block_num].tran_gi & (1 << (2 -i))) != 0) && ((block_data[block_num].tran_hi[i] & (1 << (3 -j))) == 0 ))
+				{
+					block_data[block_num].symbol_block[symbol].type = ENUM_TRAN_HI;
+					bool break_flag = false;
+					for (unsigned int k = temp_x; k < temp_x +2; k++)
+					{
+						for (unsigned int p = temp_y; p < temp_y + 2; p++)
+						{
+							if ((bit_set_plane & ABSOLUTE(block_string[final_position][(k * BLOCKSIZEIMAGE) + p])) > 0)
+							{
+								block_data[block_num].symbol_block[symbol].symbol_len++;
+								block_data[block_num].symbol_block[symbol].symbol_val <= 1;
+								block_data[block_num].symbol_block[symbol].symbol_val++;
+								block_data[block_num].tran_hi[i] += (1 << (3 -j));
+								// finish loop
+								k = temp_x + 2;
+								p = temp_y + 2;
+								break_flag = true;
+							}
+						}
+					}
+					if (!break_flag)
+					{
+						block_data[block_num].symbol_block[symbol].symbol_len++;
+						block_data[block_num].symbol_block[symbol].symbol_val <= 1;
+					}
+				}
+			}
+		}
+
+		for (unsigned i = 0; i < 3; i++)
+		{
+			// part 4 custom 2 bits integer
+			
+			for (unsigned j = 0; j < 4; j++)
+			{
+				temp_x = (i >= 1 ? 1 : 0) * 4 + (j >= 2 ? 1 : 0) * 2;
+				temp_y = (i != 1 ? 1 : 0) * 4 + (j % 2) * 2;
+				
+				if ((block_data[block_num].tran_hi[i] & ( 1 << (3 -j ))) != 0)
+				{
+					short t = 0;
+					unsigned int counter = 0;
+
+					for (unsigned int k = 0; k < 4; ++k)
+					{
+						if((block_data[block_num].type_hi[i*SIZE_TYPE+j] & (1 << (3 - k))) == 0)
+						{
+							counter++;
+						}
+					}
+
+					if (counter == 0)
+					{
+						for (unsigned int k = temp_x; k < temp_x +2; k++)
+						{
+							for (unsigned int p = temp_y; p < temp_y + 2; p++)
+							{
+								temp_value = ((ABSOLUTE(block_string[final_position][(k * BLOCKSIZEIMAGE) + p]) & bit_set_plane) > 0 ? 1 : 0);
+								
+								if (!compression_data->type_of_compression) // integer compression
+								{
+									// part 4 custom 2 bits integer
+									block_data[block_num].grand_children_ref_symbol[i] <<= 1;
+									block_data[block_num].grand_children_ref_symbol[i] += temp_value;
+									block_data[block_num].grand_children_sym_len[i]++;
+								}
+								else
+								{
+									block_data[block_num].grand_children_ref_symbol[i] <<= 1;
+									block_data[block_num].grand_children_ref_symbol[i] += temp_value;
+									block_data[block_num].grand_children_sym_len[i]++;
+								}
+							}
+
+						}
+						continue;
+					}
+
+					// if TranHI == 1, then four grand children TypeHij will be scanned
+
+					if (block_data[block_num].symbol_block[symbol].symbol_len != 0)
+					{
+						symbol++;
+					}
+					block_data[block_num].symbol_block[symbol].type = ENUM_TYPE_HIJ;
+
+					t = 0;
+					for (unsigned int k = temp_x; k < temp_x +2; k++)
+					{
+						for (unsigned int p = temp_y; p < temp_y + 2; p++)
+						{
+							if((block_data[block_num].type_hi[i*SIZE_TYPE+j] & (1 << (3 - t))) == 0)
+							{
+								if((bit_set_plane & ABSOLUTE(block_string[final_position][(k * BLOCKSIZEIMAGE) + p])) > 0)
+								{	
+									block_data[block_num].type_hi[i*SIZE_TYPE+j] += (1 << (3 - t));
+									block_data[block_num].symbol_block[symbol].symbol_len++;
+									block_data[block_num].symbol_block[symbol].symbol_val <= 1;
+									block_data[block_num].symbol_block[symbol].symbol_val++;
+									block_data[block_num].symbol_block[symbol].sign <<= 1;
+									block_data[block_num].symbol_block[symbol].sign += SIGN(block_string[final_position][(k * BLOCKSIZEIMAGE) + p]);
+								}
+								else
+								{
+									block_data[block_num].symbol_block[symbol].symbol_len++;
+									block_data[block_num].symbol_block[symbol].symbol_val <= 1;
+								}
+							}
+							else
+							{
+								// refinement
+								temp_value = ((ABSOLUTE(block_string[final_position][(k * BLOCKSIZEIMAGE) + p]) & bit_set_plane) > 0 ? 1 : 0);
+								if(!compression_data->type_of_compression) // integer compression
+								{
+									// part 4 custom 2 bits integer
+									block_data[block_num].grand_children_ref_symbol[i] <<= 1;
+									block_data[block_num].grand_children_ref_symbol[i] += temp_value;
+									block_data[block_num].grand_children_sym_len[i]++;
+								}
+								else
+								{
+									block_data[block_num].grand_children_ref_symbol[i] <<= 1;
+									block_data[block_num].grand_children_ref_symbol[i] += temp_value;
+									block_data[block_num].grand_children_sym_len[i]++;
+								}
+							}
+							t++;
+						}
+					}
+				}
+			}
+		}
+
+	}
+}
+
+
+void stages_encoding(	
+	block_data_t *block_data,
+	int **block_string,
+	compression_image_data_t *compression_data,
+	header_data_t *header_data,
+	unsigned int segment_number,
+	unsigned int bit_plane_number
+	)
+{
+	unsigned int last_block_gaggles = compression_data->segment_size % GAGGLE_SIZE;
+	unsigned int total_gaggles = compression_data->segment_size / GAGGLE_SIZE;
+
+	// check fo last gaggle
+	if (last_block_gaggles != 0)
+	{
+		total_gaggles++;
+	}
+	unsigned char **code_option_gaggles= (unsigned char **)calloc(total_gaggles, sizeof(unsigned char *));
+	bool **hit_flag = (bool **)calloc(total_gaggles, sizeof(bool *));
+
+	// 4.5.3.2
+
+	for( unsigned int gaggle_id = 0; gaggle_id < total_gaggles; gaggle_id++)
+	{
+		unsigned int block_index = gaggle_id * GAGGLE_SIZE;
+		code_option_gaggles[gaggle_id] = (unsigned char *)calloc(3, sizeof(unsigned char));
+		hit_flag[gaggle_id] = (bool *)calloc(3, sizeof(bool));
+		for(unsigned int i = 0; i < 3; i++)
+		{
+			code_option_gaggles[gaggle_id][i] = 0;
+			hit_flag[gaggle_id][i] = false;
+		}
+		unsigned int blocks_in_gaggle = (block_index + GAGGLE_SIZE <= compression_data->segment_size ? GAGGLE_SIZE : compression_data->segment_size - block_index);
+		coding_options(block_data, block_string, compression_data, header_data, segment_number, bit_plane_number, block_index, blocks_in_gaggle, code_option_gaggles[gaggle_id], hit_flag[gaggle_id]);
+		gaggle_encode_1(block_data, block_string, compression_data, header_data, segment_number, bit_plane_number, block_index, blocks_in_gaggle, code_option_gaggles[gaggle_id], hit_flag[gaggle_id]);
+	}
+	for( unsigned int gaggle_id = 0; gaggle_id < total_gaggles; gaggle_id++)
+	{
+		unsigned int block_index = gaggle_id * GAGGLE_SIZE;
+		unsigned int blocks_in_gaggle = (block_index + GAGGLE_SIZE <= compression_data->segment_size ? GAGGLE_SIZE : compression_data->segment_size - block_index);
+		gaggle_encode_2(block_data, block_string, compression_data, header_data, segment_number, bit_plane_number, block_index, blocks_in_gaggle, code_option_gaggles[gaggle_id], hit_flag[gaggle_id]);
+	}
+	for( unsigned int gaggle_id = 0; gaggle_id < total_gaggles; gaggle_id++)
+	{
+		unsigned int block_index = gaggle_id * GAGGLE_SIZE;
+		unsigned int blocks_in_gaggle = (block_index + GAGGLE_SIZE <= compression_data->segment_size ? GAGGLE_SIZE : compression_data->segment_size - block_index);
+		gaggle_encode_3(block_data, block_string, compression_data, header_data, segment_number, bit_plane_number, block_index, blocks_in_gaggle, code_option_gaggles[gaggle_id], hit_flag[gaggle_id]);
+	}
+
+}
+
+void coding_options(	
+	block_data_t *block_data,
+	int **block_string,
+	compression_image_data_t *compression_data,
+	header_data_t *header_data,
+	unsigned int segment_number,
+	unsigned int bit_plane_number,
+	unsigned int block_index,
+	unsigned int blocks_in_gaggle,
+	unsigned char *code_option_gaggle,
+	bool *hit_flag
+	)
+{
+
+}
+
+void gaggle_encode_1(	
+	block_data_t *block_data,
+	int **block_string,
+	compression_image_data_t *compression_data,
+	header_data_t *header_data,
+	unsigned int segment_number,
+	unsigned int bit_plane_number,
+	unsigned int block_index,
+	unsigned int blocks_in_gaggle,
+	unsigned char *code_option_gaggle,
+	bool *hit_flag
+	)
+{
+
+}
+
+void gaggle_encode_2(	
+	block_data_t *block_data,
+	int **block_string,
+	compression_image_data_t *compression_data,
+	header_data_t *header_data,
+	unsigned int segment_number,
+	unsigned int bit_plane_number,
+	unsigned int block_index,
+	unsigned int blocks_in_gaggle,
+	unsigned char *code_option_gaggle,
+	bool *hit_flag
+	)
+{
+
+}
+
+void gaggle_encode_3(	
+	block_data_t *block_data,
+	int **block_string,
+	compression_image_data_t *compression_data,
+	header_data_t *header_data,
+	unsigned int segment_number,
+	unsigned int bit_plane_number,
+	unsigned int block_index,
+	unsigned int blocks_in_gaggle,
+	unsigned char *code_option_gaggle,
+	bool *hit_flag
+	)
+{
+
 }

@@ -69,7 +69,7 @@ include $(CONFIG_PATH)/$(HIP_CONFIG)
 endif
 
 ################################# COMPILER MAIN ###############################
-all: cpu openmp opencl cuda #hip
+all: cpu #openmp opencl cuda #hip
 #	@echo "error: must specify target: cpu, openmp, opencl, cuda, hip"
 
 ################################### COMMON ################################

@@ -11,6 +11,11 @@
 #include "obpmark_time.h"
 #include "math.h"
 
+#define ABSOLUTE(a) ((a) >=0 ? (a): -(a))
+
+#define NEGATIVE_SIGN 1
+#define POSITIVE_SIGN 0
+#define SIGN(var) ((var < 0) ? NEGATIVE_SIGN : POSITIVE_SIGN)
 
 /* Typedefs */
 #ifdef CUDA
@@ -110,6 +115,15 @@ struct header_data_t
 
 }; 
 
+struct str_symbol_details_t
+{
+	unsigned char symbol_val;
+	unsigned char symbol_len;
+	unsigned char symbol_mapped_pattern;
+	unsigned char sign;
+	unsigned char type;
+
+};
 
 struct block_data_t
 {
@@ -118,6 +132,25 @@ struct block_data_t
 	unsigned long mapped_dc;
 	unsigned long max_ac_bit_size;
 	unsigned long mapped_ac;
+	// plane history part
+	unsigned char type_p;
+	unsigned char tran_b;
+	unsigned char tran_d;
+	unsigned char tran_gi;
+	unsigned char type_ci[3];
+	unsigned char tran_hi[3];
+	unsigned char type_hi[9];
+
+	// srt symbol details
+	str_symbol_details_t symbol_block[MAX_SYMBOLS_IN_BLOCK];
+	// refinement symbol details
+	unsigned char parent_ref_symbol;
+	unsigned char parent_sym_len;
+	unsigned short children_ref_symbol;
+	unsigned char children_sym_len;
+	unsigned short grand_children_ref_symbol[3];
+	unsigned char grand_children_sym_len[3];
+
 };
 
 typedef struct {

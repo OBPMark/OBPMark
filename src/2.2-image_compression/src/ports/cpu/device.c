@@ -86,6 +86,11 @@ void process_benchmark(
 	{
 		block_string[i] = (int *)calloc(BLOCKSIZEIMAGE * BLOCKSIZEIMAGE,sizeof(long));
 	}
+	/*block_string = (int **)calloc(total_blocks * BLOCKSIZEIMAGE,sizeof(long *));
+	for(unsigned int i = 0; i < total_blocks * BLOCKSIZEIMAGE ; i++)
+	{
+		block_string[i] = (int *)calloc(BLOCKSIZEIMAGE,sizeof(int));
+	}*/
 
 	// read the image data
 	for (unsigned int i = 0; i < h_size_padded; ++ i)
@@ -120,35 +125,29 @@ void process_benchmark(
 	// compute the BPE
 	compute_bpe(compression_data, block_string, total_blocks);
 	
-	// print the block_string
-	/*for (unsigned int i = 0; i < total_blocks; ++i)
-	{
-		for (unsigned int j = 0; j < BLOCKSIZEIMAGE * BLOCKSIZEIMAGE; ++j)
-		{
-			printf("%d ",block_string[i][j]);
-		}
-		printf("\n");
-	}*/
-	
 	/*
 	##########################################################################################################
 	*/
-	// write the transformed image to a binary file
+	// write transformed image to file
+	
+	// write block string to file
 	// open the file
-	/*FILE *fp = fopen("output.bin", "wb");
+	/*FILE *fp;
+	fp = fopen("block_string.txt", "w");
 	if (fp == NULL)
 	{
 		printf("Error opening file!\n");
-		return;
+		exit(1);
 	}
 	// write the data
-	for (unsigned int i = 0; i < h_size_padded; ++ i)
+	for (unsigned int i = 0; i < total_blocks; ++ i)
 	{
-		for (unsigned int j = 0; j < w_size_padded; ++j)
+		for (unsigned int j = 0; j < BLOCKSIZEIMAGE * BLOCKSIZEIMAGE; ++j)
 		{
-			fwrite(&transformed_image[i][j], sizeof(int), 1, fp);
+			fprintf(fp, "%d\n", block_string[i][j]);
 		}
-	}*/
+	}
+	exit(1);*/
 	/*
 	##########################################################################################################
 	*/

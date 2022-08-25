@@ -35,6 +35,18 @@
 #define GAGGLE_SIZE    16
 #define UNCODED_VALUE 0xFF
 
+/* AC encoding defines */
+#define ENUM_TYPE_P 1
+#define ENUM_TYPE_TRAN_B 2
+#define ENUM_TYPE_TRAN_D 3
+#define ENUM_TYPE_CI 4
+#define ENUM_TRAN_GI 5
+#define ENUM_TRAN_HI 6
+#define ENUM_TYPE_HIJ 7
+
+#define SIZE_TYPE 3
+#define MAX_SYMBOLS_IN_BLOCK 24
+
 /* Input Defines defines */
 #define MINIMUNWSIZE		17
 #define MINIMUNHSIZE		17
