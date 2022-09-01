@@ -1,5 +1,5 @@
 /** 
- * \brief OBPMark "Image corrections and calibrations." processing task.
+ * \brief OBPMark "Radar image generation" processing task.
  * \file processing.c
  * \author david.steenari@esa.int
  * European Space Agency Community License V2.3 applies.
@@ -135,7 +135,7 @@ float SAR_DCE(float *aux, framefp_t data, radar_params_t *params)
     float mean = 0;
     for (int i = 0; i < data.h-1; i++)
         for(int j = 0; j < width; j++){
-            c_aux[j] += std::conj(c_data[i*width+j]) * c_data[(i+1)*width+j]; 
+            c_aux[j] += std::conj(c_data[i*off+j]) * c_data[(i+1)*off+j]; 
             if (i == data.h-2) mean += std::arg(c_aux[j]);
         }
     

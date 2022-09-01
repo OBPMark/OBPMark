@@ -1,6 +1,6 @@
 /**
  * \file device.c
- * \brief Benchmark #1.2 CPU version (sequential) device initialization. 
+ * \brief Benchmark #1.2 OPENMP version device initialization. 
  * \author Marc Sole Bonet (BSC)
  */
 #include "device.h"

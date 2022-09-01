@@ -1,5 +1,5 @@
 /** 
- * \brief OBPMark "Image corrections and calibrations." processing task and image kernels.
+ * \brief OBPMark "Radar image generation" processing task and image kernels.
  * \file processing.h
  * \author david.steenari@esa.int
  * European Space Agency Community License V2.3 applies.

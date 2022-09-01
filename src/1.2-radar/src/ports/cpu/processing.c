@@ -7,6 +7,15 @@
  */
 #include "processing.h"
 
+void printF(float *data, uint32_t width, uint32_t height)
+{
+//    for(int i = 0; i < 3; i++){
+        for(int j = 0; j < 5; j++)
+            printf("%f%+fi ", data[2*j], data[2*j+1]); //i*next_power_of2(width)*2+j*2], data[i*next_power_of2(width)*2+j*2+1]);
+        printf("\n");
+//    }
+}
+
 void fft(float *data, int nn);
 void ifft(float *data, int nn);
 void complex_transpose(framefp_t *in, framefp_t *out, uint32_t nrows, uint32_t ncols);
@@ -135,7 +144,7 @@ float SAR_DCE(float *aux, framefp_t data, radar_params_t *params)
     float mean = 0;
     for (int i = 0; i < data.h-1; i++)
         for(int j = 0; j < width; j++){
-            c_aux[j] += std::conj(c_data[i*width+j]) * c_data[(i+1)*width+j]; 
+            c_aux[j] += std::conj(c_data[i*off+j]) * c_data[(i+1)*off+j]; 
             if (i == data.h-2) mean += std::arg(c_aux[j]);
         }
     
@@ -162,7 +171,7 @@ void reference_multiplication(framefp_t *data, float *ref)
     uint32_t width = data->w >> 1;
     for (int i = 0; i < data->h; i++)
         for (int j = 0; j < width ; j++)
-            c_data[i*width+j] = c_data[i*width+j] * std::conj(c_ref[j]);
+            c_data[i*width+j] =  c_data[i*width+j] * std::conj(c_ref[j]);
 }
 
 void SAR_range_compression(framefp_t *data, float *rrf)
@@ -196,7 +205,7 @@ void SAR_rcmc(framefp_t *data, uint32_t *offsets)
         for (int j = 0; j < width; j++)
         {
             uint32_t ind = i * width + j;
-            c_data[ind] = (offsets[ind]<(height*width)?c_data[offsets[ind]]:0);
+            if(offsets[ind]<(height*width)) c_data[ind] = c_data[offsets[ind]];
         }
 }
 
@@ -248,6 +257,7 @@ void quantize(framefp_t *data, frame8_t *image, float max, float min)
     }
 }
 
+
 void SAR_focus(radar_data_t *data){
     float max = FLT_MIN;
     float min = FLT_MAX;
@@ -285,6 +295,7 @@ void SAR_focus(radar_data_t *data){
         /* Multilook */
         SAR_multilook(&data->range_data[i], &data->ml_data, data->params, i, &max, &min);
     }
+    printf("max: %.12f\nmin: %.12f\n",max,min);
     quantize(&data->ml_data, &data->output_image, max, min);
 }
 
