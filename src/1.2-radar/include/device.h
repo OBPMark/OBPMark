@@ -28,6 +28,40 @@ typedef struct {
 
 /* Typedefs */
 #ifdef CUDA
+
+#include <cuda_runtime.h>
+#include <cufft.h>
+
+struct radar_data_t
+{
+	float *range_data; //width: range, height: azimuth
+	float *azimuth_data; //width: azimuth, height: range
+	float *ml_data;
+	uint8_t *output_image;
+	float *rrf; //range reference function
+	float *arf; // azimuth reference function
+	uint32_t *offsets; //Offset table for RCMC
+	radar_params_t *params;
+	//cuda specific
+    cufftHandle rrf_plan;
+    cufftHandle arf_plan;
+    cufftHandle range_plan;
+    cufftHandle azimuth_plan;
+    //accessible from device
+    radar_params_t *host_params;
+    uint32_t out_width;
+    uint32_t out_height;
+};
+
+typedef struct {
+	cudaEvent_t *start;
+	cudaEvent_t *stop;
+    cudaEvent_t *start_memory_copy_device;
+	cudaEvent_t *stop_memory_copy_device;
+	cudaEvent_t *start_memory_copy_host;
+	cudaEvent_t *stop_memory_copy_host;
+} radar_time_t; 
+
 #elif OPENCL
 #elif OPENMP
 /* OPENMP version */

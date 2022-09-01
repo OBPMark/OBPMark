@@ -46,7 +46,8 @@
 #ifdef CUDA
 #define DEVICESELECTED		0
 #define BLOCK_SIZE_PLANE 	256 
-#define BLOCK_SIZE 		16
+#define BLOCK_SIZE 		1024
+#define TILE_SIZE 		32
 
 #elif OPENCL
 #define DEVICESELECTED		0
