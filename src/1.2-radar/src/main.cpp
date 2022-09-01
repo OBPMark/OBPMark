@@ -123,7 +123,10 @@ void init_benchmark(
 	}
 
 	/* Initialize memory on the device and copy data */
-	device_memory_init(radar_data, params, output_img->h, output_img->w);
+	if(!device_memory_init(radar_data, params, output_img->h, output_img->w)){
+	    printf("error initializing memory\n");
+	    return;
+	}
 	copy_memory_to_device(radar_data, t, input_data, params);
 
 
@@ -135,6 +138,7 @@ void init_benchmark(
 
 	/* Get benchmark times */
 	get_elapsed_time(radar_data, t, csv_mode, database_mode,verbose_print, timestamp);
+	
 	if(print_output)
 		print_output_result(output_img);
 	else 
@@ -175,18 +179,6 @@ int main(int argc, char **argv)
 	if(ret == ARG_ERROR) {
 		exit(-1);
 	}
-	/* Find output image size */
-	float ratio;
-	if ( in_width > in_height ){
-	    ratio = (float) in_width/ (float) in_height;
-        out_width = ceil((float)in_width/(ratio * ml_factor));
-        out_height = in_height / ml_factor;
-	}
-    else {
-	    ratio = (float) in_height/ (float) in_width;
-        out_width = in_width / ml_factor;
-        out_height = ceil((float)in_height/(ratio * ml_factor));
-    }
 
 	/* Create data to hold input parameters */
 	params = (radar_params_t *) malloc(sizeof(radar_params_t));
@@ -194,6 +186,11 @@ int main(int argc, char **argv)
 	/* Read/Generate input parameters */
 	if(random_data) benchmark_gen_rand_params(params,in_height, in_width);
     else if(load_params_from_file(params, in_height, in_width, input_folder) == FILE_LOADING_ERROR) exit(-1);
+
+	/* Find output image size */
+    float ratio = (float) params->asize/ (float) params->rvalid;
+    out_width = params->rvalid / ml_factor;
+    out_height = ceil((float) params->asize/(ratio * ml_factor));
 
 	/* Fix output height according to valid azimuth samples */
 	float azi_factor =(float) params->asize/(float)out_height;
@@ -215,7 +212,7 @@ int main(int argc, char **argv)
     output_img->f = (uint8_t *) malloc(sizeof(uint8_t)*out_size);
     output_img->w = out_width;
     output_img->h = out_height;
-	
+
     /* Generate random data */
 	if (random_data) benchmark_gen_rand_data(input_data, params, in_height, in_width);
 	else if(load_data_from_files(input_data, params, in_height, in_width, input_folder) == FILE_LOADING_ERROR)exit(-1);
