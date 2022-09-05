@@ -42,7 +42,7 @@ void build_block_string(
 void compute_bpe(
     compression_image_data_t *compression_data,
     int **block_string,
-    unsigned int total_blocks
+    unsigned int num_segments
     );
 
 

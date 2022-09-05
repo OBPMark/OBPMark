@@ -30,10 +30,11 @@ void print_usage(const char *exec_name)
 	printf(" -C : print time in CSV with timestamp\n");
 	printf(" -t : print time in verbose\n");
 	printf(" -o : print output\n");
+	printf(" -O : output file name\n");
 }
 
 
-int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int *h_size, unsigned int *bit_size, unsigned int *segment_size, bool *type, bool *csv_mode, bool *database_mode, bool *print_output, bool *verbose_output, char *input_file)
+int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int *h_size, unsigned int *bit_size, unsigned int *segment_size, bool *type, bool *csv_mode, bool *database_mode, bool *print_output, bool *verbose_output, char *input_file, char *output_file)
 {
 	if(argc < 3) {
 		print_usage(argv[0]);
@@ -52,6 +53,7 @@ int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int 
 			case 'c' : *csv_mode = true;break;
 			case 'C' : *database_mode = true;break;
 			case 'o' : *print_output = true;break;
+			case 'O' : args +=1; strcpy(output_file,argv[args]);break;
 			case 't' : *verbose_output = true;break;
 			default: print_usage(argv[0]); return ARG_ERROR;
 		}
@@ -89,6 +91,11 @@ int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int 
 		printf("-s need to be set and smaller than or equal to %d\n\n", MAXSEGMENTSIZE);
 		print_usage(argv[0]);
 		return ARG_ERROR;
+	}
+	// check if the output file is not empty
+	if(strcmp(output_file, "") == 0) {
+		// set default output file name
+		strcpy(output_file, DEFAULTOUTPUTFILENAME);
 	}
 	
 		

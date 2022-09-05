@@ -12,7 +12,7 @@ void coefficient_scaling (int **transformed_image,unsigned int h_size_padded,uns
 void coeff_regroup(int **transformed_image,unsigned int h_size_padded,unsigned int w_size_padded);
 
 void ac_depth_encoder(block_data_t *block_data,compression_image_data_t *compression_data,header_data_t *header_data,unsigned int segment_number);
-void ac_gaggle_encode(block_data_t *block_data, compression_image_data_t *compression_data, header_data_t *header_data,unsigned int max_k,unsigned int id_length,unsigned int gaggle_number,unsigned int number_of_gaggles,bool reminder_gaggle,unsigned int N);
+void ac_gaggle_encode(block_data_t *block_data, compression_image_data_t *compression_data, header_data_t *header_data,unsigned int max_k,unsigned int id_length,unsigned int gaggle_number,unsigned int number_of_gaggles,bool reminder_gaggle,unsigned int N, unsigned int segment_number);
 void dpcm_ac_mapper(block_data_t *block_data,compression_image_data_t *compression_data,header_data_t *header_data,unsigned int segment_number,unsigned int N);
 void bit_plane_encoding(block_data_t *block_data,int **block_string,compression_image_data_t *compression_data,header_data_t *header_data,unsigned int segment_number,unsigned int bit_plane_number);
 void stages_encoding(block_data_t *block_data,int **block_string,compression_image_data_t *compression_data,header_data_t *header_data,unsigned int segment_number,unsigned int bit_plane_number);
@@ -20,7 +20,7 @@ void coding_options(block_data_t *block_data,int **block_string,compression_imag
 void gaggle_encode_1(block_data_t *block_data,int **block_string,compression_image_data_t *compression_data,header_data_t *header_data,unsigned int segment_number,unsigned int bit_plane_number,unsigned int block_index,unsigned int blocks_in_gaggle,unsigned char *code_option_gaggle,bool *hit_flag);
 void gaggle_encode_2(block_data_t *block_data,int **block_string,compression_image_data_t *compression_data,header_data_t *header_data,unsigned int segment_number,unsigned int bit_plane_number,unsigned int block_index,unsigned int blocks_in_gaggle,unsigned char *code_option_gaggle,bool *hit_flag);
 void gaggle_encode_3(block_data_t *block_data,int **block_string,compression_image_data_t *compression_data,header_data_t *header_data,unsigned int segment_number,unsigned int bit_plane_number,unsigned int block_index,unsigned int blocks_in_gaggle,unsigned char *code_option_gaggle,bool *hit_flag);
-
+void ref_bit_end_encode(block_data_t *block_data,int **block_string,compression_image_data_t *compression_data,header_data_t *header_data,unsigned int segment_number,unsigned int bit_plane_number);
 
 
 
@@ -732,7 +732,8 @@ void dc_encoder(
 	unsigned int gaggle_id,
 	unsigned int number_of_gaggles,
 	bool reminder_gaggle,
-	unsigned int N 
+	unsigned int N ,
+	unsigned int segment_number
 )
 {
 	const bool brute_force = false;
@@ -797,22 +798,21 @@ void dc_encoder(
 	}
 
 
-	// print the header 
-	// TODO
+
 	// encode_selection with size id_length
+	write_to_the_output_segment(compression_data->segment_list,encode_selection,id_length,segment_number);
 
 	// now print the output values
 	for (unsigned int i = start_position; i < start_position + GAGGLE_SIZE; i ++)
 	{
 		if ((encode_selection == UNCODED_VALUE) || (i == 0) )
 		{
-			// print the uncoded value. block_data[i].mapped_dc with size N
-			//TODO
+			write_to_the_output_segment(compression_data->segment_list,block_data[i].mapped_dc,N,segment_number);
 		}
 		else
 		{
-			// print the coded value.  1 with size (((block_data[i].mapped_dc + 1) >> encode_selection) + 1) // coding first part
-			// TODO
+			
+			write_to_the_output_segment(compression_data->segment_list,1, ((block_data[i].mapped_dc) >> encode_selection)+1 ,segment_number);
 		}
 	}
 	// now generate the second part if the encode_selection is not UNCODED_VALUE
@@ -820,8 +820,7 @@ void dc_encoder(
 	{
 		for (unsigned int i = std::max(start_position, (unsigned int)(1)); i < (start_position + GAGGLE_SIZE); ++i )
 		{
-			// print the coded value.  block_data[i].mapped_dc with size encode_selection 
-			// TODO
+			write_to_the_output_segment(compression_data->segment_list,block_data[i].mapped_dc,encode_selection,segment_number);
 		}
 	}
 
@@ -833,7 +832,8 @@ void dc_entropy_coding(
 	compression_image_data_t *compression_data,
 	header_data_t *header_data,
 	unsigned int N,
-	unsigned int quantization_factor
+	unsigned int quantization_factor,
+	unsigned int segment_number
 )
 {
 	unsigned int id_length = 0;
@@ -875,7 +875,7 @@ void dc_entropy_coding(
 	// loop over the gaggles
 	for (unsigned int i = 0; i < number_of_gaggles; i ++)
 	{
-		dc_encoder(block_data, compression_data, header_data, max_k, id_length, i, number_of_gaggles,reminder_gaggle, N);
+		dc_encoder(block_data, compression_data, header_data, max_k, id_length, i, number_of_gaggles,reminder_gaggle, N, segment_number);
 	}
 
 	// additional bit planes of DC coefficients
@@ -899,7 +899,7 @@ void dc_entropy_coding(
 			for (unsigned int k = 0; k < compression_data->segment_size; k++)
 			{
 				// print (block_data[k].dc_reminder >> (quantization_factor - i -1)) with size 1;
-				// TODO
+				write_to_the_output_segment(compression_data->segment_list,(block_data[k].dc_reminder >> (quantization_factor - i - 1)),1,segment_number);
 			}
 		}
 	}
@@ -908,7 +908,30 @@ void dc_entropy_coding(
 }
 
 
+void header_output(
+	compression_image_data_t *compression_data,
+	header_data_t *header_data,
+	unsigned int segment_id)
+{
+	#ifdef INCLUDE_HEADER
+	write_to_the_output_segment(compression_data->segment_list,(int)header_data->start_img_flag,1, segment_id);
+	write_to_the_output_segment(compression_data->segment_list,(int)header_data->end_img_flag,1, segment_id);
+	write_to_the_output_segment(compression_data->segment_list,header_data->segment_count,8, segment_id);
+	write_to_the_output_segment(compression_data->segment_list,header_data->bit_depth_dc,5, segment_id);
+	write_to_the_output_segment(compression_data->segment_list,header_data->bit_depth_ac,5, segment_id);
+	write_to_the_output_segment(compression_data->segment_list,0,1, segment_id); //RESERVED 
+	write_to_the_output_segment(compression_data->segment_list,(int)header_data->part_2_flag,1, segment_id);
+	write_to_the_output_segment(compression_data->segment_list,(int)header_data->part_3_flag,1, segment_id);
+	write_to_the_output_segment(compression_data->segment_list,(int)header_data->part_4_flag,1, segment_id);
 
+	if (header_data->end_img_flag == true)
+	{
+		write_to_the_output_segment(compression_data->segment_list,header_data->pad_rows,3, segment_id);
+		write_to_the_output_segment(compression_data->segment_list,0,5, segment_id); // RESERVED
+	}
+	// MISSING PART 2 3 and 4
+	#endif
+}
 
 void dc_encoding(
 	compression_image_data_t *compression_data,
@@ -942,8 +965,8 @@ void dc_encoding(
 		{
 			// calculate the dc bit size counting the number of bits needed to represent the dc value
 			
-			dc_bit_size = ceil(log2(dc_value + 1));
-			//dc_bit_size = ceil(log2(1 + dc_value)) + 1;
+			//dc_bit_size = ceil(log2(dc_value + 1));
+			dc_bit_size = ceil(log2(1 + dc_value)) + 1;
 		}
 		// if the dc bit size is greater than the max bit size, then set it to the max bit size
 		header_data->bit_depth_dc = (unsigned char) std::max(dc_bit_size, (unsigned int)(header_data->bit_depth_dc));
@@ -962,8 +985,10 @@ void dc_encoding(
 	block_data[i].max_ac_bit_size = max_ac_value_block;
 	}
 	// calculate the ac bit size
-	header_data->bit_depth_ac = (unsigned char)(std::ceil(std::log2(std::abs(max_ac_value))) + 1) ;
+	header_data->bit_depth_ac = (unsigned char)(std::ceil(std::log2(std::abs(max_ac_value)))) ;
 	// finish getting the AC and DC bit sizes
+	header_output(compression_data, header_data,segment_number);
+
 	// get the quantization value
 	if (header_data->bit_depth_dc <= 3)
 	{
@@ -1003,13 +1028,13 @@ void dc_encoding(
 		for (unsigned int i = 0; i < compression_data->segment_size; ++i)
 		{
 			// write  block_data[i].shifted_dc with only one bit
-			// TODO
+			write_to_the_output_segment(compression_data->segment_list,block_data[i].shifted_dc,1, segment_number);
 		}
 	}
 	else
 	{
 		coding_quantized_coefficients(block_data, compression_data->segment_size, N);
-		dc_entropy_coding(block_data, compression_data, header_data, N, quantization_factor);
+		dc_entropy_coding(block_data, compression_data, header_data, N, quantization_factor,segment_number);
 	}
 
 	
@@ -1036,7 +1061,7 @@ void ac_encoding(
 			for (unsigned int i = 0; i < compression_data->segment_size; ++i)
 			{
 				// write block_data[i].max_ac_bit_size[j] with only one bit
-				// TODO
+				write_to_the_output_segment(compression_data->segment_list,block_data[i].max_ac_bit_size,1, segment_number);
 				
 			}
 			
@@ -1049,7 +1074,9 @@ void ac_encoding(
 
 		for ( bit_plane = header_data-> bit_depth_ac; bit_plane > 0; bit_plane --)
 		{
-			// stage 0 to stage 3
+			// stage 0 
+			// MISSING heather part 4
+			//1,2, 3
 			bit_plane_encoding(block_data, block_string, compression_data, header_data, segment_number, bit_plane);
 			// stage 4
 			stages_encoding(block_data, block_string, compression_data, header_data, segment_number, bit_plane);
@@ -1113,7 +1140,7 @@ void ac_depth_encoder(
 	// loop over the gaggles
 	for (unsigned int i = 0; i < number_of_gaggles; i ++)
 	{
-		ac_gaggle_encode(block_data, compression_data, header_data, max_k, id_length, i, number_of_gaggles,reminder_gaggle, N);
+		ac_gaggle_encode(block_data, compression_data, header_data, max_k, id_length, i, number_of_gaggles,reminder_gaggle, N, segment_number);
 	}
 
 }
@@ -1127,7 +1154,8 @@ void ac_gaggle_encode(
 	unsigned int gaggle_number,
 	unsigned int number_of_gaggles,
 	bool reminder_gaggle,
-	unsigned int N
+	unsigned int N,
+	unsigned int segment_number
 	)
 {
 	const bool brute_force = false;
@@ -1193,8 +1221,8 @@ void ac_gaggle_encode(
 
 
 	// print the header 
-	// TODO
 	// encode_selection with size id_length
+	write_to_the_output_segment(compression_data->segment_list,encode_selection,id_length,segment_number);
 
 	// now print the output values
 	for (unsigned int i = start_position; i < start_position + GAGGLE_SIZE; i ++)
@@ -1202,12 +1230,12 @@ void ac_gaggle_encode(
 		if ((encode_selection == UNCODED_VALUE) || (i == 0) )
 		{
 			// print the uncoded value. block_data[i].mapped_ac with size N
-			//TODO
+			write_to_the_output_segment(compression_data->segment_list,block_data[i].mapped_ac,N,segment_number);
 		}
 		else
 		{
 			// print the coded value.  1 with size (((block_data[i].mapped_ac + 1) >> encode_selection) + 1) // coding first part
-			// TODO
+			write_to_the_output_segment(compression_data->segment_list,1,(((block_data[i].mapped_ac) >> encode_selection) + 1),segment_number);
 		}
 	}
 	// now generate the second part if the encode_selection is not UNCODED_VALUE
@@ -1216,7 +1244,7 @@ void ac_gaggle_encode(
 		for (unsigned int i = std::max(start_position, (unsigned int)(1)); i < (start_position + GAGGLE_SIZE); ++i )
 		{
 			// print the coded value.  block_data[i].mapped_ac with size encode_selection 
-			// TODO
+			write_to_the_output_segment(compression_data->segment_list,block_data[i].mapped_ac,encode_selection,segment_number);
 		}
 	}
 }
@@ -1262,26 +1290,17 @@ void dpcm_ac_mapper(
 void compute_bpe(
     compression_image_data_t *compression_data,
     int **block_string,
-    unsigned int total_blocks
+    unsigned int num_segments
     )
 {
- 	// calculate the number of segments that are generated by the block_string if have some left from the division we add 1 to the number of segments
-	unsigned int num_segments = 0;
-	if (total_blocks % compression_data->segment_size != 0)
-	{
-		num_segments = (total_blocks / compression_data->segment_size) + 1;
-	}
-	else
-	{
-		num_segments = total_blocks / compression_data->segment_size;
-	}
+ 	
 	// create and allocate memory for the header
 	header_data_t *header_data = (header_data_t *)malloc(sizeof(header_data_t));
 	// for the first header add that is the first header and init the values to 0
 	header_data->start_img_flag = true;
 	header_data->end_img_flag = false;
-	header_data->bit_depth_dc = 1;
-	header_data->bit_depth_ac = 1;
+	header_data->bit_depth_dc = 0;
+	header_data->bit_depth_ac = 0;
 	header_data->part_2_flag = false;
 	header_data->part_3_flag = false;
 	header_data->part_4_flag = false;
@@ -1291,21 +1310,25 @@ void compute_bpe(
 	{
 		// update the segment number
 		header_data->segment_count = i;
-		// now loop over the number of blocks in each segment and calculate the bpe for each block	
-		block_data_t *block_data = (block_data_t *)malloc(sizeof(block_data_t) * compression_data->segment_size);
-		// First calculate DC encoding
-		dc_encoding(compression_data,block_data,header_data, block_string, i);
-		// second calculate AC encoding
-		ac_encoding(compression_data,block_data,header_data, block_string, i);
-		// third update header
-			
-
-		
 		// check if we are at the last segment and if so add the last header
 		if (i == num_segments - 1)
 		{
 			header_data->end_img_flag = true;
 		}
+		// now loop over the number of blocks in each segment and calculate the bpe for each block	
+		block_data_t *block_data = (block_data_t *)malloc(sizeof(block_data_t) * compression_data->segment_size);
+		// First calculate DC encoding
+		dc_encoding(compression_data,block_data,header_data, block_string, i);
+		// second calculate AC encoding
+		//ac_encoding(compression_data,block_data,header_data, block_string, i);
+		// third update header
+		header_data->start_img_flag = false;
+		header_data->bit_depth_dc = 0;
+		header_data->bit_depth_ac = 0;
+		header_data->part_2_flag = false;
+		header_data->part_3_flag = false;
+		header_data->part_4_flag = false;
+		
 		// write the segment to the binary output with the header
 		// write header and clean up the header
 		//void header_write(header_data_t *header_data, unsigned int segment_number);
@@ -1919,7 +1942,46 @@ void stages_encoding(
 		unsigned int blocks_in_gaggle = (block_index + GAGGLE_SIZE <= compression_data->segment_size ? GAGGLE_SIZE : compression_data->segment_size - block_index);
 		gaggle_encode_3(block_data, block_string, compression_data, header_data, segment_number, bit_plane_number, block_index, blocks_in_gaggle, code_option_gaggles[gaggle_id], hit_flag[gaggle_id]);
 	}
+	ref_bit_end_encode(block_data, block_string, compression_data, header_data, segment_number, bit_plane_number);
 
+}
+
+
+void pattern_mapping(
+	str_symbol_details_t *symbol_details
+)
+{
+	switch (symbol_details->symbol_len)
+	{
+		case 0: return;
+		case 1: symbol_details->symbol_mapped_pattern = symbol_details->symbol_val;
+				break;
+		case 2: symbol_details->symbol_mapped_pattern = bit2_pattern[symbol_details->symbol_val];
+				break;
+		case 3:
+			if (symbol_details->type == ENUM_TYPE_TRAN_D)
+			{
+				symbol_details->symbol_mapped_pattern = bit3_pattern_TranD[symbol_details->symbol_val];
+			}
+			else
+			{
+				symbol_details->symbol_mapped_pattern = bit3_pattern[symbol_details->symbol_val];
+			}
+			break;
+		case 4: 
+			if (symbol_details->type == ENUM_TYPE_CI)
+			{
+				symbol_details->symbol_mapped_pattern = bit4_pattern_TypeCi[symbol_details->symbol_val];
+			}
+			else if (symbol_details->type == ENUM_TRAN_HI || symbol_details->type == ENUM_TYPE_HIJ)
+			{
+				symbol_details->symbol_mapped_pattern = bit4_pattern_TypeHij_TranHi[symbol_details->symbol_val];
+			}
+			break;
+		default:
+			printf("Error: symbol_len not supported\n");
+			break;
+	}
 }
 
 void coding_options(	
@@ -1935,8 +1997,394 @@ void coding_options(
 	bool *hit_flag
 	)
 {
+	unsigned int block_sec = 0;
+	unsigned int bit_counter_2bits[2] = {0};
+	unsigned int bit_counter_3bits[3] = {0};
+	unsigned int bit_counter_4bits[4] = {0};
+
+	for (unsigned int block_num = 0; block_num < blocks_in_gaggle; block_num ++)
+	{
+		unsigned char symbol_index = 0;
+		if (block_data[block_num].mapped_ac < bit_plane_number)
+		{
+			continue;
+		}
+		for( unsigned int symbol_id = 0; symbol_id < MAX_SYMBOLS_IN_BLOCK; symbol_id++)
+		{
+			// pattern statistics
+			if(block_data[block_num].symbol_block[symbol_id].type == ENUM_NONE)
+			{
+				continue;
+			}
+			else if (block_data[block_num].symbol_block[symbol_id].symbol_len == 1)
+			{
+				pattern_mapping(&block_data[block_num].symbol_block[symbol_id]);
+				continue;
+			}
+			pattern_mapping(&block_data[block_num].symbol_block[symbol_id]);
+			// entropy coding
+			if (block_data[block_num].symbol_block[symbol_id].symbol_len == 2)
+			{
+				switch (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern)
+				{
+					case 0: bit_counter_2bits[0]++; break;
+					case 1: bit_counter_2bits[0] += 2; break;
+					case 2: bit_counter_2bits[0] += 3; break;
+					case 3: bit_counter_2bits[0] += 3; break;
+					default: printf("Error: symbol_mapped_pattern not supported\n"); break;
+				}
+				bit_counter_2bits[1] += 2; // uncoded
+			}
+			else if (block_data[block_num].symbol_block[symbol_id].symbol_len == 3)
+			{
+				// try option 0
+				if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 2)
+				{
+					bit_counter_3bits[0] += block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern + 1;
+				}
+				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 5)
+				{
+					bit_counter_3bits[0] += 5;
+				}
+				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 7)
+				{
+					bit_counter_3bits[0] += 6;
+				}
+				else
+				{
+					printf("Error: symbol_mapped_pattern not supported\n");
+				}
+				// option 1
+				if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 1)
+				{
+					bit_counter_3bits[1] += 2;
+				}
+				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 3)
+				{
+					bit_counter_3bits[1] += 3;
+				}
+				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 7)
+				{
+					bit_counter_3bits[1] += 4;
+				}
+				else
+				{
+					printf("Error: symbol_mapped_pattern not supported\n");
+				}
+				// uncoded
+				bit_counter_3bits[2] += 3;
+			}
+			else if (block_data[block_num].symbol_block[symbol_id].symbol_len == 4)
+			{
+				// ty 0
+				if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 3)
+				{
+					bit_counter_4bits[0] += block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern + 1;
+				}
+				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 7)
+				{
+					bit_counter_4bits[0] += 7;
+				}
+				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 15)
+				{
+					bit_counter_4bits[0] += 8;
+				}
+				else
+				{
+					printf("Error: symbol_mapped_pattern not supported\n");
+				}
+				// try 1
+
+				if (block_data[block_num].symbol_block[symbol_id]. symbol_mapped_pattern <= 1)
+				{
+					bit_counter_4bits[1] += 2;
+				}
+				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 3)
+				{
+					bit_counter_4bits[1] += 3;
+				}
+				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 5)
+				{
+					bit_counter_4bits[1] += 4;
+				}
+				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 11)
+				{
+					bit_counter_4bits[1] += 6;
+				}
+				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 15)
+				{
+					bit_counter_4bits[1] += 7;
+				}
+				else
+				{
+					printf("Error: symbol_mapped_pattern not supported\n");
+				}
+
+				// try 2
+				if (block_data[block_num].symbol_block[symbol_id]. symbol_mapped_pattern <= 3)
+				{
+					bit_counter_4bits[2] += 3;
+				}
+				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 7)
+				{
+					bit_counter_4bits[2] += 4;
+				}
+				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 15)
+				{
+					bit_counter_4bits[2] += 5;
+				}
+				else
+				{
+					printf("Error: symbol_mapped_pattern not supported\n");
+				}
+				// tyr 3
+				bit_counter_4bits[3] += 4;
+			}	
+
+		}
+	}
+	// determine code ID
+
+	// 2 bit
+	if(	bit_counter_2bits[0] < bit_counter_2bits[1] )
+	{
+		code_option_gaggle[0] = 0; // codes. 
+	}		
+	else
+	{
+		code_option_gaggle[0] = 1; // no-coding
+	}
+
+	// 3 bit
+	if((bit_counter_3bits[2] <= bit_counter_3bits[0]) && (bit_counter_3bits[2] <= bit_counter_3bits[1]))
+	{
+		code_option_gaggle[1] = 3;
+	}
+	else if((bit_counter_3bits[0] <= bit_counter_3bits[1]) &&  (bit_counter_3bits[0] <= bit_counter_3bits[2]))
+	{
+		code_option_gaggle[1] = 0;
+	}
+	else if((bit_counter_3bits[1]  <= bit_counter_3bits[0]) && (bit_counter_3bits[1]  <= bit_counter_3bits[2]))
+	{
+		code_option_gaggle[1] = 1;
+	}
+	// 4-bit codeword
+	if((bit_counter_4bits[3]  <= bit_counter_4bits[1]) && (bit_counter_4bits[3]  <= bit_counter_4bits[0])&& (bit_counter_4bits[3]  <= bit_counter_4bits[2]))
+	{
+		code_option_gaggle[2] = 3;	
+	}
+	else if((bit_counter_4bits[0]  <= bit_counter_4bits[1]) && (bit_counter_4bits[0]  <= bit_counter_4bits[2]) && (bit_counter_4bits[0]  <= bit_counter_4bits[3]))
+	{
+		code_option_gaggle[2] = 0;
+	}
+	else if((bit_counter_4bits[1]  <= bit_counter_4bits[0]) && (bit_counter_4bits[1]  <= bit_counter_4bits[2])&& (bit_counter_4bits[1]  <= bit_counter_4bits[3]))
+	{
+		code_option_gaggle[2] = 1;
+	}		
+	else if((bit_counter_4bits[2]  <= bit_counter_4bits[1]) && (bit_counter_4bits[2]  <= bit_counter_4bits[0])&& (bit_counter_4bits[2]  <= bit_counter_4bits[3]))
+	{
+		code_option_gaggle[2] = 2;	
+	}					
 
 }
+
+void rice_coding(
+	compression_image_data_t *compression_data,
+	unsigned int segment_num,
+	short input_value,
+	short bit_length,
+	unsigned char *code_option
+)
+{
+	switch (bit_length)
+	{
+	case 0: // no need to process
+		return;
+		break;
+	case 1:
+		write_to_the_output_segment(compression_data->segment_list,input_value,1,segment_num);
+		break;
+	case 2:
+		// output FS code.
+		if (code_option[0] == 1)
+		{
+			write_to_the_output_segment(compression_data->segment_list,input_value,2,segment_num);
+		}
+		else if (code_option[0] == 0)
+		{
+			if (input_value <= 2)
+			{
+				write_to_the_output_segment(compression_data->segment_list,0,input_value,segment_num);
+				write_to_the_output_segment(compression_data->segment_list,1,1,segment_num);
+			}
+			else
+			{
+				write_to_the_output_segment(compression_data->segment_list,0,3,segment_num);
+			}
+		}
+		else
+		{
+			printf("Error: rice coding code_option not supported\n");
+		}
+		break;
+	case 3:
+		if (code_option[1] == 0)
+		{
+			if (input_value <= 2)
+			{
+				write_to_the_output_segment(compression_data->segment_list,0,input_value,segment_num);
+				write_to_the_output_segment(compression_data->segment_list,1,1,segment_num);
+			}
+			else if (input_value <= 5)
+			{
+				write_to_the_output_segment(compression_data->segment_list,0,3,segment_num);
+				write_to_the_output_segment(compression_data->segment_list,input_value - 3,2,segment_num);
+			}
+			else if (input_value <= 7)
+			{
+				write_to_the_output_segment(compression_data->segment_list,0,3,segment_num);
+				write_to_the_output_segment(compression_data->segment_list,input_value,3,segment_num);
+			}
+			else
+			{
+				printf("Error: rice coding code_option not supported\n");
+			}
+		}
+		else if (code_option[1] == 1)
+		{
+			if (input_value <= 1)
+			{
+				write_to_the_output_segment(compression_data->segment_list,input_value + 2,2,segment_num);
+			}
+			else if (input_value <= 3)
+			{
+				write_to_the_output_segment(compression_data->segment_list,input_value,3, segment_num);
+			}
+			else if (input_value <= 7)
+			{
+				write_to_the_output_segment(compression_data->segment_list,0,2,segment_num);
+				switch (input_value)
+
+				{
+				case 4:
+					write_to_the_output_segment(compression_data->segment_list,2,2,segment_num);
+					break;
+				case 5:
+					write_to_the_output_segment(compression_data->segment_list,3,2,segment_num);
+					break;
+				case 6:
+					write_to_the_output_segment(compression_data->segment_list,0,2,segment_num);
+					break;
+				case 7:
+					write_to_the_output_segment(compression_data->segment_list,1,2,segment_num);
+					break;
+				default:
+					printf("Error: rice coding value not supported\n");
+					break;
+				}
+
+			}
+			else
+			{
+				printf("Error: rice coding code_option not supported\n");
+			}
+		}
+		else if (code_option[1] == 3) // uncoded
+		{
+			write_to_the_output_segment(compression_data->segment_list,input_value,3,segment_num);
+		}
+		break;
+	case 4: // 4 bits
+		if (code_option[2] == 0)
+		{
+			if (input_value <= 3)
+			{
+				write_to_the_output_segment(compression_data->segment_list,0,input_value,segment_num);
+				write_to_the_output_segment(compression_data->segment_list,1,1,segment_num);
+			}
+			else if (input_value <= 7)
+			{
+				write_to_the_output_segment(compression_data->segment_list,0,5,segment_num);
+				write_to_the_output_segment(compression_data->segment_list,input_value - 4,2,segment_num);
+			}
+			else if (input_value <= 15)
+			{
+				write_to_the_output_segment(compression_data->segment_list,0,4,segment_num);
+				write_to_the_output_segment(compression_data->segment_list,input_value, 4,segment_num);
+			}
+			else
+			{
+				printf("Error: rice coding input value not supported\n");
+			}
+		}
+		else if (code_option[2] == 1)
+		{
+			if (input_value <= 1)
+			{
+				write_to_the_output_segment(compression_data->segment_list,input_value + 2 ,2,segment_num);
+			}
+			else if (input_value <= 3)
+			{
+				write_to_the_output_segment(compression_data->segment_list,input_value,3,segment_num);
+			}
+			else if (input_value <= 5)
+			{
+				write_to_the_output_segment(compression_data->segment_list,0,2,segment_num);
+				write_to_the_output_segment(compression_data->segment_list,input_value - 2,2,segment_num);
+			}
+			else if (input_value <= 11)
+			{
+				write_to_the_output_segment(compression_data->segment_list,0,3,segment_num);
+				write_to_the_output_segment(compression_data->segment_list,input_value - 6,3,segment_num);
+			}
+			else if (input_value <= 15)
+			{
+				write_to_the_output_segment(compression_data->segment_list,0,3,segment_num);
+				write_to_the_output_segment(compression_data->segment_list,input_value, 4,segment_num);
+			}
+			else
+			{
+				printf("Error: rice coding input value not supported\n");
+			}
+		}
+		else if (code_option[2] == 3 ) // two bits spliting
+		{
+			if (input_value <= 3)
+			{
+				write_to_the_output_segment(compression_data->segment_list, input_value + 4 , 3,segment_num);
+			}
+			else if (input_value <= 7)
+			{
+				write_to_the_output_segment(compression_data->segment_list,input_value, 4,segment_num);
+			}
+			else if (input_value <= 11)
+			{
+				write_to_the_output_segment(compression_data->segment_list,input_value - 4, 3,segment_num);
+			}
+			else if (input_value <= 15)
+			{
+				write_to_the_output_segment(compression_data->segment_list,input_value -12, 5,segment_num);
+			}
+			else
+			{
+				printf("Error: rice coding input value not supported\n");
+			}
+		}
+		else if (code_option[2] == 3) // uncoded
+		{
+			write_to_the_output_segment(compression_data->segment_list,input_value,4,segment_num);
+		}
+		else
+		{
+			printf("Error: rice coding code_option not supported\n");
+		}
+		break;
+	default:
+		printf("Error: rice coding bit_length not supported\n");
+		break;
+	}
+}
+
 
 void gaggle_encode_1(	
 	block_data_t *block_data,
@@ -1951,7 +2399,73 @@ void gaggle_encode_1(
 	bool *hit_flag
 	)
 {
+	for (unsigned int block_num = 0; block_num < blocks_in_gaggle; block_num ++)
+	{
+		if (block_data[block_num].mapped_ac < bit_plane_number)
+		{
+			continue;
+		}
+		for( unsigned int symbol_id = 0; symbol_id < MAX_SYMBOLS_IN_BLOCK; symbol_id++)
+		{
+			if (block_data[block_num].symbol_block[symbol_id].type == ENUM_TYPE_P)
+			{
+				switch (block_data[block_num].symbol_block[symbol_id].symbol_len)
+				{
+				case 1:
+				case 2:
+				case 3:
+				{
+					if (block_data[block_num].symbol_block[symbol_id].symbol_len > 1)
+					{
+						if (hit_flag[block_data[block_num].symbol_block[symbol_id].symbol_len - 2] == false)
+						{
+							hit_flag[block_data[block_num].symbol_block[symbol_id].symbol_len - 2] = true;
+							
+							if (block_data[block_num].symbol_block[symbol_id].symbol_len == 2)
+							{
+								write_to_the_output_segment(compression_data->segment_list,code_option_gaggle[0],1,segment_number);
+							}
+							else if (block_data[block_num].symbol_block[symbol_id].symbol_len == 3)
+							{
+								write_to_the_output_segment(compression_data->segment_list,code_option_gaggle[1],2,segment_number);
+							}
+							else if (block_data[block_num].symbol_block[symbol_id].symbol_len == 4)
+							{
+								write_to_the_output_segment(compression_data->segment_list,code_option_gaggle[2],2,segment_number);
+							}
+							else
+							{
+								printf("Error: symbol_len not supported\n");
+							}
+						}
+					}
 
+					rice_coding(compression_data,segment_number ,block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern, block_data[block_num].symbol_block[symbol_id].symbol_len, code_option_gaggle);
+					unsigned int counter = 0;
+
+					for (unsigned int i = 0; i < block_data[block_num].symbol_block[symbol_id].symbol_len; ++i)
+					{
+						if ((block_data[block_num].symbol_block[symbol_id].symbol_val & (1 << i)) > 0)
+						{
+							counter++;
+						}
+					}
+					write_to_the_output_segment(compression_data->segment_list,block_data[block_num].symbol_block[symbol_id].sign,counter,segment_number);
+					// reset symbol values
+					block_data[block_num].symbol_block[symbol_id].symbol_val = 0;
+					block_data[block_num].symbol_block[symbol_id].symbol_len = 0;
+					block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern = 0;
+					block_data[block_num].symbol_block[symbol_id].sign = 0; 
+					block_data[block_num].symbol_block[symbol_id].type = 0;
+					break;
+				}
+				default:
+					printf("Error: symbol_len not supported\n");
+					break;
+				}
+			}
+		}
+	}
 }
 
 void gaggle_encode_2(	
@@ -1968,7 +2482,72 @@ void gaggle_encode_2(
 	)
 {
 
+	for (unsigned int block_num = 0; block_num < blocks_in_gaggle; block_num ++)
+	{
+		if (block_data[block_num].mapped_ac < bit_plane_number)
+		{
+			continue;
+		}
+		for (unsigned int symbol_id = 0; symbol_id < MAX_SYMBOLS_IN_BLOCK; symbol_id++)
+		{
+			switch (block_data[block_num].symbol_block[symbol_id].type)
+			{
+			case ENUM_TYPE_TRAN_B:
+			case ENUM_TYPE_TRAN_D:
+			case ENUM_TYPE_CI:
+		        if (block_data[block_num].symbol_block[symbol_id].symbol_len > 1)
+		        {
+		            if (hit_flag[block_data[block_num].symbol_block[symbol_id].symbol_len - 2] == false)
+		            {
+		                hit_flag[block_data[block_num].symbol_block[symbol_id].symbol_len - 2] = true;
+		                
+		                if (block_data[block_num].symbol_block[symbol_id].symbol_len == 2)
+		                {
+		                    write_to_the_output_segment(compression_data->segment_list,code_option_gaggle[0],1,segment_number);
+		                }
+		                else if (block_data[block_num].symbol_block[symbol_id].symbol_len == 3)
+		                {
+		                    write_to_the_output_segment(compression_data->segment_list,code_option_gaggle[1],2,segment_number);
+		                }
+		                else if (block_data[block_num].symbol_block[symbol_id].symbol_len == 4)
+		                {
+		                   write_to_the_output_segment(compression_data->segment_list,code_option_gaggle[2],2,segment_number);
+		                }
+		                else
+		                {
+		                    printf("Error: symbol_len not supported\n");
+		                }
+		            }
+		        }
+				rice_coding(compression_data,segment_number,block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern, block_data[block_num].symbol_block[symbol_id].symbol_len, code_option_gaggle);
+				if (block_data[block_num].symbol_block[symbol_id].type == ENUM_TYPE_CI)
+				{
+					unsigned int counter = 0;
+					for (unsigned int i = 0; i < block_data[block_num].symbol_block[symbol_id].symbol_len; ++i)
+					{
+						if ((block_data[block_num].symbol_block[symbol_id].symbol_val & (1 << i)) > 0)
+						{
+							counter++;
+						}
+						
+					}
+					write_to_the_output_segment(compression_data->segment_list,block_data[block_num].symbol_block[symbol_id].sign,counter,segment_number);
+				}
+				block_data[block_num].symbol_block[symbol_id].symbol_val = 0;
+				block_data[block_num].symbol_block[symbol_id].symbol_len = 0;
+				block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern = 0;
+				block_data[block_num].symbol_block[symbol_id].sign = 0; 
+				block_data[block_num].symbol_block[symbol_id].type = 0;
+				break;
+			
+			default:
+				break;
+			}
+		}
+	}
+
 }
+
 
 void gaggle_encode_3(	
 	block_data_t *block_data,
@@ -1983,5 +2562,115 @@ void gaggle_encode_3(
 	bool *hit_flag
 	)
 {
+	for (unsigned int block_num = 0; block_num < blocks_in_gaggle; block_num ++)
+	{
+		if (block_data[block_num].mapped_ac < bit_plane_number)
+		{
+			continue;
+		}
+		for (unsigned int symbol_id = 0; symbol_id < MAX_SYMBOLS_IN_BLOCK; symbol_id++)
+		{
+			switch (block_data[block_num].symbol_block[symbol_id].type)
+			{
+			case ENUM_TRAN_GI:
+			case ENUM_TRAN_HI:
+			case ENUM_TYPE_HIJ:
+				if (block_data[block_num].symbol_block[symbol_id].symbol_len > 1)
+				{
+					if (hit_flag[block_data[block_num].symbol_block[symbol_id].symbol_len - 2] == false)
+					{
+						hit_flag[block_data[block_num].symbol_block[symbol_id].symbol_len - 2] = true;
+						if (block_data[block_num].symbol_block[symbol_id].symbol_len == 2)
+						{
+							write_to_the_output_segment(compression_data->segment_list,code_option_gaggle[0],1,segment_number);
+						}
+						else if (block_data[block_num].symbol_block[symbol_id].symbol_len == 3)
+						{
+							write_to_the_output_segment(compression_data->segment_list,code_option_gaggle[1],2,segment_number);
+						}
+						else if (block_data[block_num].symbol_block[symbol_id].symbol_len == 4)
+						{
+							write_to_the_output_segment(compression_data->segment_list,code_option_gaggle[2],2,segment_number);
+						}
+						else
+						{
+							printf("Error: symbol_len not supported\n");
+						}
+					}
+				}
+				rice_coding(compression_data,segment_number,block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern, block_data[block_num].symbol_block[symbol_id].symbol_len, code_option_gaggle);
+				if (block_data[block_num].symbol_block[symbol_id].type == ENUM_TYPE_HIJ)
+				{
+					unsigned int counter = 0;
+					for (unsigned int i = 0; i < block_data[block_num].symbol_block[symbol_id].symbol_len; ++i)
+					{
+						if ((block_data[block_num].symbol_block[symbol_id].symbol_val & (1 << i)) > 0)
+						{
+							counter++;
+						}
+					}
+					write_to_the_output_segment(compression_data->segment_list,block_data[block_num].symbol_block[symbol_id].sign,counter,segment_number);
+				}
+				block_data[block_num].symbol_block[symbol_id].symbol_val = 0;
+				block_data[block_num].symbol_block[symbol_id].symbol_len = 0;
+				block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern = 0;
+				block_data[block_num].symbol_block[symbol_id].sign = 0;
+				block_data[block_num].symbol_block[symbol_id].type = 0;
+			break;
+			}
+		}
+	}
+}
+
+void ref_bit_end_encode(	
+	block_data_t *block_data,
+	int **block_string,
+	compression_image_data_t *compression_data,
+	header_data_t *header_data,
+	unsigned int segment_number,
+	unsigned int bit_plane_number
+	)
+{
+	for (unsigned int block_num = 0; block_num < compression_data->segment_size; ++block_num)
+	{	
+		if (block_data[block_num].parent_sym_len > 0)
+		{
+			write_to_the_output_segment(compression_data->segment_list,
+			block_data[block_num].parent_ref_symbol,
+			block_data[block_num].parent_sym_len,
+			segment_number);
+
+			// reste to zero
+			block_data[block_num].parent_ref_symbol = 0;
+			block_data[block_num].parent_sym_len = 0;
+		}
+
+		if (block_data[block_num].children_sym_len > 0)
+		{
+			write_to_the_output_segment(compression_data->segment_list,
+			block_data[block_num].children_ref_symbol,
+			block_data[block_num].children_sym_len,
+			segment_number);
+
+			// reste to zero
+			block_data[block_num].children_ref_symbol = 0;
+			block_data[block_num].children_sym_len = 0;
+		}
+
+		for (unsigned int i = 0; i < 3; ++i)
+		{
+			if (block_data[block_num].grand_children_sym_len[i] > 0)
+			{
+				write_to_the_output_segment(compression_data->segment_list,
+				block_data[block_num].grand_children_sym_len[i],
+				block_data[block_num].grand_children_ref_symbol[i],
+				segment_number);
+
+				// reste to zero
+			}
+			block_data[block_num].grand_children_sym_len[i] = 0;
+			block_data[block_num].grand_children_ref_symbol[i] = 0;
+		}
+	} 
 
 }

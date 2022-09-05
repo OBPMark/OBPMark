@@ -9,6 +9,8 @@
 #include "obpmark.h"
 #include "benchmark.h"
 #include "obpmark_time.h"
+#include "output_format_utils.h"
+
 #include "math.h"
 
 #define ABSOLUTE(a) ((a) >=0 ? (a): -(a))
@@ -92,7 +94,9 @@ struct compression_image_data_t
 	unsigned int bit_size;
 	unsigned int pad_rows;
 	unsigned int pad_columns;
+	unsigned int number_of_segments;
 	bool type_of_compression;
+	struct SegmentBitStream *segment_list;
 
 
 };

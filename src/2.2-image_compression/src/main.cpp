@@ -73,9 +73,9 @@ int main(int argc, char **argv)
     unsigned int pad_columns = 0;
 
     char input_file[100] = "";
-    char* output_file = (char*)"output.bin";
+    char output_file[100] = "";
 
-    ret = arguments_handler(argc, argv, &w_size, &h_size, &bit_size, &segment_size,&type, &csv_mode, &database_mode, &print_output, &verbose_output, input_file);
+    ret = arguments_handler(argc, argv, &w_size, &h_size, &bit_size, &segment_size,&type, &csv_mode, &database_mode, &print_output, &verbose_output, input_file, output_file);
     if(ret == ARG_ERROR) {
 		exit(-1);
 	}
@@ -110,13 +110,8 @@ int main(int argc, char **argv)
     }
 
     init_benchmark(ccsds_data, t, csv_mode, database_mode, print_output, verbose_output,get_timestamp());
-
-    // store the output
-    file_storage_output = store_data_to_file(output_file, ccsds_data);
-    if (file_loading_output == FILE_STORAGE_ERROR)
-    {
-        exit(-1);
-    }
+    // write the output file
+    write_segment_list(ccsds_data->segment_list, ccsds_data->number_of_segments ,output_file);
     // free memory
     clean(ccsds_data, t);
 

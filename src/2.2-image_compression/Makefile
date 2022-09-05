@@ -14,10 +14,10 @@ EXEC_PATH	:= $(BIN_PATH)/$(EXEC_NAME)
 ################################################################################
 COMMON_PATH = ../../src/common
 
-_COMMON_INCLUDES = image_util.h image_mem_util.h image_file_util.h 
-_COMMON_SOURCES  = image_mem_util.c image_file_util.c  util_arg.c util_data_files.c 
-COMMON_OBJECTS   = image_mem_util.o image_file_util.o  util_arg.o util_data_files.o 
-COMMON_OBJECTS_PATH = $(COM_TARGET)/image_mem_util.o $(COM_TARGET)/image_file_util.o  $(COM_TARGET)/util_arg.o $(COM_TARGET)/util_data_files.o
+_COMMON_INCLUDES = image_util.h image_mem_util.h image_file_util.h output_format_utils.h
+_COMMON_SOURCES  = image_mem_util.c image_file_util.c  util_arg.c util_data_files.c output_format_utils.c
+COMMON_OBJECTS   = image_mem_util.o image_file_util.o  util_arg.o util_data_files.o  output_format_utils.o
+COMMON_OBJECTS_PATH = $(COM_TARGET)/image_mem_util.o $(COM_TARGET)/image_file_util.o  $(COM_TARGET)/util_arg.o $(COM_TARGET)/util_data_files.o $(COM_TARGET)/output_format_utils.o
 
 COMMON_INCLUDES = $(pathsubst %,$(COMMON_PATH)/%,$(_COMMON_INCLUDES))
 COMMON_SOURCES  = $(pathsubst %,$(COMMON_PATH)/%,$(_COMMON_SOURCES))
@@ -88,6 +88,9 @@ util_arg.o: common_conf $(SRC_FOLDER)/util_arg.c
 util_data_files.o: common_conf $(SRC_FOLDER)/util_data_files.c
 	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/util_data_files.c -o $(COM_TARGET)/util_data_files.o
 
+output_format_utils.o: common_conf $(SRC_FOLDER)/output_format_utils.c
+	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/output_format_utils.c -o $(COM_TARGET)/output_format_utils.o
+
 ################################### SEQUENTIAL ################################
 # Shortcuts
 .PHONY: CPU
@@ -100,13 +103,13 @@ cpu_conf:
 	mkdir -p $(SEQ_TARGET)
 
 # FIXME possible to define a list of sources and then generate the commands below from the list instead of having explicit definitions? 
-cpu_processing.o: cpu_conf $(SEQ_SRC)/processing.c
-	$(CC) $(CFLAGS) -c $(SEQ_SRC)/processing.c -o $(SEQ_TARGET)/cpu_processing.o
+cpu_processing.o: cpu_conf $(SEQ_SRC)/processing.c 
+	$(CC) $(CFLAGS) -c $(SEQ_SRC)/processing.c -o $(SEQ_TARGET)/cpu_processing.o 
 
-cpu_device.o: cpu_conf $(SEQ_SRC)/device.c
+cpu_device.o: cpu_conf $(SEQ_SRC)/device.c 
 	$(CC) $(CFLAGS) -c $(SEQ_SRC)/device.c -o $(SEQ_TARGET)/cpu_device.o
 
-main_cpu: cpu_conf cpu_processing.o cpu_device.o  $(COMMON_OBJECTS)
+main_cpu: $(COMMON_OBJECTS) cpu_conf cpu_processing.o cpu_device.o  
 	mkdir -p $(BIN_PATH) 
 	$(CC) $(CFLAGS) $(SRC_FOLDER)/main.cpp $(SEQ_TARGET)/cpu_device.o $(SEQ_TARGET)/cpu_processing.o  $(COMMON_OBJECTS_PATH) -o $(SEQ_EXEC)
 
@@ -126,7 +129,7 @@ openmp_conf:
 # FIXME this could probably be deleted, test first  (OMP_NUM_THREADS)
 
 openmp_processing.o: openmp_conf $(OPENMP_SRC)/processing.c
-	$(CC) $(CFLAGS) $(OMPFLAGS) -DOPENMP -c $(OPENMP_SRC)/processing.c  -o $(OPENMP_TARGET)/openmp_processing.o
+	$(CC) $(CFLAGS) $(OMPFLAGS) -DOPENMP -c $(OPENMP_SRC)/processing.c  -o $(OPENMP_TARGET)/openmp_processing.o 
 
 openmp_device.o: cpu_conf $(OPENMP_SRC)/device.c
 	$(CC) $(CFLAGS) $(OMPFLAGS) -DOPENMP -c $(OPENMP_SRC)/device.c -o $(OPENMP_TARGET)/openmp_device.o
