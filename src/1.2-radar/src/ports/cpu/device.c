@@ -107,6 +107,7 @@ void process_benchmark(
 	)
 {    
 
+
 	/* Loop through each frames and perform pre-processing. */
 	T_START(t->t_test);
     SAR_focus(radar_data);

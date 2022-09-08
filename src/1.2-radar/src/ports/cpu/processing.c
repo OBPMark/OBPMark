@@ -262,7 +262,6 @@ void SAR_focus(radar_data_t *data){
     float max = FLT_MIN;
     float min = FLT_MAX;
     /* Compute Range Reference Function */
-//    print_params(data->params);
     SAR_range_ref(data->rrf, data->params);
 
     /* Compute Doppler Centroid */
@@ -295,7 +294,6 @@ void SAR_focus(radar_data_t *data){
         /* Multilook */
         SAR_multilook(&data->range_data[i], &data->ml_data, data->params, i, &max, &min);
     }
-    printf("max: %.12f\nmin: %.12f\n",max,min);
     quantize(&data->ml_data, &data->output_image, max, min);
 }
 

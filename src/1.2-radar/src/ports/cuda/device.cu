@@ -189,7 +189,7 @@ void process_benchmark(
 
     /* SAR AZIMUTH REFERENCE */
     // compute azimuth values
-    n_blocks = (params->apatch-1)/BLOCK_SIZE+1;
+    n_blocks = (params->apatch)/BLOCK_SIZE;
     // Compute azimuth reference
     SAR_azimuth_ref<<<n_blocks, BLOCK_SIZE>>>(radar_data->arf, radar_data->params);
     // perform fft
@@ -198,7 +198,7 @@ void process_benchmark(
     /* Begin patch processing */
     //SAR Range Compress
     cufftExecC2C(radar_data->range_plan, (cufftComplex*) radar_data->range_data, (cufftComplex*) radar_data->range_data, CUFFT_FORWARD);
-    gridSize = {next_power_of_two(params->rsize)/TILE_SIZE,params->apatch/TILE_SIZE,params->npatch};
+    gridSize = {next_power_of_two(params->rsize)/TILE_SIZE, params->apatch/TILE_SIZE, params->npatch};
     SAR_ref_product<<<gridSize,blockSize>>>(radar_data->range_data, radar_data->rrf, next_power_of_two(params->rsize), params->apatch);
     cufftExecC2C(radar_data->range_plan, (cufftComplex*) radar_data->range_data, (cufftComplex*) radar_data->range_data, CUFFT_INVERSE);
     //after IFFT data needs to be idvided by next_power_of_two(rsize), we do that when transposing
