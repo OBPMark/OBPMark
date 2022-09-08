@@ -66,7 +66,7 @@ void clean_segment_bit_stream(struct SegmentBitStream *segment_list, unsigned in
 
 void write_to_the_output_segment(struct SegmentBitStream *segment_list, int word, unsigned int length, unsigned int segment_id)
 {
-    printf("Writing value %d with length %d\n", word, length);
+    //printf("Writing value %d with length %d\n", word, length);
    if (length != 0 )
    {
         /*if (length > 32)

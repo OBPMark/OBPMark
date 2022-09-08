@@ -86,11 +86,6 @@ void process_benchmark(
 	{
 		block_string[i] = (int *)calloc(BLOCKSIZEIMAGE * BLOCKSIZEIMAGE,sizeof(long));
 	}
-	/*block_string = (int **)calloc(total_blocks * BLOCKSIZEIMAGE,sizeof(long *));
-	for(unsigned int i = 0; i < total_blocks * BLOCKSIZEIMAGE ; i++)
-	{
-		block_string[i] = (int *)calloc(BLOCKSIZEIMAGE,sizeof(int));
-	}*/
 
 	// read the image data
 	for (unsigned int i = 0; i < h_size_padded; ++ i)
@@ -147,34 +142,6 @@ void process_benchmark(
 	compression_data->number_of_segments = num_segments;
 	compute_bpe(compression_data, block_string, num_segments);
 
-	
-	
-	/*
-	##########################################################################################################
-	*/
-	// write transformed image to file
-	
-	// write block string to file
-	// open the file
-	/*FILE *fp;
-	fp = fopen("block_string.txt", "w");
-	if (fp == NULL)
-	{
-		printf("Error opening file!\n");
-		exit(1);
-	}
-	// write the data
-	for (unsigned int i = 0; i < total_blocks; ++ i)
-	{
-		for (unsigned int j = 0; j < BLOCKSIZEIMAGE * BLOCKSIZEIMAGE; ++j)
-		{
-			fprintf(fp, "%d\n", block_string[i][j]);
-		}
-	}
-	exit(1);*/
-	/*
-	##########################################################################################################
-	*/
 
 	T_STOP(t->t_bpe);
 	T_STOP(t->t_test);
@@ -184,6 +151,16 @@ void process_benchmark(
 			free(transformed_image[i]);
 		}
 	free(transformed_image);
+	// free image_data
+	for(unsigned int i = 0; i < h_size_padded; i++){
+			free(image_data[i]);
+		}
+	free(image_data);
+	// free block_string
+	for(unsigned int i = 0; i < total_blocks; i++){
+			free(block_string[i]);
+		}
+	free(block_string);
 }
 
 
@@ -192,7 +169,7 @@ void copy_memory_to_host(
 	compression_time_t *t
 	)
 {
-
+	// empty
 }
 
 
@@ -205,6 +182,25 @@ void get_elapsed_time(
 	long int timestamp
 	)
 {
+
+	if (csv_format)
+	{
+		double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
+		printf("%.10f;%.10f;%.10f;\n", (float) 0, elapsed_time, (float) 0);
+	}
+	else if (database_format)
+	{
+		
+		double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
+		printf("%.10f;%.10f;%.10f;%ld;\n", (float) 0, elapsed_time, (float) 0, timestamp);
+	}
+	else if(verbose_print)
+	{
+		double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
+		printf("Elapsed time Host->Device: %.10f milliseconds\n", (float) 0);
+		printf("Elapsed time kernel: %.10f milliseconds\n", elapsed_time );
+		printf("Elapsed time Device->Host: %.10f milliseconds\n", (float) 0);
+	}
     
 }
 
@@ -216,4 +212,8 @@ void clean(
 	)
 {
 	clean_segment_bit_stream(compression_data->segment_list, compression_data->number_of_segments);
+	// clean the auxiliary structures
+	free(compression_data->input_image);
+	free(compression_data->segment_list);
+	free(compression_data);
 }

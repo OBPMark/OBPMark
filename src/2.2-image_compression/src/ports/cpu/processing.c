@@ -722,22 +722,22 @@ void coding_quantized_coefficients(
 		theta = std::min(block_data[i-1].shifted_dc - x_min, x_max - block_data[i-1].shifted_dc);
 		// calculate gamma
 		gamma = block_data[i].shifted_dc - block_data[i-1].shifted_dc;
-		printf("theta = %ld: %ld %ld %ld\n", theta, block_data[i-1].shifted_dc, x_min, x_max);
-		printf("gamma = %ld\n", gamma);
+		//printf("theta = %ld: %ld %ld %ld\n", theta, block_data[i-1].shifted_dc, x_min, x_max);
+		//printf("gamma = %ld\n", gamma);
 		if ( 0 <= gamma && gamma <= theta)
 		{
 			block_data[i].mapped_dc = 2 * gamma;
-			printf("%ld\n", block_data[i].mapped_dc);
+			//printf("%ld\n", block_data[i].mapped_dc);
 		}
 		else if (-theta <= gamma && gamma < 0)
 		{
 			block_data[i].mapped_dc = 2 * std::abs(gamma) -1;
-			printf("%ld\n", block_data[i].mapped_dc);
+			//printf("%ld\n", block_data[i].mapped_dc);
 		}
 		else
 		{
 			block_data[i].mapped_dc =  theta + std::abs(gamma);
-			printf("%ld\n", block_data[i].mapped_dc);
+			//printf("%ld\n", block_data[i].mapped_dc);
 		}
 	}
 
@@ -779,7 +779,7 @@ void dc_encoder(
 		encode_selection = UNCODED_VALUE;
 		for (unsigned int k = 0; k <= max_k; ++k)
 		{
-			printf("StartIndex %d\n", start_position);
+			//printf("StartIndex %d\n", start_position);
 			if (start_position == 0)
 			{
 				total_bits = N;
@@ -791,11 +791,11 @@ void dc_encoder(
 			
 			for (unsigned int i = std::max(start_position,(unsigned int)1); i < end_position; i ++)
 			{
-				printf("Mapped DC %ld %d\n", block_data[i].mapped_dc, total_bits);
+				//printf("Mapped DC %ld %d\n", block_data[i].mapped_dc, total_bits);
 				total_bits += ((block_data[i].mapped_dc >> k) + 1) + k;
 				
 			}
-			printf("%d\n", total_bits);
+			//printf("%d\n", total_bits);
 			if ((total_bits < min_bits) && (total_bits < N * gaggle_size))
 			{
 				min_bits = total_bits;
@@ -850,7 +850,7 @@ void dc_encoder(
 	}
 
 
-	printf("DC: min_k = %d\n", encode_selection);
+	//printf("DC: min_k = %d\n", encode_selection);
 	// encode_selection with size id_length
 	write_to_the_output_segment(compression_data->segment_list,encode_selection,id_length,segment_number);
 
@@ -1034,14 +1034,14 @@ short int dc_encoding(
 				max_ac_value_block = block_string[final_pos][j];
 			}
 		}
-		printf("Max AC Segment = %ld\n", std::abs(max_ac_value_block));
+		//printf("Max AC Segment = %ld\n", std::abs(max_ac_value_block));
 		block_data[i].max_ac_bit_size = (unsigned char)(std::ceil(std::log2(std::abs(max_ac_value_block)))) ;
 		// if max_ac_value_block is a power of 2, then max_ac_bit_size + 1
 		if (ceil(log2(std::abs(max_ac_value_block))) == floor(log2(std::abs(max_ac_value_block))))
 		{
 			block_data[i].max_ac_bit_size = block_data[i].max_ac_bit_size + 1;
 		}
-		printf("max ac bit size %ld\n", block_data[i].max_ac_bit_size);
+		//printf("max ac bit size %ld\n", block_data[i].max_ac_bit_size);
 	}
 	// calculate the ac bit size
 	header_data->bit_depth_ac = (unsigned char)(std::ceil(std::log2(std::abs(max_ac_value)))) ;
@@ -1070,7 +1070,7 @@ short int dc_encoding(
 	{
 		quantization_factor = 1 + (header_data->bit_depth_ac >> 1);
 	}
-	printf("Quantization factor: %d %d %d\n",quantization_factor, header_data->bit_depth_dc, header_data->bit_depth_ac);
+	//printf("Quantization factor: %d %d %d\n",quantization_factor, header_data->bit_depth_dc, header_data->bit_depth_ac);
 	//shift of the DC component
 	k = (1 << quantization_factor) - 1;
 	for (unsigned int i = 0; i < compression_data->segment_size; ++i)
@@ -1144,12 +1144,12 @@ void ac_encoding(
 			
 			if( (bit_plane <= quantization_factor) && ((compression_data->type_of_compression) || ((quantization_factor > BITLL3 ) && (BITLL3 < bit_plane)) ))
 			{
-				printf("printing remaining bits\n");
+				//printf("printing remaining bits\n");
 				for (unsigned int i = 0; i < compression_data->segment_size; ++i)
 				{
 					write_to_the_output_segment(compression_data->segment_list,( (block_data[i].dc_reminder >> (bit_plane - 1)) & 0x01),1, segment_number);
 				}
-				printf("end printing remaining bits\n");
+				//printf("end printing remaining bits\n");
 			}
 			// stage 0 
 			// MISSING heather part 4
@@ -1383,8 +1383,8 @@ void dpcm_ac_mapper(
 		theta = std::min(block_data[i-1].max_ac_bit_size - x_min, x_max - block_data[i-1].max_ac_bit_size);
 		// calculate gamma
 		gamma = block_data[i].max_ac_bit_size - block_data[i-1].max_ac_bit_size;
-		printf("theta AC= %ld: %ld %ld %ld\n", theta, block_data[i-1].max_ac_bit_size, x_min, x_max);
-		printf("gamma AC= %d\n", gamma);
+		//printf("theta AC= %ld: %ld %ld %ld\n", theta, block_data[i-1].max_ac_bit_size, x_min, x_max);
+		//printf("gamma AC= %d\n", gamma);
 		if ( 0 <= gamma && gamma <= theta)
 		{
 			block_data[i].mapped_ac = 2 * gamma;
@@ -1469,7 +1469,7 @@ void compute_bpe(
 	{
 		// update the segment number
 		header_data->segment_count = i;
-		printf("SEGMENT NUMBER: %d\n", i);
+		//printf("SEGMENT NUMBER: %d\n", i);
 		// check if we are at the last segment and if so add the last header
 		if (i == num_segments - 1)
 		{
@@ -1519,7 +1519,7 @@ void bit_plane_encoding(
 	unsigned int bit_plane_number
 	)
 {
-	printf("BitPlane: %d\n", bit_plane_number);
+	//printf("BitPlane: %d\n", bit_plane_number);
 	unsigned int temp_x = 0;
 	unsigned int  temp_y = 0;
 	unsigned char symbol = 0;
@@ -1527,7 +1527,7 @@ void bit_plane_encoding(
 	unsigned int start_position = segment_number * compression_data->segment_size;
 	unsigned int final_position = 0;
 	int bit_set_plane = (1 << (bit_plane_number - 1));
-	printf("Bit_Set_Plane: %d\n", bit_set_plane);
+	//printf("Bit_Set_Plane: %d\n", bit_set_plane);
 
 	// loop over the blocks in the segment
 	for (int block_num = 0; block_num < compression_data->segment_size; ++block_num)
@@ -1568,16 +1568,16 @@ void bit_plane_encoding(
 				}
 			}
 
-			printf("TYPE P %d %d\n", block_data[block_num].type_p, block_num);
+			//printf("TYPE P %d %d\n", block_data[block_num].type_p, block_num);
 			if ((block_data[block_num].type_p & (1 << (2-j))) == 0 )
 			{
 				block_data[block_num].symbol_block[symbol].type = ENUM_TYPE_P;
 				block_data[block_num].symbol_block[symbol].symbol_len ++;
 				block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
-				printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
-				printf("SYMBOL 1-1\n");
+				//printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+				//printf("SYMBOL 1-1\n");
 
-				printf("BLOCK STRING VALUE %d bit_set_plane %d\n", block_string[temp_x][temp_y], bit_plane_number);
+				//printf("BLOCK STRING VALUE %d bit_set_plane %d\n", block_string[temp_x][temp_y], bit_plane_number);
 				if (ABSOLUTE(block_string[temp_x][temp_y]) >= (1 << (bit_plane_number - 1)) &&
 					ABSOLUTE(block_string[temp_x][temp_y]) < (1 << bit_plane_number))
 				{
@@ -1585,9 +1585,9 @@ void bit_plane_encoding(
 					block_data[block_num].symbol_block[symbol].symbol_val += 1;
 					block_data[block_num].symbol_block[symbol].sign <<= 1;
 					block_data[block_num].symbol_block[symbol].sign += SIGN(block_string[temp_x][temp_y]);
-					printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
-					printf("TYPE P POST %d: %d\n", block_data[block_num].type_p, (1 << (2 - j)));
-					printf("SYMBOL 1-2\n");
+					//printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+					//printf("TYPE P POST %d: %d\n", block_data[block_num].type_p, (1 << (2 - j)));
+					//printf("SYMBOL 1-2\n");
 				}
 
 			}
@@ -1621,7 +1621,7 @@ void bit_plane_encoding(
 			++symbol;
 		}
 		// now determine first part TranB
-		printf("TRAN B1 %d\n", block_data[block_num].tran_b);
+		//printf("TRAN B1 %d\n", block_data[block_num].tran_b);
 		if (block_data[block_num].tran_b == 0)
 		{
 			bool break_flag = false;
@@ -1649,9 +1649,9 @@ void bit_plane_encoding(
 							block_data[block_num].tran_b = 1;
 							block_data[block_num].symbol_block[symbol].symbol_len = 1;
 							block_data[block_num].symbol_block[symbol].symbol_val = 1;
-							printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+							//printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
 							block_data[block_num].symbol_block[symbol].type = ENUM_TYPE_TRAN_B;
-							printf("SYMBOL 2-1\n");
+							//printf("SYMBOL 2-1\n");
 							symbol ++;
 							// goto DS_UPDATE;
 							// exit the loops
@@ -1686,8 +1686,8 @@ void bit_plane_encoding(
 								block_data[block_num].tran_b = 1;
 								block_data[block_num].symbol_block[symbol].symbol_len = 1;
 								block_data[block_num].symbol_block[symbol].symbol_val = 1;
-								printf("SYMBOL 2-2\n");
-								printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+								//printf("SYMBOL 2-2\n");
+								//printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
 								block_data[block_num].symbol_block[symbol].type = ENUM_TYPE_TRAN_B;
 								
 								symbol ++;
@@ -1704,13 +1704,13 @@ void bit_plane_encoding(
 			}
 		}
 
-		printf("TRAN B2 %d\n", block_data[block_num].tran_b);
+		//printf("TRAN B2 %d\n", block_data[block_num].tran_b);
 		if (block_data[block_num].tran_b == 0)
 		{
 			block_data[block_num].symbol_block[symbol].symbol_len = 1;
 			block_data[block_num].symbol_block[symbol].symbol_val = 0;
-			printf("SYMBOL 3-1\n");
-			printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+			//printf("SYMBOL 3-1\n");
+			//printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
 			block_data[block_num].symbol_block[symbol].type = ENUM_TYPE_TRAN_B;
 			continue;
 		}
@@ -1771,8 +1771,8 @@ void bit_plane_encoding(
 									block_data[block_num].symbol_block[symbol].symbol_len++;
 									block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
 									block_data[block_num].symbol_block[symbol].symbol_val ++;
-									printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
-									printf("SYMBOL 4-1\n");
+									//printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+									//printf("SYMBOL 4-1\n");
 									// finish loops
 									i = temp_x + 2;
 									j = temp_y + 2;
@@ -1809,8 +1809,8 @@ void bit_plane_encoding(
 									block_data[block_num].symbol_block[symbol].symbol_len++;
 									block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
 									block_data[block_num].symbol_block[symbol].symbol_val ++;
-									printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
-									printf("SYMBOL 4-2\n");
+									//printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+									//printf("SYMBOL 4-2\n");
 									// exit the loops
 									i = temp_x + 4;
 									j = temp_y + 4;
@@ -1824,8 +1824,8 @@ void bit_plane_encoding(
 							block_data[block_num].symbol_block[symbol].type = ENUM_TYPE_TRAN_D;
 							block_data[block_num].symbol_block[symbol].symbol_len++;
 							block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
-							printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
-							printf("SYMBOL 4-3\n");
+							//printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+							//printf("SYMBOL 4-3\n");
 
 
 						}	
@@ -1886,8 +1886,8 @@ void bit_plane_encoding(
 									block_data[block_num].symbol_block[symbol].symbol_len++;
 									block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
 									block_data[block_num].symbol_block[symbol].symbol_val ++;
-									printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
-									printf("SYMBOL 5-1\n");
+									//printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+									//printf("SYMBOL 5-1\n");
 									block_data[block_num].symbol_block[symbol].sign <<= 1;
 									block_data[block_num].symbol_block[symbol].sign += SIGN(block_string[final_position][(i * BLOCKSIZEIMAGE) + j]);
 								}
@@ -1895,8 +1895,8 @@ void bit_plane_encoding(
 								{
 									block_data[block_num].symbol_block[symbol].symbol_len++;
 									block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
-									printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
-									printf("SYMBOL 5-2\n");
+									//printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+									//printf("SYMBOL 5-2\n");
 								}
 							}
 							else
@@ -1977,7 +1977,7 @@ void bit_plane_encoding(
 				}
 			}
 
-			printf ("trand %d: tran GI %d\n", block_data[block_num].tran_d , block_data[block_num].tran_gi);
+			//printf ("trand %d: tran GI %d\n", block_data[block_num].tran_d , block_data[block_num].tran_gi);
 			if (((block_data[block_num].tran_d & (1 << 2 - k)) != 0) && ((block_data[block_num].tran_gi & (1 << 2 - k)) == 0))
 			{
 				block_data[block_num].symbol_block[symbol].type = ENUM_TRAN_GI;
@@ -1996,8 +1996,8 @@ void bit_plane_encoding(
 							block_data[block_num].symbol_block[symbol].symbol_len++;
 							block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
 							block_data[block_num].symbol_block[symbol].symbol_val++;
-							printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
-							printf("SYMBOL 6-1\n");
+							//printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+							//printf("SYMBOL 6-1\n");
 							block_data[block_num].symbol_block[symbol].sign <<= 1;
 							block_data[block_num].tran_gi += (1 << 2 - k);
 							// finish loop
@@ -2011,8 +2011,8 @@ void bit_plane_encoding(
 				{
 					block_data[block_num].symbol_block[symbol].symbol_len++;
 					block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
-					printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
-					printf("SYMBOL 6-2\n");
+					//printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+					//printf("SYMBOL 6-2\n");
 				}
 
 			}
@@ -2055,8 +2055,8 @@ void bit_plane_encoding(
 								block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
 								block_data[block_num].symbol_block[symbol].symbol_val++;
 								block_data[block_num].tran_hi[i] += (1 << (3 -j));
-								printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
-								printf("SYMBOL 7-1\n");
+								//printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+								//printf("SYMBOL 7-1\n");
 								// finish loop
 								k = temp_x + 2;
 								p = temp_y + 2;
@@ -2068,8 +2068,8 @@ void bit_plane_encoding(
 					{
 						block_data[block_num].symbol_block[symbol].symbol_len++;
 						block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
-						printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
-						printf("SYMBOL 7-2\n");
+						//printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+						//printf("SYMBOL 7-2\n");
 					}
 				}
 			}
@@ -2149,19 +2149,19 @@ void bit_plane_encoding(
 					{
 						for (unsigned int p = temp_y; p < temp_y + 2; p++)
 						{
-							printf("TYPE_HI %d %d %d\n", i, j, block_data[block_num].type_hi[i*SIZE_TYPE+j]);
+							//printf("TYPE_HI %d %d %d\n", i, j, block_data[block_num].type_hi[i*SIZE_TYPE+j]);
 							if((block_data[block_num].type_hi[i*SIZE_TYPE+j] & (1 << (3 - t))) == 0)
 							{
-								printf("TYPE 8 %d : %d\n", bit_set_plane, ABSOLUTE(block_string[final_position][(k * BLOCKSIZEIMAGE) + p]));
+								//printf("TYPE 8 %d : %d\n", bit_set_plane, ABSOLUTE(block_string[final_position][(k * BLOCKSIZEIMAGE) + p]));
 								if((bit_set_plane & ABSOLUTE(block_string[final_position][(k * BLOCKSIZEIMAGE) + p])) > 0)
 								{	
 									block_data[block_num].type_hi[i*SIZE_TYPE+j] += (1 << (3 - t));
-									printf("TYPE_HI SET %d\n", block_data[block_num].type_hi[i*SIZE_TYPE+j]);
+									//printf("TYPE_HI SET %d\n", block_data[block_num].type_hi[i*SIZE_TYPE+j]);
 									block_data[block_num].symbol_block[symbol].symbol_len++;
 									block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
 									block_data[block_num].symbol_block[symbol].symbol_val++;
-									printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
-									printf("SYMBOL 8-1\n");
+									//printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+									//printf("SYMBOL 8-1\n");
 									block_data[block_num].symbol_block[symbol].sign <<= 1;
 									block_data[block_num].symbol_block[symbol].sign += SIGN(block_string[final_position][(k * BLOCKSIZEIMAGE) + p]);
 								}
@@ -2169,8 +2169,8 @@ void bit_plane_encoding(
 								{
 									block_data[block_num].symbol_block[symbol].symbol_len++;
 									block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
-									printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
-									printf("SYMBOL 8-2\n");
+									//printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+									//printf("SYMBOL 8-2\n");
 								}
 							}
 							else
@@ -2265,12 +2265,12 @@ void pattern_mapping(
 	str_symbol_details_t *symbol_details
 )
 {
-	printf("Symbol length: %d\n", symbol_details->symbol_len);
+	//printf("Symbol length: %d\n", symbol_details->symbol_len);
 	switch (symbol_details->symbol_len)
 	{
 		case 0: return;
 		case 1: symbol_details->symbol_mapped_pattern = symbol_details->symbol_val;
-				printf("Symbol mapped pattern: %d\n", symbol_details->symbol_val);
+				//printf("Symbol mapped pattern: %d\n", symbol_details->symbol_val);
 				break;
 		case 2: symbol_details->symbol_mapped_pattern = bit2_pattern[symbol_details->symbol_val];
 				break;
@@ -2278,12 +2278,12 @@ void pattern_mapping(
 			
 			if (symbol_details->type == ENUM_TYPE_TRAN_D)
 			{
-				printf("Symbol type %d %d %d\n", symbol_details->type, bit3_pattern_TranD[symbol_details->symbol_val], symbol_details->symbol_val);
+				//printf("Symbol type %d %d %d\n", symbol_details->type, bit3_pattern_TranD[symbol_details->symbol_val], symbol_details->symbol_val);
 				symbol_details->symbol_mapped_pattern = bit3_pattern_TranD[symbol_details->symbol_val];
 			}
 			else
 			{
-				printf("Symbol type %d %d %d\n", symbol_details->type, bit3_pattern[symbol_details->symbol_val], symbol_details->symbol_val);
+				//printf("Symbol type %d %d %d\n", symbol_details->type, bit3_pattern[symbol_details->symbol_val], symbol_details->symbol_val);
 				symbol_details->symbol_mapped_pattern = bit3_pattern[symbol_details->symbol_val];
 			}
 			break;
@@ -2298,7 +2298,7 @@ void pattern_mapping(
 			}
 			break;
 		default:
-			printf("Error: symbol_len not supported\n");
+			//printf("Error: symbol_len not supported\n");
 			break;
 	}
 }
@@ -2331,7 +2331,7 @@ void coding_options(
 		for( unsigned int symbol_id = 0; symbol_id < MAX_SYMBOLS_IN_BLOCK; symbol_id++)
 		{
 			// pattern statistics
-			printf("SYMBOL TYPE %d: %d\n",block_data[block_num_index].symbol_block[symbol_id].type, symbol_id);
+			//printf("SYMBOL TYPE %d: %d\n",block_data[block_num_index].symbol_block[symbol_id].type, symbol_id);
 			if(block_data[block_num_index].symbol_block[symbol_id].type == ENUM_NONE)
 			{
 				continue;
@@ -2516,7 +2516,7 @@ void rice_coding(
 	unsigned char *code_option
 )
 {
-	printf("Bit length: %d\n", bit_length);
+	//printf("Bit length: %d\n", bit_length);
 	switch (bit_length)
 	{
 	case 0: // no need to process
@@ -2545,11 +2545,11 @@ void rice_coding(
 		}
 		else
 		{
-			printf("Error: rice coding code_option not supported\n");
+			//printf("Error: rice coding code_option not supported\n");
 		}
 		break;
 	case 3:
-		printf("InputVal: %d %d\n", input_value, code_option[1]);
+		//printf("InputVal: %d %d\n", input_value, code_option[1]);
 		if (code_option[1] == 0)
 		{
 			if (input_value <= 2)
@@ -2617,7 +2617,7 @@ void rice_coding(
 		}
 		break;
 	case 4: // 4 bits
-		printf("InputVal: %d %d\n", input_value, code_option[2]);
+		//printf("InputVal: %d %d\n", input_value, code_option[2]);
 		if (code_option[2] == 0)
 		{
 			if (input_value <= 3)
@@ -2735,7 +2735,7 @@ void gaggle_encode_1(
 		{
 			if (block_data[block_num_index].symbol_block[symbol_id].type == ENUM_TYPE_P)
 			{
-				printf("SYMBOL LENGTH: %d\n", block_data[block_num_index].symbol_block[symbol_id].symbol_len);
+				//printf("SYMBOL LENGTH: %d\n", block_data[block_num_index].symbol_block[symbol_id].symbol_len);
 				switch (block_data[block_num_index].symbol_block[symbol_id].symbol_len)
 				{
 				case 1:
@@ -2768,10 +2768,10 @@ void gaggle_encode_1(
 							}
 						}
 					}
-					printf("RICE CODING START 1\n");
-					printf("input value: %d symbol_id %d\n",block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern, symbol_id);
+					//printf("RICE CODING START 1\n");
+					//printf("input value: %d symbol_id %d\n",block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern, symbol_id);
 					rice_coding(compression_data,segment_number ,block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern, block_data[block_num_index].symbol_block[symbol_id].symbol_len, code_option_gaggle);
-					printf("RICE CODING END 1\n");
+					//printf("RICE CODING END 1\n");
 					unsigned int counter = 0;
 
 					for (unsigned int i = 0; i < block_data[block_num_index].symbol_block[symbol_id].symbol_len; ++i)
@@ -2788,7 +2788,7 @@ void gaggle_encode_1(
 					block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern = 0;
 					block_data[block_num_index].symbol_block[symbol_id].sign = 0; 
 					block_data[block_num_index].symbol_block[symbol_id].type = 0;
-					printf("TYPE POST RESTET %d\n", block_data[block_num_index].symbol_block[symbol_id].type );
+					//printf("TYPE POST RESTET %d\n", block_data[block_num_index].symbol_block[symbol_id].type );
 					break;
 				}
 				default:
@@ -2852,9 +2852,9 @@ void gaggle_encode_2(
 		                }
 		            }
 		        }
-				printf("RICE CODING START 2\n");
+				//printf("RICE CODING START 2\n");
 				rice_coding(compression_data,segment_number,block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern, block_data[block_num_index].symbol_block[symbol_id].symbol_len, code_option_gaggle);
-				printf("RICE CODING END 2\n");
+				//printf("RICE CODING END 2\n");
 				if (block_data[block_num_index].symbol_block[symbol_id].type == ENUM_TYPE_CI)
 				{
 					unsigned int counter = 0;
@@ -2934,9 +2934,9 @@ void gaggle_encode_3(
 						}
 					}
 				}
-				printf("RICE CODING START 3\n");
+				//printf("RICE CODING START 3\n");
 				rice_coding(compression_data,segment_number,block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern, block_data[block_num_index].symbol_block[symbol_id].symbol_len, code_option_gaggle);
-				printf("RICE CODING END 3\n");
+				//printf("RICE CODING END 3\n");
 				if (block_data[block_num_index].symbol_block[symbol_id].type == ENUM_TYPE_HIJ)
 				{
 					unsigned int counter = 0;
@@ -2971,7 +2971,7 @@ void ref_bit_end_encode(
 {
 	for (unsigned int block_num = 0; block_num < compression_data->segment_size; ++block_num)
 	{	
-		printf("PARENT SYM LENG %d\n", block_data[block_num].parent_sym_len);
+		//printf("PARENT SYM LENG %d\n", block_data[block_num].parent_sym_len);
 		if (block_data[block_num].parent_sym_len > 0)
 		{
 			write_to_the_output_segment(compression_data->segment_list,
@@ -2984,7 +2984,7 @@ void ref_bit_end_encode(
 			block_data[block_num].parent_sym_len = 0;
 		}
 
-		printf("CHILDREN SYM LENG %d\n", block_data[block_num].children_sym_len);
+		//printf("CHILDREN SYM LENG %d\n", block_data[block_num].children_sym_len);
 		if (block_data[block_num].children_sym_len > 0)
 		{
 			write_to_the_output_segment(compression_data->segment_list,
@@ -2999,7 +2999,7 @@ void ref_bit_end_encode(
 
 		for (unsigned int i = 0; i < 3; ++i)
 		{
-			printf("GRANCHILDREN SYM LENG %d %d\n",i, block_data[block_num].grand_children_sym_len[i]);
+			//printf("GRANCHILDREN SYM LENG %d %d\n",i, block_data[block_num].grand_children_sym_len[i]);
 			if (block_data[block_num].grand_children_sym_len[i] > 0)
 			{
 				write_to_the_output_segment(compression_data->segment_list,
