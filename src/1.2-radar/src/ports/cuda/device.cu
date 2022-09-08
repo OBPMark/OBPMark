@@ -185,7 +185,7 @@ void process_benchmark(
     radar_params_t *params = radar_data->host_params;
 
     /* SAR RANGE REFERENCE */
-    int n_blocks = params->rsize/BLOCK_SIZE+1;
+    int n_blocks = (params->rsize-1)/BLOCK_SIZE+1;
     // compute reference function
     uint32_t nit = floor(params->tau * params->fs);
     SAR_range_ref<<<n_blocks,BLOCK_SIZE>>>(radar_data->rrf, radar_data->params, nit);
@@ -200,12 +200,12 @@ void process_benchmark(
 
 //    printffDc<<<1,1>>>();
     /* RCMC table */
-    dim3 gridSize(params->apatch/TILE_SIZE,(params->rvalid)/TILE_SIZE+1,1);
+    dim3 gridSize(params->apatch/TILE_SIZE,(params->rvalid-1)/TILE_SIZE+1,1);
     SAR_rcmc_table<<<gridSize, blockSize>>>(radar_data->params, radar_data->offsets);
 
     /* SAR AZIMUTH REFERENCE */
     // compute azimuth values
-    n_blocks = params->apatch/BLOCK_SIZE+1;
+    n_blocks = (params->apatch)/BLOCK_SIZE;
     // Compute azimuth reference
     SAR_azimuth_ref<<<n_blocks, BLOCK_SIZE>>>(radar_data->arf, radar_data->params);
     // perform fft
@@ -214,14 +214,14 @@ void process_benchmark(
     /* Begin patch processing */
     //SAR Range Compress
     cufftExecC2C(radar_data->range_plan, (cufftComplex*) radar_data->range_data, (cufftComplex*) radar_data->range_data, CUFFT_FORWARD);
-    gridSize = {next_power_of_two(params->rsize)/TILE_SIZE+1,params->apatch/TILE_SIZE+1,params->npatch};
+    gridSize = {next_power_of_two(params->rsize)/TILE_SIZE, params->apatch/TILE_SIZE, params->npatch};
     SAR_ref_product<<<gridSize,blockSize>>>(radar_data->range_data, radar_data->rrf, next_power_of_two(params->rsize), params->apatch);
     cufftExecC2C(radar_data->range_plan, (cufftComplex*) radar_data->range_data, (cufftComplex*) radar_data->range_data, CUFFT_INVERSE);
     //after IFFT data needs to be idvided by next_power_of_two(rsize), we do that when transposing
     SAR_transpose<<<gridSize, blockSize>>>(radar_data->range_data, radar_data->azimuth_data, next_power_of_two(params->rsize), params->apatch, params->apatch, params->rvalid);
     cufftExecC2C(radar_data->azimuth_plan, (cufftComplex*) radar_data->azimuth_data, (cufftComplex*) radar_data->azimuth_data, CUFFT_FORWARD);
 
-    gridSize= {params->apatch/TILE_SIZE+1,(params->rvalid)/TILE_SIZE+1,params->npatch};
+    gridSize= {params->apatch/TILE_SIZE,(params->rvalid-1)/TILE_SIZE+1,params->npatch};
     /* RCMC */
     SAR_rcmc<<<gridSize,blockSize>>>(radar_data->azimuth_data , radar_data->offsets, params->apatch, params->rvalid);
 
@@ -231,9 +231,8 @@ void process_benchmark(
     //after IFFT data needs to be idvided by next_power_of_two(rsize), we do that when transposing
     SAR_transpose<<<gridSize, blockSize>>>(radar_data->azimuth_data, radar_data->range_data, params->apatch, next_power_of_two(params->rsize), params->rvalid, params->apatch);
 
-    gridSize= {radar_data->out_width/TILE_SIZE+1,radar_data->out_height/TILE_SIZE+1,1};
+    gridSize= {(radar_data->out_width-1)/TILE_SIZE+1,(radar_data->out_height-1)/TILE_SIZE+1,1};
     SAR_multilook<<<gridSize,blockSize>>>(radar_data->range_data, radar_data->ml_data, radar_data->params, radar_data->out_width, radar_data->out_height);
-    printfM<<<1,1>>>();
     quantize<<<gridSize,blockSize>>>(radar_data->ml_data, radar_data->output_image, radar_data->out_width, radar_data->out_height);
 
     cudaEventRecord(*t->stop);

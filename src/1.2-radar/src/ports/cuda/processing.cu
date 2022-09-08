@@ -28,6 +28,17 @@ __device__ uint32_t next_power_of2(uint32_t n)
 static __device__ float fDc = 0;
 static __device__ float v_max = FLT_MIN;
 static __device__ float v_min = FLT_MAX;
+/* Debug kernels */
+__global__ void printffDc()
+{
+    printf("fDc: %.12f\n",fDc);
+}
+__global__ void printfM()
+{
+    printf("Max: %.12f\n",v_max);
+    printf("Min: %.12f\n",v_min);
+}
+
 
 __global__ void SAR_range_ref(float *rrf, radar_params_t *params, uint32_t nit)
 {
@@ -85,16 +96,6 @@ __global__ void SAR_DCE(float *data, radar_params_t *params, float const_k)
     }
 }
 
-__global__ void printffDc()
-{
-    printf("fDc: %.12f\n",fDc);
-}
-__global__ void printfM()
-{
-    printf("Max: %.12f\n",v_max);
-    printf("Min: %.12f\n",v_min);
-}
-
 __global__ void SAR_azimuth_ref(float *arf, radar_params_t *params)
 {
     float  rnge = params->ro+(params->rvalid/2)*(c/(2*params->fs));        //range perpendicular to azimuth
@@ -115,19 +116,10 @@ __global__ void SAR_ref_product(float *data, float *ref, uint32_t w, uint32_t h)
 {
     uint32_t i = blockIdx.y * TILE_SIZE + threadIdx.y; if (i >= h) return;
     uint32_t j = blockIdx.x * TILE_SIZE + threadIdx.x; if (j >= w) return;
-    i = i + h * blockIdx.z;
+    i = i + h * blockIdx.z; //Add to i the patch offset
     cuda::std::complex<float> *c_data = (cuda::std::complex<float>*) data;
-
     cuda::std::complex<float>* c_ref = (cuda::std::complex<float>*) ref;
     c_data[i*w+j] *= cuda::std::conj(c_ref[j]);
-//    __shared__ cuda::std::complex<float> c_ref[TILE_SIZE];
-//    if (threadIdx.y == 0) {
-//        if(threadIdx.x < TILE_SIZE)
-//        c_ref[threadIdx.x] = cuda::std::conj(((cuda::std::complex<float>*) ref)[j]);
-//        else printf("%d\n", threadIdx.x);
-//    }
-//    __syncthreads();
-//    c_data[i*w+j] *= c_ref[threadIdx.x];
 }
 
 __global__ void SAR_transpose(float *in, float *out, uint32_t in_width, uint32_t out_width, uint32_t nrows, uint32_t ncols)
@@ -136,19 +128,6 @@ __global__ void SAR_transpose(float *in, float *out, uint32_t in_width, uint32_t
     uint32_t j = blockIdx.x * TILE_SIZE + threadIdx.x; if (j >= ncols) return;
     out[2*((j+ncols*blockIdx.z)*out_width+i)]   = in[2*((i + nrows * blockIdx.z) * in_width +j)]/in_width;
     out[2*((j+ncols*blockIdx.z)*out_width+i)+1] = in[2*((i + nrows * blockIdx.z) * in_width +j)+1]/in_width;
-    //TODO: Try to improve using shared mem
-    //__shared__ float tile[TILE_SIZE][TILE_SIZE*2];
-    //
-    //tile[threadIdx.y][2*threadIdx.x]   = in[2*(y * in_width +x)]/in_width;
-    //tile[threadIdx.y][2*threadIdx.x+1] = in[2*(y * in_width +x)+1]/in_width;
-
-    //__syncthreads();
-
-    //x = blockIdx.y * TILE_SIZE + threadIdx.x;
-    //y = blockIdx.x * TILE_SIZE + threadIdx.y;
-
-    //out[2*(y*out_width+x)]   = tile[threadIdx.x][2*threadIdx.y];
-    //out[2*(y*out_width+x)+1] = tile[threadIdx.x][1+2*threadIdx.y];
 }
 
 __global__ void SAR_rcmc(float *data, uint32_t *offsets, uint32_t width, uint32_t height)
@@ -156,13 +135,12 @@ __global__ void SAR_rcmc(float *data, uint32_t *offsets, uint32_t width, uint32_
 
     uint32_t i = blockIdx.y * TILE_SIZE + threadIdx.y; if (i >= height) return;
     uint32_t j = blockIdx.x * TILE_SIZE + threadIdx.x; if (j >= width) return;
-    cuda::std::complex<float> *c_data = (cuda::std::complex<float>*) &data[(i+blockIdx.z*height) * width];
-
-    //RCMC
+    cuda::std::complex<float> *c_data = &((cuda::std::complex<float>*) data)[(i+blockIdx.z*height) * width];
     uint32_t ind = i * width + j;
     if (offsets[ind] < (height * width)) c_data[ind] = c_data[offsets[ind]];
 }
 
+/* UTIL float atomic Max and atomic Min */
 __device__ float atomicMax(float* address, float val)
 {
     unsigned int* address_as_uint =(unsigned int*)address;
@@ -193,35 +171,35 @@ __global__ void SAR_multilook(float *radar_data, float *image, radar_params_t *p
 {
     cuda::std::complex<float> *c_data = (cuda::std::complex<float>*) radar_data;
 
+    uint32_t isx = params->rvalid/width; 
+    uint32_t isy = params->asize/width; 
+    uint32_t range_w = next_power_of2(params->rsize);
+
     int x = blockIdx.x * TILE_SIZE + threadIdx.x; if (x >= width) return;
     int y = blockIdx.y * TILE_SIZE + threadIdx.y; if (y >= height) return;
+    uint32_t oIdx = y * width + x;
 
-    float sy = (float)params->asize/(float)width;
-    float sx = (float)params->rvalid/(float)width;
-    uint32_t isx = floor(sx);
-    uint32_t isy = floor(sy);
-    uint32_t row_x_patch = ceil(params->avalid/sy);
+    uint32_t row_x_patch = height/params->npatch;
     uint32_t patch = y / row_x_patch;
-    uint32_t offset = patch * (params->apatch - params->avalid);
+    uint32_t patch_offset = patch * params->apatch * range_w;
+    uint32_t initIdx = patch_offset + (y%row_x_patch * isy) * range_w + (x * isx);
     float value;
     float fimg = 0;
     for(int iy = 0; iy < isy; iy++)
         for(int jx = 0; jx < isx; jx++)
-            fimg += cuda::std::abs(c_data[((offset+y*isy+iy) * next_power_of2(params->rsize)+ x*isx+jx)]);
+            fimg += cuda::std::abs(c_data[initIdx+iy*range_w+jx]);
 
     value = fimg/(isx*isy);
     value = (value == 0)?0:log2(value);
-    image[y*width+x] = value;
+    image[oIdx] = value;
     atomicMax(&v_max, value);
     atomicMin(&v_min, value);
 }
 
-
 __global__ void quantize(float *data, uint8_t *image, uint32_t width, uint32_t height)
 {
     float scale = 256.f / (v_max-v_min);
-    int x = blockIdx.x * TILE_SIZE + threadIdx.x;
-    int y = blockIdx.y * TILE_SIZE + threadIdx.y;
-    if(y*width+x >= width * height) return;
+    int x = blockIdx.x * TILE_SIZE + threadIdx.x; if(x >= width) return;
+    int y = blockIdx.y * TILE_SIZE + threadIdx.y; if(y >= height) return;
     image[y*width+x] = min(255.f,floor(scale * (data[y*width+x]-v_min)));
 }
