@@ -125,7 +125,7 @@ openmp: main_openmp
 
 openmp_conf:
 	mkdir -p $(OPENMP_TARGET)
-	export OMP_NUM_THREADS 
+	export OMP_NUM_THREADS=2
 # FIXME this could probably be deleted, test first  (OMP_NUM_THREADS)
 
 openmp_processing.o: openmp_conf $(OPENMP_SRC)/processing.c
@@ -134,7 +134,7 @@ openmp_processing.o: openmp_conf $(OPENMP_SRC)/processing.c
 openmp_device.o: cpu_conf $(OPENMP_SRC)/device.c
 	$(CC) $(CFLAGS) $(OMPFLAGS) -DOPENMP -c $(OPENMP_SRC)/device.c -o $(OPENMP_TARGET)/openmp_device.o
 
-main_openmp: openmp_conf openmp_processing.o openmp_device.o $(COMMON_OBJECTS)
+main_openmp: $(COMMON_OBJECTS) openmp_conf openmp_processing.o openmp_device.o 
 	mkdir -p $(BIN_PATH) 
 	$(CC) $(CFLAGS) $(OMPFLAGS) -DOPENMP $(SRC_FOLDER)/main.cpp  $(OPENMP_TARGET)/openmp_processing.o $(OPENMP_TARGET)/openmp_device.o $(COMMON_OBJECTS_PATH) -o $(OPENMP_EXEC)
 
