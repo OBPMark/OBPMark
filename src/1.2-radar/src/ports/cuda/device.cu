@@ -86,14 +86,14 @@ bool device_memory_init(
 //	//RANGE & AZIMUTH DATA
 	err = cudaMalloc((void **)&(radar_data->range_data),
 	        sizeof(float) * params->npatch * patch_height * patch_extended_width);
-    if (err != cudaSuccess) {printf("rangedata\n"); return false;}
+    if (err != cudaSuccess) return false;
     err = cudaMemset(radar_data->range_data, 0,
 	        sizeof(float) * params->npatch * patch_height * patch_extended_width);
     if (err != cudaSuccess) return false;
 
 	err = cudaMalloc((void **)&(radar_data->azimuth_data),
 	        sizeof(float) * params->npatch * patch_height * patch_width);
-    if (err != cudaSuccess) {printf("azi data\n"); return false;}
+    if (err != cudaSuccess) return false;
     err = cudaMemset(radar_data->azimuth_data, 0,
 	        sizeof(float) * params->npatch * patch_height * patch_width);
     if (err != cudaSuccess) return false;
@@ -101,48 +101,33 @@ bool device_memory_init(
   	//MULTILOOK DATA
 	err = cudaMalloc((void **)&(radar_data->ml_data),
 	        sizeof(float) * params->npatch * out_height * out_width);
-    if (err != cudaSuccess) {printf("ml data\n"); return false;}
+    if (err != cudaSuccess) return false;
 
   	//OUTPUT DATA
 	err = cudaMalloc((void **)&(radar_data->output_image),
 	        sizeof(uint8_t) * params->npatch * out_height * out_width);
-    if (err != cudaSuccess) {printf("out data\n"); return false;}
+    if (err != cudaSuccess) return false;
 
   	//PARAMS
 	err = cudaMalloc((void **)&(radar_data->params), sizeof(radar_params_t));
-    if (err != cudaSuccess) {printf("params data\n"); return false;}
+    if (err != cudaSuccess) return false;
 //    
     //RANGE REF. FUNCTION
 	err = cudaMalloc((void **)&(radar_data->rrf), sizeof(float) * patch_extended_width);
-    if (err != cudaSuccess) {printf("rrf data\n"); return false;}
+    if (err != cudaSuccess) return false;
     err = cudaMemset(radar_data->rrf, 0, sizeof(float) * patch_extended_width);
     if (err != cudaSuccess) return false;
 
 	//AZIMUTH REF. FUNCTION
 	err = cudaMalloc((void **)&(radar_data->arf), sizeof(float) * (patch_height<<1));
-    if (err != cudaSuccess) {printf("arf data\n"); return false;}
+    if (err != cudaSuccess) return false;
     err = cudaMemset(radar_data->arf, 0, sizeof(float) * (patch_height<<1));
     if (err != cudaSuccess) return false;
 
-    //DOPPLER CENTROID VALUE
-//	err = cudaMalloc((void **)&(radar_data->fDc), sizeof(float));
-//    if (err != cudaSuccess) return false;
-//    err = cudaMemset(radar_data->fDc, 0, sizeof(float));
-//    if (err != cudaSuccess) return false;
-
-   // //DOPPLER AUXILIAR BUFFER
-   // err = cudaMalloc((void **)&(radar_data->aux), sizeof(float) * patch_width);
-   // if (err != cudaSuccess) return false;
-   // cudaMemset(radar_data->aux, 0, sizeof(float) * patch_width);
-   // if (err != cudaSuccess) return false;
-//
     //RCMC TABLE
 	err = cudaMalloc((void **)&(radar_data->offsets), sizeof(uint32_t) * params->rvalid * patch_height);
-    if (err != cudaSuccess) {printf("off data\n"); return false;}
+    if (err != cudaSuccess) return false;
 
-//    //Device pointer
-//	err = cudaMalloc((void **)&(radar_data->gpu_ptr), sizeof(radar_data_t));
-//    if (err != cudaSuccess) return false;
 
     return true;
 }
@@ -185,7 +170,7 @@ void process_benchmark(
     radar_params_t *params = radar_data->host_params;
 
     /* SAR RANGE REFERENCE */
-    int n_blocks = params->rsize/BLOCK_SIZE+1;
+    int n_blocks = (params->rsize-1)/BLOCK_SIZE+1;
     // compute reference function
     uint32_t nit = floor(params->tau * params->fs);
     SAR_range_ref<<<n_blocks,BLOCK_SIZE>>>(radar_data->rrf, radar_data->params, nit);
@@ -198,14 +183,13 @@ void process_benchmark(
     float const_k = params->PRF/(2*pi*params->rsize);
     SAR_DCE<<<params->rsize,BLOCK_SIZE,sizeof(float)*2*params->apatch>>>(radar_data->range_data, radar_data->params, const_k);
 
-//    printffDc<<<1,1>>>();
     /* RCMC table */
-    dim3 gridSize(params->apatch/TILE_SIZE,(params->rvalid)/TILE_SIZE+1,1);
+    dim3 gridSize(params->apatch/TILE_SIZE,(params->rvalid-1)/TILE_SIZE+1,1);
     SAR_rcmc_table<<<gridSize, blockSize>>>(radar_data->params, radar_data->offsets);
 
     /* SAR AZIMUTH REFERENCE */
     // compute azimuth values
-    n_blocks = params->apatch/BLOCK_SIZE+1;
+    n_blocks = (params->apatch-1)/BLOCK_SIZE+1;
     // Compute azimuth reference
     SAR_azimuth_ref<<<n_blocks, BLOCK_SIZE>>>(radar_data->arf, radar_data->params);
     // perform fft
@@ -214,14 +198,14 @@ void process_benchmark(
     /* Begin patch processing */
     //SAR Range Compress
     cufftExecC2C(radar_data->range_plan, (cufftComplex*) radar_data->range_data, (cufftComplex*) radar_data->range_data, CUFFT_FORWARD);
-    gridSize = {next_power_of_two(params->rsize)/TILE_SIZE+1,params->apatch/TILE_SIZE+1,params->npatch};
+    gridSize = {next_power_of_two(params->rsize)/TILE_SIZE,params->apatch/TILE_SIZE,params->npatch};
     SAR_ref_product<<<gridSize,blockSize>>>(radar_data->range_data, radar_data->rrf, next_power_of_two(params->rsize), params->apatch);
     cufftExecC2C(radar_data->range_plan, (cufftComplex*) radar_data->range_data, (cufftComplex*) radar_data->range_data, CUFFT_INVERSE);
     //after IFFT data needs to be idvided by next_power_of_two(rsize), we do that when transposing
     SAR_transpose<<<gridSize, blockSize>>>(radar_data->range_data, radar_data->azimuth_data, next_power_of_two(params->rsize), params->apatch, params->apatch, params->rvalid);
     cufftExecC2C(radar_data->azimuth_plan, (cufftComplex*) radar_data->azimuth_data, (cufftComplex*) radar_data->azimuth_data, CUFFT_FORWARD);
 
-    gridSize= {params->apatch/TILE_SIZE+1,(params->rvalid)/TILE_SIZE+1,params->npatch};
+    gridSize= {params->apatch/TILE_SIZE,(params->rvalid-1)/TILE_SIZE+1,params->npatch};
     /* RCMC */
     SAR_rcmc<<<gridSize,blockSize>>>(radar_data->azimuth_data , radar_data->offsets, params->apatch, params->rvalid);
 
@@ -231,13 +215,11 @@ void process_benchmark(
     //after IFFT data needs to be idvided by next_power_of_two(rsize), we do that when transposing
     SAR_transpose<<<gridSize, blockSize>>>(radar_data->azimuth_data, radar_data->range_data, params->apatch, next_power_of_two(params->rsize), params->rvalid, params->apatch);
 
-    gridSize= {radar_data->out_width/TILE_SIZE+1,radar_data->out_height/TILE_SIZE+1,1};
+    gridSize= {(radar_data->out_width-1)/TILE_SIZE+1,(radar_data->out_height-1)/TILE_SIZE+1,1};
     SAR_multilook<<<gridSize,blockSize>>>(radar_data->range_data, radar_data->ml_data, radar_data->params, radar_data->out_width, radar_data->out_height);
-    printfM<<<1,1>>>();
     quantize<<<gridSize,blockSize>>>(radar_data->ml_data, radar_data->output_image, radar_data->out_width, radar_data->out_height);
 
     cudaEventRecord(*t->stop);
-
 }
 
 void copy_memory_to_host(
