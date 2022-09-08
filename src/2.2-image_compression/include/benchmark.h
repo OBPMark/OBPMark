@@ -32,6 +32,7 @@
 /* Defines */
 #define DEFAULTOUTPUTFILENAME "output.bib"
 
+
 #define LEVELS_DWT     3
 #define BLOCKSIZEIMAGE 8
 #define GAGGLE_SIZE    16
@@ -49,8 +50,24 @@
 #define ENUM_TRAN_HI 6
 #define ENUM_TYPE_HIJ 7
 
-#define SIZE_TYPE 3
+#define SIZE_TYPE 4
 #define MAX_SYMBOLS_IN_BLOCK 22
+
+/* customs bits */
+#define BITHH1 0
+#define BITLH1 1
+#define BITHL1 1
+
+#define BITHH2 1
+#define BITLH2 2
+#define BITHL2 2
+
+#define BITHH3 2
+#define BITHL3 3
+#define BITLH3 3
+#define BITLL3 3
+
+
 
 /* Input Defines defines */
 #define MINIMUNWSIZE		17

@@ -1,5 +1,7 @@
 #include "output_format_utils.h"
 
+void get_total_number_of_bits(struct SegmentBitStream *segment_list, unsigned int segment, unsigned int *total_number_of_bits);
+
 
 void add_byte_to_segment_bit_stream(struct SegmentBitStream *segment_bit_stream, unsigned int segment_id, int value, unsigned int bit_length)
 {
@@ -35,6 +37,18 @@ void add_byte_to_segment_bit_stream(struct SegmentBitStream *segment_bit_stream,
    }
 }
 
+void round_up_last_byte(struct SegmentBitStream *segment_bit_stream, unsigned int segment_id)
+{
+  // first get the total number of bits in the segment
+    unsigned int total_number_of_bits = 0;
+    get_total_number_of_bits(segment_bit_stream, segment_id, &total_number_of_bits);
+    // if the total number of bits is not a multiple of 8, then add all of the bits to the last byte
+    if(total_number_of_bits % 8 != 0)
+    {
+        write_to_the_output_segment(segment_bit_stream, 0, BYTE_SIZE - (total_number_of_bits % 8) , segment_id);
+    }
+}
+
 void clean_segment_bit_stream(struct SegmentBitStream *segment_list, unsigned int number_segments)
 {
     for(unsigned int i = 0; i < number_segments; i++)
@@ -52,6 +66,7 @@ void clean_segment_bit_stream(struct SegmentBitStream *segment_list, unsigned in
 
 void write_to_the_output_segment(struct SegmentBitStream *segment_list, int word, unsigned int length, unsigned int segment_id)
 {
+    printf("Writing value %d with length %d\n", word, length);
    if (length != 0 )
    {
         /*if (length > 32)
@@ -159,134 +174,4 @@ void write_segment_list(struct SegmentBitStream *segment_list, unsigned int num_
     }
 
 
-
-    /*// loop over all segments
-    for (unsigned int i = 0; i < num_segments; i++)
-    {
-        struct SegmentBitStreamByte * tmp = segment_list[i].first_byte;
-        while (tmp != NULL)
-        {
-
-            unsigned int bit_size = tmp->bit_size + remaining_bits;
-            if (bit_size > 8)
-            {
-                unsigned int temp_bit_size = bit_size;
-                // loop until the bit size is less than 8
-                while (temp_bit_size > 8)
-                {
-                    unsigned char temp_byte = 0;
-                    for (int i = 8 - 1; i >=0; --i)
-                    {
-                        temp_byte |= ((word >>i) & 0x1) << (7 - status->num_bits);
-                    }
-                    temp_bit_size = temp_bit_size - 8;
-                 
-                }
-                // if the bit size is not 0, add the remaining bits to the next byte
-                if (temp_bit_size != 0)
-                {
-                    remaining_bits_value = 0;
-                    remaining_bits = temp_bit_size;
-                }
-
-            }
-            else
-            {
-                if (remaining_bits == 0)
-                {
-                    remaining_bits_value = tmp->byte_4_value;
-                    remaining_bits = bit_size;
-                }
-                else
-                {
-                    remaining_bits_value << tmp->bit_size;
-                    remaining_bits_value += tmp->byte_4_value;
-                    remaining_bits = bit_size;
-                }
-            }
-            tmp = tmp->next;
-            /*
-            // get the size of each SegmentBitStreamByte
-            unsigned int bit_size = tmp->bit_size + remaining_bits;
-            if (bit_size == 32)
-            {   
-                // if remaining bits are 0, write the 4 byte to the file
-                if (remaining_bits == 0)
-                {
-                    fwrite(&tmp->byte_4_value, sizeof(unsigned int), 1, output_file);
-                }
-                else
-                {
-                    // if remaining bits are not 0, concatenate the actual value with the remaining bits
-                    unsigned int temp_value = tmp->byte_4_value;
-                    temp_value <<= remaining_bits;
-                    temp_value += remaining_bits_value;
-                    fwrite(&temp_value, sizeof(unsigned int), 1, output_file);
-                }
-            }
-            else if (bit_size >= 16)
-            {
-                if (remaining_bits == 0)
-                {
-                    // write the first 16 bits to the file and save the remaining bits
-                    fwrite(&tmp->byte_4_value, sizeof(unsigned short), 1, output_file);
-                    remaining_bits_value = tmp->byte_4_value >> 16;
-                    remaining_bits = bit_size - 16;
-                }
-                else
-                {
-                    // if remaining bits are not 0, concatenate the actual value with the remaining bits and write the 16 bits to the file and save the remaining bits
-                    unsigned int temp_value = tmp->byte_4_value;
-                    temp_value <<= remaining_bits;
-                    temp_value += remaining_bits_value;
-                    fwrite(&temp_value, sizeof(unsigned short), 1, output_file);
-                    remaining_bits_value = temp_value >> 16;
-                    remaining_bits = bit_size - 16;
-                }
-            }
-            else if (bit_size >= 8)
-            {
-                if (remaining_bits == 0)
-                {
-                    // write the first 8 bits to the file and save the remaining bits
-                    fwrite(&tmp->byte_4_value, sizeof(unsigned char), 1, output_file);
-                    remaining_bits_value = tmp->byte_4_value >> 8;
-                    remaining_bits = bit_size - 8;
-                }
-                else
-                {
-                    // if remaining bits are not 0, concatenate the actual value with the remaining bits and write the 8 bits to the file and save the remaining bits
-                    unsigned int temp_value = tmp->byte_4_value;
-                    temp_value <<= remaining_bits;
-                    temp_value += remaining_bits_value;
-
-                    remaining_bits_value <<=  bit_size % 8;
-                    // only create a mask to get the bit_size % 8 bits from temp_value
-                    remaining_bits_value += temp_value 
-
-                    fwrite(&temp_value, sizeof(unsigned char), 1, output_file);
-                    remaining_bits_value = temp_value >> 8;
-                    remaining_bits = bit_size - 8;
-                }
-            }
-            else
-            {
-                // if remaining bits are not 0, concatenate the actual value with the remaining bits and save the remaining bits
-                if (remaining_bits == 0)
-                {
-                    remaining_bits_value = tmp->byte_4_value;
-                    remaining_bits = bit_size;
-                }
-                else
-                {
-                    remaining_bits_value << tmp->bit_size;
-                    remaining_bits_value += tmp->byte_4_value;
-                    remaining_bits = bit_size;
-                }
-            }
-            
-            
-            tmp = tmp->next;
-        }
-    }*/
 }

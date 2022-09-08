@@ -143,7 +143,7 @@ struct block_data_t
 	unsigned char tran_gi;
 	unsigned char type_ci[3];
 	unsigned char tran_hi[3];
-	unsigned char type_hi[9];
+	unsigned char type_hi[12];
 
 	// srt symbol details
 	str_symbol_details_t symbol_block[MAX_SYMBOLS_IN_BLOCK];

@@ -654,7 +654,7 @@ void build_block_string(int **transformed_image, unsigned int h_size, unsigned i
 }
 
 unsigned long conv_to_twos_complement(
-	unsigned int value,
+	int value,
 	unsigned int num_bits
 )
 {
@@ -694,30 +694,50 @@ void coding_quantized_coefficients(
 	unsigned int N
 )
 {
-	unsigned long x_min = - (1<<(N-1));
-	unsigned long x_max = ((1<<(N-1)) - 1);
-	unsigned long theta = 0;
+	long x_min = - (1<<(N-1));
+	long x_max = ((1<<(N-1)) - 1);
+	unsigned int number_bits = 0;
+	long theta = 0;
 	long gamma = 0;
 
 	block_data[0].mapped_dc = block_data[0].shifted_dc; // reference sample
-	for(unsigned int i = 1; i < num_blocks; i ++)
+
+	for (unsigned int i = 0; i < (N - 1); i++)
 	{
+		number_bits = (number_bits<<1) +1;
+	}
+
+	if ((block_data[0].shifted_dc & (1 << (N - 1))) > 0)
+	{
+		block_data[0].shifted_dc = - (short) (((block_data[0].shifted_dc ^ number_bits) & number_bits) + 1);
+	}
+
+	for(unsigned int i = 1; i < num_blocks; i ++)
+	{	
+		if ((block_data[i].shifted_dc & (1 << (N - 1))) > 0)
+		{
+			block_data[i].shifted_dc = - (short) (((block_data[i].shifted_dc ^ number_bits) & number_bits) + 1);
+		}
 		// calculate theta
-		theta = std::min(block_data[i-1].shifted_dc - x_min, x_max + block_data[i-1].shifted_dc);
+		theta = std::min(block_data[i-1].shifted_dc - x_min, x_max - block_data[i-1].shifted_dc);
 		// calculate gamma
 		gamma = block_data[i].shifted_dc - block_data[i-1].shifted_dc;
-		
+		printf("theta = %ld: %ld %ld %ld\n", theta, block_data[i-1].shifted_dc, x_min, x_max);
+		printf("gamma = %ld\n", gamma);
 		if ( 0 <= gamma && gamma <= theta)
 		{
 			block_data[i].mapped_dc = 2 * gamma;
+			printf("%ld\n", block_data[i].mapped_dc);
 		}
 		else if (-theta <= gamma && gamma < 0)
 		{
 			block_data[i].mapped_dc = 2 * std::abs(gamma) -1;
+			printf("%ld\n", block_data[i].mapped_dc);
 		}
 		else
 		{
 			block_data[i].mapped_dc =  theta + std::abs(gamma);
+			printf("%ld\n", block_data[i].mapped_dc);
 		}
 	}
 
@@ -736,14 +756,52 @@ void dc_encoder(
 	unsigned int segment_number
 )
 {
-	const bool brute_force = false;
+	const bool brute_force = true;
 	unsigned int start_position = 0;
 	unsigned int end_position = 0;
 	unsigned char encode_selection = 0;
+	unsigned int total_bits = 0;
+	unsigned int min_bits = 0XFFFF;
 
 	if (brute_force)
 	{
-		// brute force coding is not implemented in this version doe to the lack of Header part 3 missin
+		// brute force coding is not implemented in this version doe to the lack of Header part 3 missing
+		unsigned int gaggle_size = GAGGLE_SIZE;
+		start_position = gaggle_id * GAGGLE_SIZE;
+		end_position = start_position + GAGGLE_SIZE;
+		// check if this is the first gaggle, so the start position is 1 instead of 0
+		// check if this is the last gaggle, so the end position is remaining values instead of GAGGLE_SIZE
+		if (reminder_gaggle)
+		{
+			end_position = compression_data->segment_size;
+			gaggle_size = compression_data->segment_size - start_position;
+		}
+		encode_selection = UNCODED_VALUE;
+		for (unsigned int k = 0; k <= max_k; ++k)
+		{
+			printf("StartIndex %d\n", start_position);
+			if (start_position == 0)
+			{
+				total_bits = N;
+			}
+			else
+			{
+				total_bits = 0;
+			}
+			
+			for (unsigned int i = std::max(start_position,(unsigned int)1); i < end_position; i ++)
+			{
+				printf("Mapped DC %ld %d\n", block_data[i].mapped_dc, total_bits);
+				total_bits += ((block_data[i].mapped_dc >> k) + 1) + k;
+				
+			}
+			printf("%d\n", total_bits);
+			if ((total_bits < min_bits) && (total_bits < N * gaggle_size))
+			{
+				min_bits = total_bits;
+				encode_selection = k;
+			}
+		}
 	}
 	else
 	{
@@ -755,11 +813,6 @@ void dc_encoder(
 		// calculate the start position of this gaggle
 		start_position = gaggle_id * GAGGLE_SIZE;
 		end_position = start_position + GAGGLE_SIZE;
-		// check if this is the first gaggle, so the start position is 1 instead of 0
-		if (gaggle_id == 0)
-		{
-			start_position = 1;
-		}
 		// check if this is the last gaggle, so the end position is remaining values instead of GAGGLE_SIZE
 		if (reminder_gaggle)
 		{
@@ -767,11 +820,10 @@ void dc_encoder(
 			gaggle_size = compression_data->segment_size - start_position;
 		}
 		// sum the delta of all the blocks in this gaggle
-		for (unsigned int i = start_position; i < end_position; i ++)
+		for (unsigned int i = std::max(start_position,(unsigned int)1); i < end_position; i ++)
 		{
 			delta += block_data[i].mapped_dc;
 		}
-
 		// table of code options Table 4-10 in the document
 		if(64 * delta >= 23 * gaggle_size * (1 <<(N)))
 		{
@@ -798,7 +850,7 @@ void dc_encoder(
 	}
 
 
-
+	printf("DC: min_k = %d\n", encode_selection);
 	// encode_selection with size id_length
 	write_to_the_output_segment(compression_data->segment_list,encode_selection,id_length,segment_number);
 
@@ -933,7 +985,7 @@ void header_output(
 	#endif
 }
 
-void dc_encoding(
+short int dc_encoding(
 	compression_image_data_t *compression_data,
 	block_data_t *block_data,
 	header_data_t *header_data,
@@ -950,7 +1002,7 @@ void dc_encoding(
 
 	for (unsigned int i = 0; i < compression_data->segment_size; ++i)
 	{
-		int max_ac_value_block = 0;
+		long max_ac_value_block = 0;
 		// loop over the blocks to get the dc value
 		unsigned int final_pos = i + (segment_number * compression_data->segment_size);
 		int dc_value = block_string[final_pos][0];
@@ -982,10 +1034,22 @@ void dc_encoding(
 				max_ac_value_block = block_string[final_pos][j];
 			}
 		}
-	block_data[i].max_ac_bit_size = max_ac_value_block;
+		printf("Max AC Segment = %ld\n", std::abs(max_ac_value_block));
+		block_data[i].max_ac_bit_size = (unsigned char)(std::ceil(std::log2(std::abs(max_ac_value_block)))) ;
+		// if max_ac_value_block is a power of 2, then max_ac_bit_size + 1
+		if (ceil(log2(std::abs(max_ac_value_block))) == floor(log2(std::abs(max_ac_value_block))))
+		{
+			block_data[i].max_ac_bit_size = block_data[i].max_ac_bit_size + 1;
+		}
+		printf("max ac bit size %ld\n", block_data[i].max_ac_bit_size);
 	}
 	// calculate the ac bit size
 	header_data->bit_depth_ac = (unsigned char)(std::ceil(std::log2(std::abs(max_ac_value)))) ;
+	// if max_ac_value is a power of 2, then max_ac_bit_size + 1
+	if (ceil(log2(std::abs(max_ac_value))) == floor(log2(std::abs(max_ac_value))))
+	{
+		header_data->bit_depth_ac = header_data->bit_depth_ac + 1;
+	}
 	// finish getting the AC and DC bit sizes
 	header_output(compression_data, header_data,segment_number);
 
@@ -998,21 +1062,22 @@ void dc_encoding(
 	{
 		quantization_factor = header_data->bit_depth_dc - 3;
 	}
-	else if (((header_data->bit_depth_ac - (1 + header_data->bit_depth_ac >> 1)) > 10) && (header_data->bit_depth_dc > 3) )
+	else if (((header_data->bit_depth_dc - (1 + header_data->bit_depth_ac >> 1)) > 10) && (header_data->bit_depth_dc > 3) )
 	{
 		quantization_factor = header_data->bit_depth_dc - 10;
 	}
 	else
 	{
-		quantization_factor = 1 + (1 + header_data->bit_depth_ac >> 1);
+		quantization_factor = 1 + (header_data->bit_depth_ac >> 1);
 	}
-
+	printf("Quantization factor: %d %d %d\n",quantization_factor, header_data->bit_depth_dc, header_data->bit_depth_ac);
 	//shift of the DC component
 	k = (1 << quantization_factor) - 1;
 	for (unsigned int i = 0; i < compression_data->segment_size; ++i)
 	{
 		unsigned int final_pos = i + (segment_number * compression_data->segment_size);
 		unsigned long new_value_twos = conv_to_twos_complement(block_string[final_pos][0], header_data->bit_depth_dc);
+		//printf("ConvTwosComp: %lu %d\n", new_value_twos, quantization_factor);
 		block_data[i].shifted_dc = new_value_twos >> quantization_factor;
 		block_data[i].dc_reminder = (unsigned short)(new_value_twos & k);
 	}
@@ -1033,10 +1098,11 @@ void dc_encoding(
 	}
 	else
 	{
+		
 		coding_quantized_coefficients(block_data, compression_data->segment_size, N);
 		dc_entropy_coding(block_data, compression_data, header_data, N, quantization_factor,segment_number);
 	}
-
+	return quantization_factor;
 	
 
 }
@@ -1047,7 +1113,8 @@ void ac_encoding(
 	block_data_t *block_data,
 	header_data_t *header_data,
 	int **block_string,
-	unsigned int segment_number
+	unsigned int segment_number,
+	short int quantization_factor
 	)
 
 {
@@ -1074,6 +1141,16 @@ void ac_encoding(
 
 		for ( bit_plane = header_data-> bit_depth_ac; bit_plane > 0; bit_plane --)
 		{
+			
+			if( (bit_plane <= quantization_factor) && ((compression_data->type_of_compression) || ((quantization_factor > BITLL3 ) && (BITLL3 < bit_plane)) ))
+			{
+				printf("printing remaining bits\n");
+				for (unsigned int i = 0; i < compression_data->segment_size; ++i)
+				{
+					write_to_the_output_segment(compression_data->segment_list,( (block_data[i].dc_reminder >> (bit_plane - 1)) & 0x01),1, segment_number);
+				}
+				printf("end printing remaining bits\n");
+			}
 			// stage 0 
 			// MISSING heather part 4
 			//1,2, 3
@@ -1158,14 +1235,50 @@ void ac_gaggle_encode(
 	unsigned int segment_number
 	)
 {
-	const bool brute_force = false;
+	const bool brute_force = true;
 	unsigned int start_position = 0;
 	unsigned int end_position = 0;
 	unsigned char encode_selection = 0;
 
 	if (brute_force)
 	{
-		// brute force coding is not implemented in this version doe to the lack of Header part 3 missin
+		// brute force coding is not implemented in this version doe to the lack of Header part 3 missing
+		// brute force coding is not implemented in this version doe to the lack of Header part 3 missing
+		unsigned int gaggle_size = GAGGLE_SIZE;
+		start_position = gaggle_number * GAGGLE_SIZE;
+		end_position = start_position + GAGGLE_SIZE;
+		// check if this is the first gaggle, so the start position is 1 instead of 0
+		// check if this is the last gaggle, so the end position is remaining values instead of GAGGLE_SIZE
+		if (reminder_gaggle)
+		{
+			end_position = compression_data->segment_size;
+			gaggle_size = compression_data->segment_size - start_position;
+		}
+		encode_selection = UNCODED_VALUE;
+		int total_bits = 0;
+		int min_bits = 0XFFFF;
+		for (unsigned int k = 0; k <= max_k; ++k)
+		{
+			if (start_position == 0)
+			{
+				total_bits = N;
+			}
+			else
+			{
+				total_bits = 0;
+			}
+			
+			for (unsigned int i = std::max(start_position,(unsigned int)1); i < end_position; i ++)
+			{
+				total_bits += ((block_data[i].mapped_ac >> k) + 1) + k;
+				
+			}
+			if ((total_bits < min_bits) && (total_bits < N * gaggle_size))
+			{
+				min_bits = total_bits;
+				encode_selection = k;
+			}
+		}
 	}
 	else
 	{
@@ -1259,18 +1372,19 @@ void dpcm_ac_mapper(
 	)
 {
 	unsigned long x_min = 0;
-	unsigned long x_max = ((1<<(N-1)) - 1);
-	unsigned long theta = 0;
-	long gamma = 0;
+	unsigned long x_max = ((1 << N) - 1);
+	long theta = 0;
+	short gamma = 0;
 
 	block_data[0].mapped_ac = block_data[0].max_ac_bit_size; // reference sample
 	for(unsigned int i = 1; i < compression_data->segment_size; i ++)
 	{
 		// calculate theta
-		theta = std::min(block_data[i-1].max_ac_bit_size - x_min, x_max + block_data[i-1].max_ac_bit_size);
+		theta = std::min(block_data[i-1].max_ac_bit_size - x_min, x_max - block_data[i-1].max_ac_bit_size);
 		// calculate gamma
 		gamma = block_data[i].max_ac_bit_size - block_data[i-1].max_ac_bit_size;
-		
+		printf("theta AC= %ld: %ld %ld %ld\n", theta, block_data[i-1].max_ac_bit_size, x_min, x_max);
+		printf("gamma AC= %d\n", gamma);
 		if ( 0 <= gamma && gamma <= theta)
 		{
 			block_data[i].mapped_ac = 2 * gamma;
@@ -1287,13 +1401,57 @@ void dpcm_ac_mapper(
 
 }
 
+
+void init_block_data(block_data_t *block_data)
+{
+	// clean the block_data structure
+	block_data->shifted_dc =  0;
+	block_data->dc_reminder = 0;
+	block_data->mapped_dc = 0;
+	block_data->max_ac_bit_size = 0;
+	block_data->mapped_ac = 0;
+	block_data->type_p = 0;
+	block_data->tran_b = 0;
+	block_data->tran_d = 0;
+	block_data->tran_gi = 0;
+	block_data->parent_ref_symbol = 0;
+	block_data->parent_sym_len = 0;
+	block_data->children_ref_symbol = 0;
+	block_data->children_sym_len = 0;
+
+	for (unsigned int i = 0; i < 3; ++i)
+	{
+		block_data->type_ci[i] = 0;
+		block_data->tran_hi[i] = 0;
+		block_data->grand_children_ref_symbol[i] = 0;
+		block_data->grand_children_sym_len[i] = 0;
+
+	}
+
+	for (unsigned int i = 0; i < 12; ++i)
+	{
+		block_data->type_hi[i] = 0;
+	}
+
+	for(unsigned int i = 0; i < MAX_SYMBOLS_IN_BLOCK; ++ i)
+	{
+		block_data->symbol_block[i].symbol_val = 0;
+		block_data->symbol_block[i].symbol_len = 0;
+		block_data->symbol_block[i].symbol_mapped_pattern = 0;
+		block_data->symbol_block[i].sign = 0;
+		block_data->symbol_block[i].type = 0;
+	}
+
+}
+
+
 void compute_bpe(
     compression_image_data_t *compression_data,
     int **block_string,
     unsigned int num_segments
     )
 {
- 	
+ 	short int quantization_factor = 0;
 	// create and allocate memory for the header
 	header_data_t *header_data = (header_data_t *)malloc(sizeof(header_data_t));
 	// for the first header add that is the first header and init the values to 0
@@ -1305,22 +1463,26 @@ void compute_bpe(
 	header_data->part_3_flag = false;
 	header_data->part_4_flag = false;
 	header_data->pad_rows = 0;
+	
 	// now loop over the number of segments and calculate the bpe for each segment
 	for (unsigned int i = 0; i < num_segments; ++i)
 	{
 		// update the segment number
 		header_data->segment_count = i;
+		printf("SEGMENT NUMBER: %d\n", i);
 		// check if we are at the last segment and if so add the last header
 		if (i == num_segments - 1)
 		{
 			header_data->end_img_flag = true;
 		}
 		// now loop over the number of blocks in each segment and calculate the bpe for each block	
-		block_data_t *block_data = (block_data_t *)malloc(sizeof(block_data_t) * compression_data->segment_size);
+		//block_data_t *block_data = (block_data_t *)malloc(sizeof(block_data_t) * compression_data->segment_size);
+		block_data_t *block_data = (block_data_t *)calloc(compression_data->segment_size, sizeof(block_data_t));
+		//init_block_data(block_data);
 		// First calculate DC encoding
-		dc_encoding(compression_data,block_data,header_data, block_string, i);
+		quantization_factor = dc_encoding(compression_data,block_data,header_data, block_string, i);
 		// second calculate AC encoding
-		//ac_encoding(compression_data,block_data,header_data, block_string, i);
+		ac_encoding(compression_data,block_data,header_data, block_string, i, quantization_factor);
 		// third update header
 		header_data->start_img_flag = false;
 		header_data->bit_depth_dc = 0;
@@ -1332,8 +1494,14 @@ void compute_bpe(
 		// write the segment to the binary output with the header
 		// write header and clean up the header
 		//void header_write(header_data_t *header_data, unsigned int segment_number);
+		// flush the segment to have byte size
+		round_up_last_byte(compression_data->segment_list,i);
 		// free the block_data array
 		free(block_data);
+		if (i== 1)
+		{
+			//exit(0);
+		}
 	}
 	// free the header data
 	free(header_data);
@@ -1351,7 +1519,7 @@ void bit_plane_encoding(
 	unsigned int bit_plane_number
 	)
 {
-
+	printf("BitPlane: %d\n", bit_plane_number);
 	unsigned int temp_x = 0;
 	unsigned int  temp_y = 0;
 	unsigned char symbol = 0;
@@ -1359,14 +1527,15 @@ void bit_plane_encoding(
 	unsigned int start_position = segment_number * compression_data->segment_size;
 	unsigned int final_position = 0;
 	int bit_set_plane = (1 << (bit_plane_number - 1));
+	printf("Bit_Set_Plane: %d\n", bit_set_plane);
 
 	// loop over the blocks in the segment
-	for (unsigned int block_num = 0; block_num < compression_data->segment_size; ++block_num)
+	for (int block_num = 0; block_num < compression_data->segment_size; ++block_num)
 	{	
 		symbol = 0;
 		final_position = start_position + block_num;
 		// check if something to code
-		if (block_data[block_num].mapped_ac < bit_plane_number)
+		if (block_data[block_num].max_ac_bit_size < bit_plane_number)
 		{
 			continue;
 		}
@@ -1376,7 +1545,7 @@ void bit_plane_encoding(
 
 
 		// check the parents of the block_string
-		for (unsigned int j = 0; j < 3; ++j)
+		for (int j = 0; j < 3; ++j)
 		{
 			// missing  Header part 4
 
@@ -1391,20 +1560,34 @@ void bit_plane_encoding(
 			case 2: temp_y = BLOCKSIZEIMAGE + 1; break;
 			default: temp_y = 0; break;
 			}
+			if (!compression_data->type_of_compression) // integer encoding
+			{
+				if( ((j == 0) && (BITHL3 >= bit_plane_number )) || ((j == 1) && (BITLH3 >= bit_plane_number)) || ((j == 2) && (BITHH3>= bit_plane_number)) )
+				{
+					continue;
+				}
+			}
 
-			if ((block_data[block_num].type_p & (1 << (2-block_num))) == 0 )
+			printf("TYPE P %d %d\n", block_data[block_num].type_p, block_num);
+			if ((block_data[block_num].type_p & (1 << (2-j))) == 0 )
 			{
 				block_data[block_num].symbol_block[symbol].type = ENUM_TYPE_P;
 				block_data[block_num].symbol_block[symbol].symbol_len ++;
 				block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
+				printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+				printf("SYMBOL 1-1\n");
 
-				if (ABSOLUTE(block_string[temp_x][temp_y]) >= (1 << (bit_set_plane - 1)) &&
-					ABSOLUTE(block_string[temp_x][temp_y]) < (1 << bit_set_plane))
+				printf("BLOCK STRING VALUE %d bit_set_plane %d\n", block_string[temp_x][temp_y], bit_plane_number);
+				if (ABSOLUTE(block_string[temp_x][temp_y]) >= (1 << (bit_plane_number - 1)) &&
+					ABSOLUTE(block_string[temp_x][temp_y]) < (1 << bit_plane_number))
 				{
-					block_data[block_num].type_p += (1 << (2 - block_num));
+					block_data[block_num].type_p += (1 << (2 - j));
 					block_data[block_num].symbol_block[symbol].symbol_val += 1;
 					block_data[block_num].symbol_block[symbol].sign <<= 1;
 					block_data[block_num].symbol_block[symbol].sign += SIGN(block_string[temp_x][temp_y]);
+					printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+					printf("TYPE P POST %d: %d\n", block_data[block_num].type_p, (1 << (2 - j)));
+					printf("SYMBOL 1-2\n");
 				}
 
 			}
@@ -1414,9 +1597,14 @@ void bit_plane_encoding(
 				if (!compression_data->type_of_compression) // integer compression
 				{
 					// header part 4 custom 2 bits TODO CHECK
-					block_data[block_num].parent_ref_symbol <<= 1;
-					block_data[block_num].parent_ref_symbol += temp_value;
-					block_data[block_num].parent_sym_len ++;
+
+					if( ((j == 0) && (BITHL3 < bit_plane_number )) || ((j == 1) && (BITLH3 < bit_plane_number)) || ((j == 2) && (BITHH3 < bit_plane_number)) )
+					{
+						block_data[block_num].parent_ref_symbol <<= 1;
+						block_data[block_num].parent_ref_symbol += temp_value;
+						block_data[block_num].parent_sym_len ++;
+					}
+					
 				}
 				else
 				{
@@ -1433,6 +1621,7 @@ void bit_plane_encoding(
 			++symbol;
 		}
 		// now determine first part TranB
+		printf("TRAN B1 %d\n", block_data[block_num].tran_b);
 		if (block_data[block_num].tran_b == 0)
 		{
 			bool break_flag = false;
@@ -1444,16 +1633,25 @@ void bit_plane_encoding(
 				temp_x *= 2;
 				temp_y = (k != 1 ? 1 : 0);
 				temp_y *= 2;
+				if (!compression_data->type_of_compression) // integer compression
+				{
+					if( ((k == 0) && (BITHL1 >= bit_plane_number )) || ((k == 1) && (BITLH1 >= bit_plane_number)) || ((k == 2) && (BITHH1 >= bit_plane_number)) )
+					{
+						continue;
+					}
+				}
 				for (unsigned int i = temp_x ; i < temp_x + 2; ++i)
 				{
 					for (unsigned int j = temp_y; j < temp_y + 2; ++j)
 					{
-						if (bit_set_plane & ABSOLUTE(block_string[final_position][(i * BLOCKSIZEIMAGE) + j]) > 0)
+						if ((bit_set_plane & ABSOLUTE(block_string[final_position][(i * BLOCKSIZEIMAGE) + j])) > 0)
 						{
 							block_data[block_num].tran_b = 1;
 							block_data[block_num].symbol_block[symbol].symbol_len = 1;
 							block_data[block_num].symbol_block[symbol].symbol_val = 1;
+							printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
 							block_data[block_num].symbol_block[symbol].type = ENUM_TYPE_TRAN_B;
+							printf("SYMBOL 2-1\n");
 							symbol ++;
 							// goto DS_UPDATE;
 							// exit the loops
@@ -1467,6 +1665,13 @@ void bit_plane_encoding(
 				}
 				if (!break_flag)
 				{
+					if (!compression_data->type_of_compression) // integer compression
+					{
+						if( ((k == 0) && (BITHL1 >= bit_plane_number )) || ((k == 1) && (BITLH1 >= bit_plane_number)) || ((k == 2) && (BITHH1 >= bit_plane_number)) )
+						{
+							continue;
+						}
+					}
 					temp_x = (k >= 1 ? 1 : 0);
 					temp_x *= 4;
 					temp_y = (k != 1 ? 1 : 0);
@@ -1476,12 +1681,15 @@ void bit_plane_encoding(
 					{
 						for (unsigned int j = temp_y; j < temp_y + 4; ++j)
 						{
-							if (bit_set_plane & ABSOLUTE(block_string[final_position][(i * BLOCKSIZEIMAGE) + j]) > 0)
+							if ((bit_set_plane & ABSOLUTE(block_string[final_position][(i * BLOCKSIZEIMAGE) + j])) > 0)
 							{
 								block_data[block_num].tran_b = 1;
 								block_data[block_num].symbol_block[symbol].symbol_len = 1;
 								block_data[block_num].symbol_block[symbol].symbol_val = 1;
+								printf("SYMBOL 2-2\n");
+								printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
 								block_data[block_num].symbol_block[symbol].type = ENUM_TYPE_TRAN_B;
+								
 								symbol ++;
 								// goto DS_UPDATE;
 								// exit the loops
@@ -1496,10 +1704,13 @@ void bit_plane_encoding(
 			}
 		}
 
+		printf("TRAN B2 %d\n", block_data[block_num].tran_b);
 		if (block_data[block_num].tran_b == 0)
 		{
 			block_data[block_num].symbol_block[symbol].symbol_len = 1;
 			block_data[block_num].symbol_block[symbol].symbol_val = 0;
+			printf("SYMBOL 3-1\n");
+			printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
 			block_data[block_num].symbol_block[symbol].type = ENUM_TYPE_TRAN_B;
 			continue;
 		}
@@ -1513,8 +1724,19 @@ void bit_plane_encoding(
 
 		if (block_data[block_num].tran_b == 1) // continue scan
 		{
-			for (unsigned int k = 0; k < 3; k++)
+			for ( int k = 0; k < 3; k++)
 			{
+				
+				if (!compression_data->type_of_compression) // integer compression
+				{
+					if( ((k == 0) && (BITHL2 >= bit_plane_number ) && (BITHL1 >= bit_plane_number) ) 
+					|| ((k == 1) && (BITLH2 >= bit_plane_number) && (BITLH1 >= bit_plane_number)) 
+					|| ((k == 2) && (BITHH2 >= bit_plane_number) && (BITHH1 >= bit_plane_number)) )
+					{
+						continue;
+					}
+				}
+				
 				bool break_flag = false;
 				// Header part 4 custom 2 bits
 				// 
@@ -1527,29 +1749,49 @@ void bit_plane_encoding(
 					temp_x *= 2;
 					temp_y = (k != 1 ? 1 : 0);
 					temp_y *= 2;
-
-					for (unsigned int i = temp_x ; i < temp_x + 2; ++i)
+					bool jump_flag = false;
+					if (!compression_data->type_of_compression) // integer compression
 					{
-						for (unsigned int j = temp_y; j < temp_y + 2; ++j)
+						if( ((k == 0) && (BITHL2 >= bit_plane_number )) || ((k == 1) && (BITLH2 >= bit_plane_number)) || ((k == 2) && (BITHH2 >= bit_plane_number)) )
 						{
-							if((bit_set_plane & ABSOLUTE(block_string[final_position][(i * BLOCKSIZEIMAGE) + j])) > 0)
+							jump_flag = true;
+						}
+					}
+					if (!jump_flag)
+					{
+						for (unsigned int i = temp_x ; i < temp_x + 2; ++i)
+						{
+							for (unsigned int j = temp_y; j < temp_y + 2; ++j)
 							{
-								block_data[block_num].tran_d += (1 << (2 - k));
-								block_data[block_num].symbol_block[symbol].type = ENUM_TYPE_TRAN_D;
-								block_data[block_num].symbol_block[symbol].symbol_len++;
-								block_data[block_num].symbol_block[symbol].symbol_val <= 1;
-								block_data[block_num].symbol_block[symbol].symbol_val++;
-								// finish loops
-								i = temp_x + 2;
-								j = temp_y + 2;
-								break_flag = true;
+								
+								if((bit_set_plane & ABSOLUTE(block_string[final_position][(i * BLOCKSIZEIMAGE) + j])) > 0)
+								{
+									block_data[block_num].tran_d += (1 << (2 - k));
+									block_data[block_num].symbol_block[symbol].type = ENUM_TYPE_TRAN_D;
+									block_data[block_num].symbol_block[symbol].symbol_len++;
+									block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
+									block_data[block_num].symbol_block[symbol].symbol_val ++;
+									printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+									printf("SYMBOL 4-1\n");
+									// finish loops
+									i = temp_x + 2;
+									j = temp_y + 2;
+									break_flag = true;
 
+								}
 							}
 						}
 					}
-
 					if (!break_flag)
 					{
+
+						if (!compression_data->type_of_compression) // integer compression
+						{
+							if( ((k == 0) && (BITHL1 >= bit_plane_number )) || ((k == 1) && (BITLH1 >= bit_plane_number)) || ((k == 2) && (BITHH1 >= bit_plane_number)) )
+							{
+								continue;
+							}
+						}
 						temp_x = (k >= 1 ? 1 : 0);
 						temp_x *= 4;
 						temp_y = (k != 1 ? 1 : 0);
@@ -1559,14 +1801,16 @@ void bit_plane_encoding(
 						{
 							for (unsigned int j = temp_y; j < temp_y + 4; ++j)
 							{
-								if (bit_set_plane & ABSOLUTE(block_string[final_position][(i * BLOCKSIZEIMAGE) + j]) > 0)
+								
+								if ((bit_set_plane & ABSOLUTE(block_string[final_position][(i * BLOCKSIZEIMAGE) + j])) > 0)
 								{
 									block_data[block_num].tran_d += (1 << (2 - k));
 									block_data[block_num].symbol_block[symbol].type = ENUM_TYPE_TRAN_D;
 									block_data[block_num].symbol_block[symbol].symbol_len++;
-									block_data[block_num].symbol_block[symbol].symbol_val <= 1;
-									block_data[block_num].symbol_block[symbol].symbol_val++;
-									symbol ++;
+									block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
+									block_data[block_num].symbol_block[symbol].symbol_val ++;
+									printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+									printf("SYMBOL 4-2\n");
 									// exit the loops
 									i = temp_x + 4;
 									j = temp_y + 4;
@@ -1579,7 +1823,9 @@ void bit_plane_encoding(
 						{
 							block_data[block_num].symbol_block[symbol].type = ENUM_TYPE_TRAN_D;
 							block_data[block_num].symbol_block[symbol].symbol_len++;
-							block_data[block_num].symbol_block[symbol].symbol_val <= 1;
+							block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
+							printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+							printf("SYMBOL 4-3\n");
 
 
 						}	
@@ -1599,7 +1845,13 @@ void bit_plane_encoding(
 			if ((block_data[block_num].tran_d & (1 << (2-k))) != 0)
 			{
 				// Header part 4 custom 2 bits
-
+				if (!compression_data->type_of_compression) // integer compression
+				{
+					if( ((k == 0) && (BITHL2 >= bit_plane_number )) || ((k == 1) && (BITLH2 >= bit_plane_number)) || ((k == 2) && (BITHH2 >= bit_plane_number)) )
+					{
+						continue;
+					}
+				}
 				temp_x = (k >= 1 ? 1 : 0);
 				temp_x *= 2;
 				temp_y = (k != 1 ? 1 : 0);
@@ -1632,15 +1884,19 @@ void bit_plane_encoding(
 								{
 									block_data[block_num].type_ci[k] += (1 << (3 - counter));
 									block_data[block_num].symbol_block[symbol].symbol_len++;
-									block_data[block_num].symbol_block[symbol].symbol_val <= 1;
-									block_data[block_num].symbol_block[symbol].symbol_val++;
+									block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
+									block_data[block_num].symbol_block[symbol].symbol_val ++;
+									printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+									printf("SYMBOL 5-1\n");
 									block_data[block_num].symbol_block[symbol].sign <<= 1;
 									block_data[block_num].symbol_block[symbol].sign += SIGN(block_string[final_position][(i * BLOCKSIZEIMAGE) + j]);
 								}
 								else
 								{
 									block_data[block_num].symbol_block[symbol].symbol_len++;
-									block_data[block_num].symbol_block[symbol].symbol_val <= 1;
+									block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
+									printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+									printf("SYMBOL 5-2\n");
 								}
 							}
 							else
@@ -1649,10 +1905,15 @@ void bit_plane_encoding(
 								
 								if (!compression_data->type_of_compression) // integer compression
 								{
-									// header part 4 custom 2 bits
-									block_data[block_num].children_ref_symbol <<= 1;
-									block_data[block_num].children_ref_symbol += temp_value;
-									block_data[block_num].children_sym_len ++;
+									// header part 4 custom 2 bits TODO CHECK
+
+									if( ((k == 0) && (BITHL2 < bit_plane_number )) || ((k == 1) && (BITLH2 < bit_plane_number)) || ((k == 2) && (BITHH2 < bit_plane_number)) )
+									{
+										block_data[block_num].children_ref_symbol <<= 1;
+										block_data[block_num].children_ref_symbol += temp_value;
+										block_data[block_num].children_sym_len ++;
+									}
+									
 								}
 								else
 								{
@@ -1674,12 +1935,18 @@ void bit_plane_encoding(
 						for (unsigned int j = temp_y; j < temp_y + 2; ++j)
 						{
 							temp_value = ((ABSOLUTE(block_string[final_position][(i * BLOCKSIZEIMAGE) + j]) & bit_set_plane) > 0 ? 1: 0);
+							
 							if (!compression_data->type_of_compression) // integer compression
 							{
 								// header part 4 custom 2 bits TODO CHECK
-								block_data[block_num].children_ref_symbol <<= 1;
-								block_data[block_num].children_ref_symbol += temp_value;
-								block_data[block_num].children_sym_len ++;
+
+								if( ((k == 0) && (BITHL2 < bit_plane_number )) || ((k == 1) && (BITLH2 < bit_plane_number)) || ((k == 2) && (BITHH2 < bit_plane_number)) )
+								{
+									block_data[block_num].children_ref_symbol <<= 1;
+									block_data[block_num].children_ref_symbol += temp_value;
+									block_data[block_num].children_sym_len ++;
+								}
+								
 							}
 							else
 							{
@@ -1699,10 +1966,18 @@ void bit_plane_encoding(
 		{
 			symbol++;
 		}
-		for (unsigned int k; k < 3; ++k)
+		for (int k = 0; k < 3; ++k)
 		{
 			// part 4 custom 2 bits
+			if (!compression_data->type_of_compression) // integer compression
+			{
+				if( ((k == 0) && (BITHL1 >= bit_plane_number )) || ((k == 1) && (BITLH1 >= bit_plane_number)) || ((k == 2) && (BITHH1 >= bit_plane_number)) )
+				{
+					continue;
+				}
+			}
 
+			printf ("trand %d: tran GI %d\n", block_data[block_num].tran_d , block_data[block_num].tran_gi);
 			if (((block_data[block_num].tran_d & (1 << 2 - k)) != 0) && ((block_data[block_num].tran_gi & (1 << 2 - k)) == 0))
 			{
 				block_data[block_num].symbol_block[symbol].type = ENUM_TRAN_GI;
@@ -1719,8 +1994,10 @@ void bit_plane_encoding(
 						if( (bit_set_plane & ABSOLUTE(block_string[final_position][(i * BLOCKSIZEIMAGE) + j])) > 0)
 						{
 							block_data[block_num].symbol_block[symbol].symbol_len++;
-							block_data[block_num].symbol_block[symbol].symbol_val <= 1;
+							block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
 							block_data[block_num].symbol_block[symbol].symbol_val++;
+							printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+							printf("SYMBOL 6-1\n");
 							block_data[block_num].symbol_block[symbol].sign <<= 1;
 							block_data[block_num].tran_gi += (1 << 2 - k);
 							// finish loop
@@ -1733,7 +2010,9 @@ void bit_plane_encoding(
 				if (!break_flag)
 				{
 					block_data[block_num].symbol_block[symbol].symbol_len++;
-					block_data[block_num].symbol_block[symbol].symbol_val <= 1;
+					block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
+					printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+					printf("SYMBOL 6-2\n");
 				}
 
 			}
@@ -1747,7 +2026,13 @@ void bit_plane_encoding(
 		for (unsigned int i = 0; i < 3; i++)
 		{
 			// part 4 custom 2 bits integer
-			
+			if (!compression_data->type_of_compression) // integer compression
+			{
+				if( ((i == 0) && (BITHL1 >= bit_plane_number )) || ((i == 1) && (BITLH1 >= bit_plane_number)) || ((i == 2) && (BITHH1 >= bit_plane_number)) )
+				{
+					continue;
+				}
+			}
 			if (block_data[block_num].symbol_block[symbol].symbol_len != 0)
 			{
 				symbol++;
@@ -1767,9 +2052,11 @@ void bit_plane_encoding(
 							if ((bit_set_plane & ABSOLUTE(block_string[final_position][(k * BLOCKSIZEIMAGE) + p])) > 0)
 							{
 								block_data[block_num].symbol_block[symbol].symbol_len++;
-								block_data[block_num].symbol_block[symbol].symbol_val <= 1;
+								block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
 								block_data[block_num].symbol_block[symbol].symbol_val++;
 								block_data[block_num].tran_hi[i] += (1 << (3 -j));
+								printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+								printf("SYMBOL 7-1\n");
 								// finish loop
 								k = temp_x + 2;
 								p = temp_y + 2;
@@ -1780,7 +2067,9 @@ void bit_plane_encoding(
 					if (!break_flag)
 					{
 						block_data[block_num].symbol_block[symbol].symbol_len++;
-						block_data[block_num].symbol_block[symbol].symbol_val <= 1;
+						block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
+						printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+						printf("SYMBOL 7-2\n");
 					}
 				}
 			}
@@ -1789,7 +2078,13 @@ void bit_plane_encoding(
 		for (unsigned i = 0; i < 3; i++)
 		{
 			// part 4 custom 2 bits integer
-			
+			if (!compression_data->type_of_compression) // integer compression
+			{
+				if( ((i == 0) && (BITHL1 >= bit_plane_number )) || ((i == 1) && (BITLH1 >= bit_plane_number)) || ((i == 2) && (BITHH1 >= bit_plane_number)) )
+				{
+					continue;
+				}
+			}
 			for (unsigned j = 0; j < 4; j++)
 			{
 				temp_x = (i >= 1 ? 1 : 0) * 4 + (j >= 2 ? 1 : 0) * 2;
@@ -1818,11 +2113,17 @@ void bit_plane_encoding(
 								
 								if (!compression_data->type_of_compression) // integer compression
 								{
-									// part 4 custom 2 bits integer
-									block_data[block_num].grand_children_ref_symbol[i] <<= 1;
-									block_data[block_num].grand_children_ref_symbol[i] += temp_value;
-									block_data[block_num].grand_children_sym_len[i]++;
+									// header part 4 custom 2 bits TODO CHECK
+
+									if( ((i == 0) && (BITHL1 < bit_plane_number )) || ((i == 1) && (BITLH1 < bit_plane_number)) || ((i == 2) && (BITHH1 < bit_plane_number)) )
+									{
+										block_data[block_num].grand_children_ref_symbol[i] <<= 1;
+										block_data[block_num].grand_children_ref_symbol[i] += temp_value;
+										block_data[block_num].grand_children_sym_len[i]++;
+									}
+								
 								}
+								
 								else
 								{
 									block_data[block_num].grand_children_ref_symbol[i] <<= 1;
@@ -1848,33 +2149,46 @@ void bit_plane_encoding(
 					{
 						for (unsigned int p = temp_y; p < temp_y + 2; p++)
 						{
+							printf("TYPE_HI %d %d %d\n", i, j, block_data[block_num].type_hi[i*SIZE_TYPE+j]);
 							if((block_data[block_num].type_hi[i*SIZE_TYPE+j] & (1 << (3 - t))) == 0)
 							{
+								printf("TYPE 8 %d : %d\n", bit_set_plane, ABSOLUTE(block_string[final_position][(k * BLOCKSIZEIMAGE) + p]));
 								if((bit_set_plane & ABSOLUTE(block_string[final_position][(k * BLOCKSIZEIMAGE) + p])) > 0)
 								{	
 									block_data[block_num].type_hi[i*SIZE_TYPE+j] += (1 << (3 - t));
+									printf("TYPE_HI SET %d\n", block_data[block_num].type_hi[i*SIZE_TYPE+j]);
 									block_data[block_num].symbol_block[symbol].symbol_len++;
-									block_data[block_num].symbol_block[symbol].symbol_val <= 1;
+									block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
 									block_data[block_num].symbol_block[symbol].symbol_val++;
+									printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+									printf("SYMBOL 8-1\n");
 									block_data[block_num].symbol_block[symbol].sign <<= 1;
 									block_data[block_num].symbol_block[symbol].sign += SIGN(block_string[final_position][(k * BLOCKSIZEIMAGE) + p]);
 								}
 								else
 								{
 									block_data[block_num].symbol_block[symbol].symbol_len++;
-									block_data[block_num].symbol_block[symbol].symbol_val <= 1;
+									block_data[block_num].symbol_block[symbol].symbol_val <<= 1;
+									printf("Symbol val %d: %d\n", symbol, block_data[block_num].symbol_block[symbol].symbol_val);
+									printf("SYMBOL 8-2\n");
 								}
 							}
 							else
 							{
 								// refinement
 								temp_value = ((ABSOLUTE(block_string[final_position][(k * BLOCKSIZEIMAGE) + p]) & bit_set_plane) > 0 ? 1 : 0);
-								if(!compression_data->type_of_compression) // integer compression
+								
+								if (!compression_data->type_of_compression) // integer compression
 								{
-									// part 4 custom 2 bits integer
+									// header part 4 custom 2 bits TODO CHECK
+
+									if( ((i == 0) && (BITHL1 < bit_plane_number )) || ((i == 1) && (BITLH1 < bit_plane_number)) || ((i == 2) && (BITHH1 < bit_plane_number)) )
+									{
 									block_data[block_num].grand_children_ref_symbol[i] <<= 1;
 									block_data[block_num].grand_children_ref_symbol[i] += temp_value;
 									block_data[block_num].grand_children_sym_len[i]++;
+									}
+								
 								}
 								else
 								{
@@ -1951,20 +2265,25 @@ void pattern_mapping(
 	str_symbol_details_t *symbol_details
 )
 {
+	printf("Symbol length: %d\n", symbol_details->symbol_len);
 	switch (symbol_details->symbol_len)
 	{
 		case 0: return;
 		case 1: symbol_details->symbol_mapped_pattern = symbol_details->symbol_val;
+				printf("Symbol mapped pattern: %d\n", symbol_details->symbol_val);
 				break;
 		case 2: symbol_details->symbol_mapped_pattern = bit2_pattern[symbol_details->symbol_val];
 				break;
 		case 3:
+			
 			if (symbol_details->type == ENUM_TYPE_TRAN_D)
 			{
+				printf("Symbol type %d %d %d\n", symbol_details->type, bit3_pattern_TranD[symbol_details->symbol_val], symbol_details->symbol_val);
 				symbol_details->symbol_mapped_pattern = bit3_pattern_TranD[symbol_details->symbol_val];
 			}
 			else
 			{
+				printf("Symbol type %d %d %d\n", symbol_details->type, bit3_pattern[symbol_details->symbol_val], symbol_details->symbol_val);
 				symbol_details->symbol_mapped_pattern = bit3_pattern[symbol_details->symbol_val];
 			}
 			break;
@@ -2004,28 +2323,29 @@ void coding_options(
 
 	for (unsigned int block_num = 0; block_num < blocks_in_gaggle; block_num ++)
 	{
-		unsigned char symbol_index = 0;
-		if (block_data[block_num].mapped_ac < bit_plane_number)
+		unsigned int block_num_index = block_index + block_num; 
+		if (block_data[block_num_index].max_ac_bit_size < bit_plane_number)
 		{
 			continue;
 		}
 		for( unsigned int symbol_id = 0; symbol_id < MAX_SYMBOLS_IN_BLOCK; symbol_id++)
 		{
 			// pattern statistics
-			if(block_data[block_num].symbol_block[symbol_id].type == ENUM_NONE)
+			printf("SYMBOL TYPE %d: %d\n",block_data[block_num_index].symbol_block[symbol_id].type, symbol_id);
+			if(block_data[block_num_index].symbol_block[symbol_id].type == ENUM_NONE)
 			{
 				continue;
 			}
-			else if (block_data[block_num].symbol_block[symbol_id].symbol_len == 1)
+			else if (block_data[block_num_index].symbol_block[symbol_id].symbol_len == 1)
 			{
-				pattern_mapping(&block_data[block_num].symbol_block[symbol_id]);
+				pattern_mapping(&block_data[block_num_index].symbol_block[symbol_id]);
 				continue;
 			}
-			pattern_mapping(&block_data[block_num].symbol_block[symbol_id]);
+			pattern_mapping(&block_data[block_num_index].symbol_block[symbol_id]);
 			// entropy coding
-			if (block_data[block_num].symbol_block[symbol_id].symbol_len == 2)
+			if (block_data[block_num_index].symbol_block[symbol_id].symbol_len == 2)
 			{
-				switch (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern)
+				switch (block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern)
 				{
 					case 0: bit_counter_2bits[0]++; break;
 					case 1: bit_counter_2bits[0] += 2; break;
@@ -2035,18 +2355,18 @@ void coding_options(
 				}
 				bit_counter_2bits[1] += 2; // uncoded
 			}
-			else if (block_data[block_num].symbol_block[symbol_id].symbol_len == 3)
+			else if (block_data[block_num_index].symbol_block[symbol_id].symbol_len == 3)
 			{
 				// try option 0
-				if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 2)
+				if (block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern <= 2)
 				{
-					bit_counter_3bits[0] += block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern + 1;
+					bit_counter_3bits[0] += block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern + 1;
 				}
-				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 5)
+				else if (block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern <= 5)
 				{
 					bit_counter_3bits[0] += 5;
 				}
-				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 7)
+				else if (block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern <= 7)
 				{
 					bit_counter_3bits[0] += 6;
 				}
@@ -2055,15 +2375,15 @@ void coding_options(
 					printf("Error: symbol_mapped_pattern not supported\n");
 				}
 				// option 1
-				if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 1)
+				if (block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern <= 1)
 				{
 					bit_counter_3bits[1] += 2;
 				}
-				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 3)
+				else if (block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern <= 3)
 				{
 					bit_counter_3bits[1] += 3;
 				}
-				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 7)
+				else if (block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern <= 7)
 				{
 					bit_counter_3bits[1] += 4;
 				}
@@ -2074,18 +2394,18 @@ void coding_options(
 				// uncoded
 				bit_counter_3bits[2] += 3;
 			}
-			else if (block_data[block_num].symbol_block[symbol_id].symbol_len == 4)
+			else if (block_data[block_num_index].symbol_block[symbol_id].symbol_len == 4)
 			{
 				// ty 0
-				if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 3)
+				if (block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern <= 3)
 				{
-					bit_counter_4bits[0] += block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern + 1;
+					bit_counter_4bits[0] += block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern + 1;
 				}
-				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 7)
+				else if (block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern <= 7)
 				{
 					bit_counter_4bits[0] += 7;
 				}
-				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 15)
+				else if (block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern <= 15)
 				{
 					bit_counter_4bits[0] += 8;
 				}
@@ -2095,23 +2415,23 @@ void coding_options(
 				}
 				// try 1
 
-				if (block_data[block_num].symbol_block[symbol_id]. symbol_mapped_pattern <= 1)
+				if (block_data[block_num_index].symbol_block[symbol_id]. symbol_mapped_pattern <= 1)
 				{
 					bit_counter_4bits[1] += 2;
 				}
-				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 3)
+				else if (block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern <= 3)
 				{
 					bit_counter_4bits[1] += 3;
 				}
-				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 5)
+				else if (block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern <= 5)
 				{
 					bit_counter_4bits[1] += 4;
 				}
-				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 11)
+				else if (block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern <= 11)
 				{
 					bit_counter_4bits[1] += 6;
 				}
-				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 15)
+				else if (block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern <= 15)
 				{
 					bit_counter_4bits[1] += 7;
 				}
@@ -2121,15 +2441,15 @@ void coding_options(
 				}
 
 				// try 2
-				if (block_data[block_num].symbol_block[symbol_id]. symbol_mapped_pattern <= 3)
+				if (block_data[block_num_index].symbol_block[symbol_id]. symbol_mapped_pattern <= 3)
 				{
 					bit_counter_4bits[2] += 3;
 				}
-				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 7)
+				else if (block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern <= 7)
 				{
 					bit_counter_4bits[2] += 4;
 				}
-				else if (block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern <= 15)
+				else if (block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern <= 15)
 				{
 					bit_counter_4bits[2] += 5;
 				}
@@ -2196,6 +2516,7 @@ void rice_coding(
 	unsigned char *code_option
 )
 {
+	printf("Bit length: %d\n", bit_length);
 	switch (bit_length)
 	{
 	case 0: // no need to process
@@ -2228,6 +2549,7 @@ void rice_coding(
 		}
 		break;
 	case 3:
+		printf("InputVal: %d %d\n", input_value, code_option[1]);
 		if (code_option[1] == 0)
 		{
 			if (input_value <= 2)
@@ -2295,6 +2617,7 @@ void rice_coding(
 		}
 		break;
 	case 4: // 4 bits
+		printf("InputVal: %d %d\n", input_value, code_option[2]);
 		if (code_option[2] == 0)
 		{
 			if (input_value <= 3)
@@ -2347,7 +2670,7 @@ void rice_coding(
 				printf("Error: rice coding input value not supported\n");
 			}
 		}
-		else if (code_option[2] == 3 ) // two bits spliting
+		else if (code_option[2] == 2 ) // two bits spliting
 		{
 			if (input_value <= 3)
 			{
@@ -2359,6 +2682,7 @@ void rice_coding(
 			}
 			else if (input_value <= 11)
 			{
+				write_to_the_output_segment(compression_data->segment_list,0,2,segment_num);
 				write_to_the_output_segment(compression_data->segment_list,input_value - 4, 3,segment_num);
 			}
 			else if (input_value <= 15)
@@ -2401,35 +2725,40 @@ void gaggle_encode_1(
 {
 	for (unsigned int block_num = 0; block_num < blocks_in_gaggle; block_num ++)
 	{
-		if (block_data[block_num].mapped_ac < bit_plane_number)
+		// get the block index
+		unsigned int block_num_index = block_index + block_num; 
+		if (block_data[block_num_index].max_ac_bit_size < bit_plane_number)
 		{
 			continue;
 		}
 		for( unsigned int symbol_id = 0; symbol_id < MAX_SYMBOLS_IN_BLOCK; symbol_id++)
 		{
-			if (block_data[block_num].symbol_block[symbol_id].type == ENUM_TYPE_P)
+			if (block_data[block_num_index].symbol_block[symbol_id].type == ENUM_TYPE_P)
 			{
-				switch (block_data[block_num].symbol_block[symbol_id].symbol_len)
+				printf("SYMBOL LENGTH: %d\n", block_data[block_num_index].symbol_block[symbol_id].symbol_len);
+				switch (block_data[block_num_index].symbol_block[symbol_id].symbol_len)
 				{
 				case 1:
 				case 2:
 				case 3:
 				{
-					if (block_data[block_num].symbol_block[symbol_id].symbol_len > 1)
+					if (block_data[block_num_index].symbol_block[symbol_id].symbol_len > 1)
 					{
-						if (hit_flag[block_data[block_num].symbol_block[symbol_id].symbol_len - 2] == false)
+						if (hit_flag[block_data[block_num_index].symbol_block[symbol_id].symbol_len - 2] == false)
 						{
-							hit_flag[block_data[block_num].symbol_block[symbol_id].symbol_len - 2] = true;
+							hit_flag[block_data[block_num_index].symbol_block[symbol_id].symbol_len - 2] = true;
 							
-							if (block_data[block_num].symbol_block[symbol_id].symbol_len == 2)
+							//printf("BLOCK OF 3\n");
+							if (block_data[block_num_index].symbol_block[symbol_id].symbol_len == 2)
 							{
+								
 								write_to_the_output_segment(compression_data->segment_list,code_option_gaggle[0],1,segment_number);
 							}
-							else if (block_data[block_num].symbol_block[symbol_id].symbol_len == 3)
+							else if (block_data[block_num_index].symbol_block[symbol_id].symbol_len == 3)
 							{
 								write_to_the_output_segment(compression_data->segment_list,code_option_gaggle[1],2,segment_number);
 							}
-							else if (block_data[block_num].symbol_block[symbol_id].symbol_len == 4)
+							else if (block_data[block_num_index].symbol_block[symbol_id].symbol_len == 4)
 							{
 								write_to_the_output_segment(compression_data->segment_list,code_option_gaggle[2],2,segment_number);
 							}
@@ -2439,24 +2768,27 @@ void gaggle_encode_1(
 							}
 						}
 					}
-
-					rice_coding(compression_data,segment_number ,block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern, block_data[block_num].symbol_block[symbol_id].symbol_len, code_option_gaggle);
+					printf("RICE CODING START 1\n");
+					printf("input value: %d symbol_id %d\n",block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern, symbol_id);
+					rice_coding(compression_data,segment_number ,block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern, block_data[block_num_index].symbol_block[symbol_id].symbol_len, code_option_gaggle);
+					printf("RICE CODING END 1\n");
 					unsigned int counter = 0;
 
-					for (unsigned int i = 0; i < block_data[block_num].symbol_block[symbol_id].symbol_len; ++i)
+					for (unsigned int i = 0; i < block_data[block_num_index].symbol_block[symbol_id].symbol_len; ++i)
 					{
-						if ((block_data[block_num].symbol_block[symbol_id].symbol_val & (1 << i)) > 0)
+						if ((block_data[block_num_index].symbol_block[symbol_id].symbol_val & (1 << i)) > 0)
 						{
 							counter++;
 						}
 					}
-					write_to_the_output_segment(compression_data->segment_list,block_data[block_num].symbol_block[symbol_id].sign,counter,segment_number);
+					write_to_the_output_segment(compression_data->segment_list,block_data[block_num_index].symbol_block[symbol_id].sign,counter,segment_number);
 					// reset symbol values
-					block_data[block_num].symbol_block[symbol_id].symbol_val = 0;
-					block_data[block_num].symbol_block[symbol_id].symbol_len = 0;
-					block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern = 0;
-					block_data[block_num].symbol_block[symbol_id].sign = 0; 
-					block_data[block_num].symbol_block[symbol_id].type = 0;
+					block_data[block_num_index].symbol_block[symbol_id].symbol_val = 0;
+					block_data[block_num_index].symbol_block[symbol_id].symbol_len = 0;
+					block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern = 0;
+					block_data[block_num_index].symbol_block[symbol_id].sign = 0; 
+					block_data[block_num_index].symbol_block[symbol_id].type = 0;
+					printf("TYPE POST RESTET %d\n", block_data[block_num_index].symbol_block[symbol_id].type );
 					break;
 				}
 				default:
@@ -2484,32 +2816,33 @@ void gaggle_encode_2(
 
 	for (unsigned int block_num = 0; block_num < blocks_in_gaggle; block_num ++)
 	{
-		if (block_data[block_num].mapped_ac < bit_plane_number)
+		unsigned int block_num_index = block_index + block_num; 
+		if (block_data[block_num_index].max_ac_bit_size < bit_plane_number)
 		{
 			continue;
 		}
 		for (unsigned int symbol_id = 0; symbol_id < MAX_SYMBOLS_IN_BLOCK; symbol_id++)
 		{
-			switch (block_data[block_num].symbol_block[symbol_id].type)
+			switch (block_data[block_num_index].symbol_block[symbol_id].type)
 			{
 			case ENUM_TYPE_TRAN_B:
 			case ENUM_TYPE_TRAN_D:
 			case ENUM_TYPE_CI:
-		        if (block_data[block_num].symbol_block[symbol_id].symbol_len > 1)
+		        if (block_data[block_num_index].symbol_block[symbol_id].symbol_len > 1)
 		        {
-		            if (hit_flag[block_data[block_num].symbol_block[symbol_id].symbol_len - 2] == false)
+		            if (hit_flag[block_data[block_num_index].symbol_block[symbol_id].symbol_len - 2] == false)
 		            {
-		                hit_flag[block_data[block_num].symbol_block[symbol_id].symbol_len - 2] = true;
+		                hit_flag[block_data[block_num_index].symbol_block[symbol_id].symbol_len - 2] = true;
 		                
-		                if (block_data[block_num].symbol_block[symbol_id].symbol_len == 2)
+		                if (block_data[block_num_index].symbol_block[symbol_id].symbol_len == 2)
 		                {
 		                    write_to_the_output_segment(compression_data->segment_list,code_option_gaggle[0],1,segment_number);
 		                }
-		                else if (block_data[block_num].symbol_block[symbol_id].symbol_len == 3)
+		                else if (block_data[block_num_index].symbol_block[symbol_id].symbol_len == 3)
 		                {
 		                    write_to_the_output_segment(compression_data->segment_list,code_option_gaggle[1],2,segment_number);
 		                }
-		                else if (block_data[block_num].symbol_block[symbol_id].symbol_len == 4)
+		                else if (block_data[block_num_index].symbol_block[symbol_id].symbol_len == 4)
 		                {
 		                   write_to_the_output_segment(compression_data->segment_list,code_option_gaggle[2],2,segment_number);
 		                }
@@ -2519,25 +2852,27 @@ void gaggle_encode_2(
 		                }
 		            }
 		        }
-				rice_coding(compression_data,segment_number,block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern, block_data[block_num].symbol_block[symbol_id].symbol_len, code_option_gaggle);
-				if (block_data[block_num].symbol_block[symbol_id].type == ENUM_TYPE_CI)
+				printf("RICE CODING START 2\n");
+				rice_coding(compression_data,segment_number,block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern, block_data[block_num_index].symbol_block[symbol_id].symbol_len, code_option_gaggle);
+				printf("RICE CODING END 2\n");
+				if (block_data[block_num_index].symbol_block[symbol_id].type == ENUM_TYPE_CI)
 				{
 					unsigned int counter = 0;
-					for (unsigned int i = 0; i < block_data[block_num].symbol_block[symbol_id].symbol_len; ++i)
+					for (unsigned int i = 0; i < block_data[block_num_index].symbol_block[symbol_id].symbol_len; ++i)
 					{
-						if ((block_data[block_num].symbol_block[symbol_id].symbol_val & (1 << i)) > 0)
+						if ((block_data[block_num_index].symbol_block[symbol_id].symbol_val & (1 << i)) > 0)
 						{
 							counter++;
 						}
 						
 					}
-					write_to_the_output_segment(compression_data->segment_list,block_data[block_num].symbol_block[symbol_id].sign,counter,segment_number);
+					write_to_the_output_segment(compression_data->segment_list,block_data[block_num_index].symbol_block[symbol_id].sign,counter,segment_number);
 				}
-				block_data[block_num].symbol_block[symbol_id].symbol_val = 0;
-				block_data[block_num].symbol_block[symbol_id].symbol_len = 0;
-				block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern = 0;
-				block_data[block_num].symbol_block[symbol_id].sign = 0; 
-				block_data[block_num].symbol_block[symbol_id].type = 0;
+				block_data[block_num_index].symbol_block[symbol_id].symbol_val = 0;
+				block_data[block_num_index].symbol_block[symbol_id].symbol_len = 0;
+				block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern = 0;
+				block_data[block_num_index].symbol_block[symbol_id].sign = 0; 
+				block_data[block_num_index].symbol_block[symbol_id].type = 0;
 				break;
 			
 			default:
@@ -2564,31 +2899,32 @@ void gaggle_encode_3(
 {
 	for (unsigned int block_num = 0; block_num < blocks_in_gaggle; block_num ++)
 	{
-		if (block_data[block_num].mapped_ac < bit_plane_number)
+		unsigned int block_num_index = block_index + block_num; 
+		if (block_data[block_num_index].max_ac_bit_size < bit_plane_number)
 		{
 			continue;
 		}
 		for (unsigned int symbol_id = 0; symbol_id < MAX_SYMBOLS_IN_BLOCK; symbol_id++)
 		{
-			switch (block_data[block_num].symbol_block[symbol_id].type)
+			switch (block_data[block_num_index].symbol_block[symbol_id].type)
 			{
 			case ENUM_TRAN_GI:
 			case ENUM_TRAN_HI:
 			case ENUM_TYPE_HIJ:
-				if (block_data[block_num].symbol_block[symbol_id].symbol_len > 1)
+				if (block_data[block_num_index].symbol_block[symbol_id].symbol_len > 1)
 				{
-					if (hit_flag[block_data[block_num].symbol_block[symbol_id].symbol_len - 2] == false)
+					if (hit_flag[block_data[block_num_index].symbol_block[symbol_id].symbol_len - 2] == false)
 					{
-						hit_flag[block_data[block_num].symbol_block[symbol_id].symbol_len - 2] = true;
-						if (block_data[block_num].symbol_block[symbol_id].symbol_len == 2)
+						hit_flag[block_data[block_num_index].symbol_block[symbol_id].symbol_len - 2] = true;
+						if (block_data[block_num_index].symbol_block[symbol_id].symbol_len == 2)
 						{
 							write_to_the_output_segment(compression_data->segment_list,code_option_gaggle[0],1,segment_number);
 						}
-						else if (block_data[block_num].symbol_block[symbol_id].symbol_len == 3)
+						else if (block_data[block_num_index].symbol_block[symbol_id].symbol_len == 3)
 						{
 							write_to_the_output_segment(compression_data->segment_list,code_option_gaggle[1],2,segment_number);
 						}
-						else if (block_data[block_num].symbol_block[symbol_id].symbol_len == 4)
+						else if (block_data[block_num_index].symbol_block[symbol_id].symbol_len == 4)
 						{
 							write_to_the_output_segment(compression_data->segment_list,code_option_gaggle[2],2,segment_number);
 						}
@@ -2598,24 +2934,26 @@ void gaggle_encode_3(
 						}
 					}
 				}
-				rice_coding(compression_data,segment_number,block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern, block_data[block_num].symbol_block[symbol_id].symbol_len, code_option_gaggle);
-				if (block_data[block_num].symbol_block[symbol_id].type == ENUM_TYPE_HIJ)
+				printf("RICE CODING START 3\n");
+				rice_coding(compression_data,segment_number,block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern, block_data[block_num_index].symbol_block[symbol_id].symbol_len, code_option_gaggle);
+				printf("RICE CODING END 3\n");
+				if (block_data[block_num_index].symbol_block[symbol_id].type == ENUM_TYPE_HIJ)
 				{
 					unsigned int counter = 0;
-					for (unsigned int i = 0; i < block_data[block_num].symbol_block[symbol_id].symbol_len; ++i)
+					for (unsigned int i = 0; i < block_data[block_num_index].symbol_block[symbol_id].symbol_len; ++i)
 					{
-						if ((block_data[block_num].symbol_block[symbol_id].symbol_val & (1 << i)) > 0)
+						if ((block_data[block_num_index].symbol_block[symbol_id].symbol_val & (1 << i)) > 0)
 						{
 							counter++;
 						}
 					}
-					write_to_the_output_segment(compression_data->segment_list,block_data[block_num].symbol_block[symbol_id].sign,counter,segment_number);
+					write_to_the_output_segment(compression_data->segment_list,block_data[block_num_index].symbol_block[symbol_id].sign,counter,segment_number);
 				}
-				block_data[block_num].symbol_block[symbol_id].symbol_val = 0;
-				block_data[block_num].symbol_block[symbol_id].symbol_len = 0;
-				block_data[block_num].symbol_block[symbol_id].symbol_mapped_pattern = 0;
-				block_data[block_num].symbol_block[symbol_id].sign = 0;
-				block_data[block_num].symbol_block[symbol_id].type = 0;
+				block_data[block_num_index].symbol_block[symbol_id].symbol_val = 0;
+				block_data[block_num_index].symbol_block[symbol_id].symbol_len = 0;
+				block_data[block_num_index].symbol_block[symbol_id].symbol_mapped_pattern = 0;
+				block_data[block_num_index].symbol_block[symbol_id].sign = 0;
+				block_data[block_num_index].symbol_block[symbol_id].type = 0;
 			break;
 			}
 		}
@@ -2633,6 +2971,7 @@ void ref_bit_end_encode(
 {
 	for (unsigned int block_num = 0; block_num < compression_data->segment_size; ++block_num)
 	{	
+		printf("PARENT SYM LENG %d\n", block_data[block_num].parent_sym_len);
 		if (block_data[block_num].parent_sym_len > 0)
 		{
 			write_to_the_output_segment(compression_data->segment_list,
@@ -2645,6 +2984,7 @@ void ref_bit_end_encode(
 			block_data[block_num].parent_sym_len = 0;
 		}
 
+		printf("CHILDREN SYM LENG %d\n", block_data[block_num].children_sym_len);
 		if (block_data[block_num].children_sym_len > 0)
 		{
 			write_to_the_output_segment(compression_data->segment_list,
@@ -2659,11 +2999,12 @@ void ref_bit_end_encode(
 
 		for (unsigned int i = 0; i < 3; ++i)
 		{
+			printf("GRANCHILDREN SYM LENG %d %d\n",i, block_data[block_num].grand_children_sym_len[i]);
 			if (block_data[block_num].grand_children_sym_len[i] > 0)
 			{
 				write_to_the_output_segment(compression_data->segment_list,
-				block_data[block_num].grand_children_sym_len[i],
 				block_data[block_num].grand_children_ref_symbol[i],
+				block_data[block_num].grand_children_sym_len[i],
 				segment_number);
 
 				// reste to zero
