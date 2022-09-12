@@ -99,6 +99,7 @@ static const int bit4_pattern_TypeHij_TranHi[] = {0, 1, 3, 6, 2, 5, 9, 11, 0, 8,
 
 /* Device defines */
 #ifdef CUDA
+#define NUMBER_STREAMS     2
 #define DEVICESELECTED		0
 #define BLOCK_SIZE_PLANE 	256 
 #define BLOCK_SIZE 		16

@@ -1,6 +1,6 @@
 /**
  * \file device.c
- * \brief Benchmark #122 CPU version (sequential) device initialization. 
+ * \brief Benchmark #122 CPU version (OpenMP) device initialization. 
  * \author Ivan Rodriguez-Ferrandez (BSC)
  */
 
