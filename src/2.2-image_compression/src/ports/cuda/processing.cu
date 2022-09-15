@@ -24,66 +24,94 @@ void ref_bit_end_encode(block_data_t *block_data,int **block_string,compression_
 
 
 
-/**
- * \brief Section that computes the DWT 1D 
- */
-
-void ccsds_wavelet_transform_1D(const int* A, int* B, const int size){
-	// the output will be in the B array the lower half will be the lowpass filter and the half_up will be the high pass filter
-	unsigned int full_size = size * 2;
-	// integer computation
-	// high part
-	for (unsigned int i = 0; i < size; ++i){
-		int sum_value_high = 0;
-		// specific cases
-		if(i == 0){
-			sum_value_high = A[1] - floor( ((9.0/16.0) * (A[0] + A[2])) - ((1.0/16.0) * (A[2] + A[4])) + (1.0/2.0));
-		}
-		else if(i == size -2){
-			sum_value_high = A[2*size - 3] - floor( ((9.0/16.0) * (A[2*size -4] + A[2*size -2])) - ((1.0/16.0) * (A[2*size - 6] + A[2*size - 2])) + (1.0/2.0));
-		}
-		else if(i == size - 1){
-			sum_value_high = A[2*size - 1] - floor( ((9.0/8.0) * (A[2*size -2])) -  ((1.0/8.0) * (A[2*size - 4])) + (1.0/2.0));
-		}
-		else{
-			// generic case
-			sum_value_high = A[2*i+1] - floor( ((9.0/16.0) * (A[2*i] + A[2*i+2])) - ((1.0/16.0) * (A[2*i - 2] + A[2*i + 4])) + (1.0/2.0));
-		}
-		
-		//store
-		B[i+size] = sum_value_high;
-
-	
-
-	}
-	// low_part
-	for (unsigned int i = 0; i < size; ++i){
-		int sum_value_low = 0;
-		if(i == 0){
-			sum_value_low = A[0] - floor(- (B[size]/2.0) + (1.0/2.0));
-		}
-		else
-		{
-			sum_value_low = A[2*i] - floor( - (( B[i + size -1] +  B[i + size])/ 4.0) + (1.0/2.0) );
-		}
-		
-		B[i] = sum_value_low;
-	}
+__global__ void
+transform_image_to_float(const int *A, float *B, unsigned int size)
+{
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if ( i < size)
+    {
+        B[i] = float(A[i]);
+    }
+    
 }
-	
-void ccsds_wavelet_transform_1D(const float* A, float* B, const int size){
-	// flotating part
-	unsigned int full_size = size * 2;
+
+__global__ void
+transform_image_to_int(const float *A, int *B, unsigned int size)
+{
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if ( i < size)
+    {
+        B[i] = A[i] >= 0 ? int(A[i] + 0.5) : int(A[i] - 0.5);
+    }
+    
+}
+
+
+__global__ void
+wavelet_transform_low_int(const int *A, int *B, const int n, const int step){
+    unsigned int size = n;
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (i < size){
+        int sum_value_low = 0;
+        if(i == 0){
+            sum_value_low = A[0] - floor(- (B[(size * step)]/2.0) + (1.0/2.0));
+        }
+        else
+        {
+            sum_value_low = A[(2 * i) * step] - floor( - (( B[(i * step) + (size * step) -(1 * step)] +  B[(i * step) + (size*step)])/ 4.0) + (1.0/2.0) );
+        }
+        
+        B[(i * step)] = sum_value_low;
+    }
+}
+__global__ void
+wavelet_transform_int(const int *A, int *B, const int n, const int step){
+    unsigned int size = n;
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+   
+    if (i < size){
+        int sum_value_high = 0;
+        // specific cases
+        if(i == 0){
+            sum_value_high = A[1 * step] - floor( ((9.0/16.0) * (A[0] + A[2* step])) - ((1.0/16.0) * (A[2* step] + A[4* step])) + (1.0/2.0));
+        }
+        else if(i == size -2){
+            sum_value_high = A[ (2*size  - 3) * step] - floor( ((9.0/16.0) * (A[(2*size -4) * step] + A[(2*size -2)*step])) - ((1.0/16.0) * (A[(2*size - 6)* step] + A[(2*size - 2) * step])) + (1.0/2.0));
+        }
+        else if(i == size - 1){
+            sum_value_high = A[(2*size - 1)* step] - floor( ((9.0/8.0) * (A[(2*size  -2) * step])) -  ((1.0/8.0) * (A[(2*size  - 4)* step ])) + (1.0/2.0));
+        }
+        else{
+            // generic case
+            sum_value_high = A[(2*i  +1)* step] - floor( ((9.0/16.0) * (A[(2*i)* step ] + A[(2*i +2)* step])) - ((1.0/16.0) * (A[(2*i  - 2)* step] + A[(2*i  + 4)* step])) + (1.0/2.0));
+        }
+        
+        //store
+        B[(i * step)+(size * step)] = sum_value_high;
+
+        //__syncthreads();
+        // low_part
+        //for (unsigned int i = 0; i < size; ++i){
+        
+        //}
+    }
+
+}
+
+__global__ void
+wavelet_transform_float(const float *A, float *B, const int n, const float *lowpass_filter,const float *highpass_filter, const int step){
+    unsigned int size = n;
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    unsigned int full_size = size * 2;
 	int hi_start = -(LOWPASSFILTERSIZE / 2);
 	int hi_end = LOWPASSFILTERSIZE / 2;
 	int gi_start = -(HIGHPASSFILTERSIZE / 2 );
-	int gi_end = HIGHPASSFILTERSIZE / 2;
-
-	for (unsigned int i = 0; i < size ; i = ++i ){
-		// loop over N elements of the input vector.
-		float sum_value_low = 0;
-		// first process the lowpass filter
-		for (int hi = hi_start; hi < hi_end + 1; ++hi){
+    int gi_end = HIGHPASSFILTERSIZE / 2;
+    if (i < size){
+        float sum_value_low = 0;
+        for (int hi = hi_start; hi < hi_end + 1; ++hi){
 			int x_position = (2 * i) + hi;
 			if (x_position < 0) {
 				// turn negative to positive
@@ -91,14 +119,14 @@ void ccsds_wavelet_transform_1D(const float* A, float* B, const int size){
 			}
 			else if (x_position > full_size - 1)
 			{
-				x_position = full_size - 1 - (x_position - (full_size -1 ));
+				x_position = full_size - 1 - (x_position - (full_size -1 ));;
 			}
 			// now I need to restore the hi value to work with the array
-			sum_value_low += lowpass_filter_cpu[hi + hi_end] * A[x_position];
+			sum_value_low += lowpass_filter[hi + hi_end] * A[x_position * step];
 			
-		}
+        }
 		// store the value
-		B[i] = sum_value_low;
+		B[i * step] = sum_value_low;
 		float sum_value_high = 0;
 		// second process the Highpass filter
 		for (int gi = gi_start; gi < gi_end + 1; ++gi){
@@ -111,259 +139,14 @@ void ccsds_wavelet_transform_1D(const float* A, float* B, const int size){
 			{
 				x_position = full_size - 1 - (x_position - (full_size -1 ));
 			}
-			sum_value_high += highpass_filter_cpu[gi + gi_end] * A[x_position];
+			sum_value_high += highpass_filter[gi + gi_end] * A[x_position * step];
 		}
 		// store the value
-		B[i+size] = sum_value_high;
-	}
-	
-}
+		B[(i * step) + (size * step)] = sum_value_high;
 
-
-/**
- * \brief Section that computes the DWT 2D 
- */
-void ccsds_wavelet_transform_2D (int** A, const int w_size, const int h_size){
-    // auxiliar pointer to the intermidiate part
-	int *auxiliar = (int *)malloc(sizeof(int) * h_size * w_size);
-    // we nee to be perform a 1D DWT in all rows and another 1D DWT in the columns side
-	for (unsigned int i = 0; i < h_size; ++i){   
-        ccsds_wavelet_transform_1D(A[i], auxiliar + i * w_size, w_size/2);
-    }
-	// write auxiliar to a file
-	/*FILE *fp;
-	fp = fopen("auxiliar.txt", "w");
-	for (unsigned int i = 0; i < h_size; ++i){
-		for (unsigned int j = 0; j < w_size; ++j){
-			fprintf(fp, "%d ", auxiliar[i * w_size + j]);
-			
-		}
-		fprintf(fp, "\n");
-	}
-	fclose(fp);
-	exit(0);*/
-	int *auxiliar_h_input = (int *)malloc(sizeof(int) * h_size);
-	int *auxiliar_h_output = (int *)malloc(sizeof(int) * h_size);
-    for (unsigned int i = 0; i < w_size; ++i){
-		// for each iteration create an auxiliar array
-		for(unsigned int x = 0; x < h_size; ++x ){
-			auxiliar_h_input[x] = auxiliar[x *w_size + i];
-		}
-        ccsds_wavelet_transform_1D(auxiliar_h_input, auxiliar_h_output, h_size/2);
-		for(unsigned int x = 0; x < h_size; ++x ){
-			A[x][i] = auxiliar_h_output[x];
-		}
-    }
-	free(auxiliar);
-	free(auxiliar_h_input);
-	free(auxiliar_h_output);
-}
-
-void ccsds_wavelet_transform_2D (float** A, const int w_size, const int h_size)
-{
-	// auxiliar pointer to the intermidiate part
-	float *auxiliar = (float *)malloc(sizeof(float) * h_size * w_size);
-    // we nee to be perform a 1D DWT in all rows and another 1D DWT in the columns side
-	for (unsigned int i = 0; i < h_size; ++i){   
-        ccsds_wavelet_transform_1D(A[i], auxiliar + i * w_size, w_size/2);
-    }
-	float *auxiliar_h_input = (float *)malloc(sizeof(float) * h_size);
-	float *auxiliar_h_output = (float *)malloc(sizeof(float) * h_size);
-    for (unsigned int i = 0; i < w_size; ++i){
-		// for each iteration create an auxiliar array
-		for(unsigned int x = 0; x < h_size; ++x ){
-			auxiliar_h_input[x] = auxiliar[x *w_size + i];
-		}
-        ccsds_wavelet_transform_1D(auxiliar_h_input, auxiliar_h_output, h_size/2);
-		for(unsigned int x = 0; x < h_size; ++x ){
-			A[x][i] = auxiliar_h_output[x];
-		}
-    }
-	free(auxiliar);
-	free(auxiliar_h_input);
-	free(auxiliar_h_output);
-}
-
-
-/**
- * \brief Section that computes the DWT 2D three levels with the two types of data computations
- */
-void dwt2D_compression_computation_integer(
-    compression_image_data_t *compression_data,
-    int  **image_data,
-    int  **transformed_image
-    )
-{
-    unsigned int h_size_padded = compression_data->h_size + compression_data->pad_rows;
-	unsigned int w_size_padded = compression_data->w_size + compression_data->pad_columns;
-	unsigned int pad_rows = compression_data->pad_rows;
-	unsigned int pad_colums = compression_data->pad_columns;
-    unsigned int iteration = 0;
-    while(iteration != LEVELS_DWT){
-        if (iteration == 0){
-            ccsds_wavelet_transform_2D(image_data,w_size_padded, h_size_padded);
-        }
-        else{
-            // create a subimage from the original
-            unsigned int new_h_size = compression_data->h_size/ (2*iteration);
-            unsigned int new_w_size = compression_data->w_size/ (2*iteration);
-            int  **aux_image = NULL;
-            aux_image = (int**)calloc(new_h_size, sizeof(int *));
-            for(unsigned i = 0; i < new_h_size; i++){
-                aux_image[i] = (int *)calloc(w_size_padded, sizeof(int));
-            }
-            // copy the subimage
-            for( int i=0 ; i < new_h_size ; i++){
-                for( int j=0 ; j < new_w_size ; j++){
-                    aux_image[i][j] = image_data[i][j];
-                }
-            }
-            // send subimage
-            ccsds_wavelet_transform_2D(aux_image, new_w_size, new_h_size);
-            // copy back image
-            for( int i=0 ; i < new_h_size ; i++){
-                for( int j=0 ; j < new_w_size ; j++){
-                    image_data[i][j] = aux_image[i][j];
-                }
-            }
-            for(unsigned i = 0; i < new_h_size; i++){
-                free(aux_image[i]);
-            }
-            free(aux_image);
-        }	
-        
-        ++iteration;
-    }
-    // copy the image
-    for(unsigned int i = 0; i < h_size_padded; i++)
-    {		
-        for(unsigned int j = 0; j < w_size_padded; j++)		
-        {
-                transformed_image[i][j] = image_data[i][j];
-				printf("%d ", transformed_image[i][j]);
-        }
-		printf("\n");
     }
 }
 
-void dwt2D_compression_computation_float(
-    compression_image_data_t *compression_data,
-    int  **image_data,
-    int  **transformed_image
-    )
-{   
-    unsigned int h_size_padded = compression_data->h_size + compression_data->pad_rows;
-    unsigned int w_size_padded = compression_data->w_size + compression_data->pad_columns;
-    unsigned int pad_rows = compression_data->pad_rows;
-    unsigned int pad_colums = compression_data->pad_columns;
-
-    float  **aux_data = NULL;
-    aux_data = (float**)calloc(h_size_padded, sizeof(float *));
-    for(unsigned i = 0; i < h_size_padded; i++){
-        aux_data[i] = (float *)calloc(w_size_padded, sizeof(float));
-    }
-    // convert the original interger image unsigned int to float
-    // convert image to float
-    for( int i=0 ; i < compression_data->h_size ; i++)
-    {
-        for( int j=0 ; j < compression_data->w_size ; j++)
-        {
-            aux_data[i][j] =  float(image_data[i][j]);
-        }
-    }
-    unsigned int iteration = 0;
-    while(iteration != LEVELS_DWT){
-        if (iteration == 0){
-            ccsds_wavelet_transform_2D(aux_data,w_size_padded, h_size_padded);
-        }
-        else{
-            // create a subimage from the original
-            unsigned int new_h_size = h_size_padded / (2*iteration);
-            unsigned int new_w_size = w_size_padded / (2*iteration);
-            float  **aux_image = NULL;
-            aux_image = (float**)calloc(new_h_size, sizeof(float *));
-            for(unsigned i = 0; i < new_h_size; i++){
-                aux_image[i] = (float *)calloc(w_size_padded, sizeof(float));
-            }
-            // copy the subimage
-            for( int i=0 ; i < new_h_size ; i++){
-                for( int j=0 ; j < new_w_size ; j++){
-                    aux_image[i][j] = aux_data[i][j];
-                }
-            }
-            // send subimage
-            ccsds_wavelet_transform_2D(aux_image, new_w_size, new_h_size);
-            // copy back image
-            for( int i=0 ; i < new_h_size ; i++){
-                for( int j=0 ; j < new_w_size ; j++){
-                    aux_data[i][j] = aux_image[i][j];
-                }
-            }
-            for(unsigned i = 0; i < new_h_size; i++){
-                free(aux_image[i]);
-            }
-            free(aux_image);
-        }	
-        
-        ++iteration;
-    }
-    //transform the output image
-    for(unsigned int i = 0; i < h_size_padded; i++)
-    {			
-        for(unsigned int j = 0; j < w_size_padded; j++)		
-        {
-            if( aux_data[i][j] >= 0)
-                transformed_image[i][j] = (int)(aux_data[i][j] + 0.5);
-            else 
-                transformed_image[i][j] = (int)(aux_data[i][j] -0.5);
-
-        }
-    }
-	
-    // copy the image
-    //writeBMP(compression_data->filename_output, transformed_image,*compression_data->w_size,*compression_data->h_size );
-    for(unsigned i = 0; i < h_size_padded; i++){
-        free(aux_data[i]);
-    }
-    free(aux_data);
-    
-}
-
-
-
-/**
- * \brief Entry point of the DWT part of the compression.
- */
-
-void dwt2D_compression_computation(
-	compression_image_data_t *compression_data,
-    int  **image_data,
-    int  **transformed_image,
-	unsigned int h_size_padded,
-	unsigned int w_size_padded
-	)
-{
-    
-
-    if (compression_data->type_of_compression)
-	{
-        dwt2D_compression_computation_float(compression_data, image_data, transformed_image);
-		// Step 1 transform the image 
-		/*
-		##########################################################################################################
-		# This function take the image that has been processed for each of the levels of the DWT 2D and
-		# re-arrange the data so each 8 by 8 block contains a family of de DC component been the DC component
-		# in 0 0 of that block.
-		##########################################################################################################
-		*/
-	}
-	else{
-		// integer encoding
-        dwt2D_compression_computation_integer(compression_data, image_data, transformed_image);
-		coefficient_scaling(transformed_image, h_size_padded, w_size_padded);
-	}
-	coeff_regroup(transformed_image, h_size_padded, w_size_padded);
-}
 
 /**
  * \brief Entry point of the reorder of the blocks.
@@ -472,7 +255,7 @@ void coeff_regroup(
 	}
 	// HH3 band parent family 2
 	unsigned int x = (h_size_padded>>3);
-	unsigned int y = (w_size_padded>>2);
+	//unsigned int y = (w_size_padded>>2);
 	for (unsigned int i = (h_size_padded>>3); i < (h_size_padded>>2); ++i)
 	{
 		for (unsigned int j = (w_size_padded>>3); j < (w_size_padded>>2); ++j)
@@ -633,24 +416,28 @@ void build_block_string(int **transformed_image, unsigned int h_size, unsigned i
 	unsigned int block_h = h_size / BLOCKSIZEIMAGE;
 	unsigned int block_w = w_size / BLOCKSIZEIMAGE;
 
-	unsigned int total_blocks = block_h * block_w;
-	unsigned int counter = 0;
+	//unsigned int total_blocks = block_h * block_w;
+	//unsigned int counter = 0;
+
+	#pragma omp parallel for
 	for (unsigned int i = 0; i < block_h; ++i)
 	{
+		
 		for (unsigned int j = 0; j < block_w; ++j)
 		{
 			// outer loop to loop over the blocks
+			
 			for (unsigned int x = 0; x < BLOCKSIZEIMAGE; ++x)
 			{
 				for (unsigned int y =0; y < BLOCKSIZEIMAGE; ++y)
 				{
 					// this loops is for acces each of the blocks
-					block_string[counter][x * BLOCKSIZEIMAGE + y] = transformed_image[i*BLOCKSIZEIMAGE +x][j*BLOCKSIZEIMAGE+y];
+					block_string[i * block_w + j][x * BLOCKSIZEIMAGE + y] = transformed_image[i*BLOCKSIZEIMAGE +x][j*BLOCKSIZEIMAGE+y];
 					//block_string[counter][y] = transformed_image[i*BLOCKSIZEIMAGE +x][j*BLOCKSIZEIMAGE+y];
 				}
 				//++counter;
 			}
-			++counter;
+			//++counter;
 		}
 	}
 }
@@ -1453,26 +1240,34 @@ void compute_bpe(
     unsigned int num_segments
     )
 {
- 	short int quantization_factor = 0;
-	// create and allocate memory for the header
-	header_data_t *header_data = (header_data_t *)malloc(sizeof(header_data_t));
-	// for the first header add that is the first header and init the values to 0
-	header_data->start_img_flag = true;
-	header_data->end_img_flag = false;
-	header_data->bit_depth_dc = 0;
-	header_data->bit_depth_ac = 0;
-	header_data->part_2_flag = false;
-	header_data->part_3_flag = false;
-	header_data->part_4_flag = false;
-	header_data->pad_rows = 0;
+ 	
+	
 	
 	// now loop over the number of segments and calculate the bpe for each segment
+	#pragma omp parallel for
 	for (unsigned int i = 0; i < num_segments; ++i)
 	{
+
+		// create and allocate memory for the header
+		header_data_t *header_data = (header_data_t *)malloc(sizeof(header_data_t));
+		// for the first header add that is the first header and init the values to 0
+		header_data->start_img_flag = false;
+		header_data->end_img_flag = false;
+		header_data->bit_depth_dc = 0;
+		header_data->bit_depth_ac = 0;
+		header_data->part_2_flag = false;
+		header_data->part_3_flag = false;
+		header_data->part_4_flag = false;
+		header_data->pad_rows = 0;
+		short int quantization_factor = 0;
 		// update the segment number
 		header_data->segment_count = i;
 		//printf("SEGMENT NUMBER: %d\n", i);
 		// check if we are at the last segment and if so add the last header
+		if (i == 0)
+		{
+			header_data->start_img_flag = true;
+		}
 		if (i == num_segments - 1)
 		{
 			header_data->end_img_flag = true;
@@ -1500,13 +1295,11 @@ void compute_bpe(
 		round_up_last_byte(compression_data->segment_list,i);
 		// free the block_data array
 		free(block_data);
-		if (i== 1)
-		{
-			//exit(0);
-		}
+		
+		// free the header data
+		free(header_data);
 	}
-	// free the header data
-	free(header_data);
+
 
 
 }
@@ -2318,7 +2111,7 @@ void coding_options(
 	bool *hit_flag
 	)
 {
-	unsigned int block_sec = 0;
+	//unsigned int block_sec = 0;
 	unsigned int bit_counter_2bits[2] = {0};
 	unsigned int bit_counter_3bits[3] = {0};
 	unsigned int bit_counter_4bits[4] = {0};

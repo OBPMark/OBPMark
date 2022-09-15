@@ -108,6 +108,7 @@ struct block_data_t
 
 typedef struct {
 	time_t t_test;
+	time_t t_dwt;
 	time_t t_bpe;
 	cudaEvent_t *start_memory_copy_device;
 	cudaEvent_t *stop_memory_copy_device;
