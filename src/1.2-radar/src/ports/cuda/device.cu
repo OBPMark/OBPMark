@@ -82,8 +82,8 @@ bool device_memory_init(
 
     cudaError_t err = cudaSuccess;
 
-//	/* radar_data_t memory allocation */
-//	//RANGE & AZIMUTH DATA
+	/* radar_data_t memory allocation */
+	//RANGE & AZIMUTH DATA
 	err = cudaMalloc((void **)&(radar_data->range_data),
 	        sizeof(float) * params->npatch * patch_height * patch_extended_width);
     if (err != cudaSuccess) return false;
@@ -111,7 +111,7 @@ bool device_memory_init(
   	//PARAMS
 	err = cudaMalloc((void **)&(radar_data->params), sizeof(radar_params_t));
     if (err != cudaSuccess) return false;
-//    
+    
     //RANGE REF. FUNCTION
 	err = cudaMalloc((void **)&(radar_data->rrf), sizeof(float) * patch_extended_width);
     if (err != cudaSuccess) return false;
@@ -146,14 +146,12 @@ void copy_memory_to_device(
     uint32_t width = input_params->rsize<<1;
     uint32_t height = input_params->apatch;
     uint32_t line_width = next_power_of_two(width);
-    uint32_t patch_size = line_width * height; // * sizeof(float);
+    uint32_t patch_size = line_width * height;
     for (uint32_t i = 0; i < input_params->npatch; i++ )
         for(uint32_t j = 0; j < height; j++){
             uint32_t offs = i * patch_size + j * line_width;
             cudaMemcpy(&radar_data->range_data[offs], &input_data[i].f[j * width], width * sizeof(float), cudaMemcpyHostToDevice);
         }
-
-    //cudaMemcpy(radar_data->gpu_ptr, radar_data, sizeof(radar_data_t), cudaMemcpyHostToDevice);
 
     cudaEventRecord(*t->stop_memory_copy_device);
 }
@@ -298,12 +296,6 @@ void clean(
 	err = cudaFree(radar_data->params);
 	if(err != cudaSuccess) { fprintf(stderr, "Failed to free device data (error code %s)!\n", cudaGetErrorString(err)); return; }
 
-//	err = cudaFree(radar_data->aux);
-//	if(err != cudaSuccess) { fprintf(stderr, "Failed to free device data (error code %s)!\n", cudaGetErrorString(err)); return; }
-
-//	err = cudaFree(radar_data->fDc);
-//	if(err != cudaSuccess) { fprintf(stderr, "Failed to free device data (error code %s)!\n", cudaGetErrorString(err)); return; }
-
 	err = cudaFree(radar_data->rrf);
 	if(err != cudaSuccess) { fprintf(stderr, "Failed to free device data (error code %s)!\n", cudaGetErrorString(err)); return; }
 
@@ -312,9 +304,6 @@ void clean(
 
 	err = cudaFree(radar_data->offsets);
 	if(err != cudaSuccess) { fprintf(stderr, "Failed to free device data (error code %s)!\n", cudaGetErrorString(err)); return; }
-
-//	err = cudaFree(radar_data->gpu_ptr);
-//	if(err != cudaSuccess) { fprintf(stderr, "Failed to free device data (error code %s)!\n", cudaGetErrorString(err)); return; }
 
     free(radar_data);
 }
