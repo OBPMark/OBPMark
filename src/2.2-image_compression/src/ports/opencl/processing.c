@@ -8,6 +8,7 @@
 #include "processing.h"
 
 
+
 void coefficient_scaling (int **transformed_image,unsigned int h_size_padded,unsigned int w_size_padded);
 void coeff_regroup(int **transformed_image,unsigned int h_size_padded,unsigned int w_size_padded);
 
@@ -21,135 +22,6 @@ void gaggle_encode_1(block_data_t *block_data,int **block_string,compression_ima
 void gaggle_encode_2(block_data_t *block_data,int **block_string,compression_image_data_t *compression_data,header_data_t *header_data,unsigned int segment_number,unsigned int bit_plane_number,unsigned int block_index,unsigned int blocks_in_gaggle,unsigned char *code_option_gaggle,bool *hit_flag);
 void gaggle_encode_3(block_data_t *block_data,int **block_string,compression_image_data_t *compression_data,header_data_t *header_data,unsigned int segment_number,unsigned int bit_plane_number,unsigned int block_index,unsigned int blocks_in_gaggle,unsigned char *code_option_gaggle,bool *hit_flag);
 void ref_bit_end_encode(block_data_t *block_data,int **block_string,compression_image_data_t *compression_data,header_data_t *header_data,unsigned int segment_number,unsigned int bit_plane_number);
-
-
-
-__global__ void
-transform_image_to_float(const int *A, float *B, unsigned int size)
-{
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if ( i < size)
-    {
-        B[i] = float(A[i]);
-    }
-    
-}
-
-__global__ void
-transform_image_to_int(const float *A, int *B, unsigned int size)
-{
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if ( i < size)
-    {
-        B[i] = A[i] >= 0 ? int(A[i] + 0.5) : int(A[i] - 0.5);
-    }
-    
-}
-
-
-__global__ void
-wavelet_transform_low_int(const int *A, int *B, const int n, const int step){
-    unsigned int size = n;
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (i < size){
-		//printf("Value low %d %d: %d\n",step,i,A[(i * step)]);
-        int sum_value_low = 0;
-        if(i == 0){
-            sum_value_low = A[0] - floor(- (B[(size * step)]/2.0) + (1.0/2.0));
-        }
-        else
-        {
-            sum_value_low = A[(2 * i) * step] - floor( - (( B[(i * step) + (size * step) -(1 * step)] +  B[(i * step) + (size*step)])/ 4.0) + (1.0/2.0) );
-        }
-        //printf("sum_value_low: %d: %d\n",i,sum_value_low);
-        B[(i * step)] = sum_value_low;
-    }
-}
-__global__ void
-wavelet_transform_int(const int *A, int *B, const int n, const int step){
-    unsigned int size = n;
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-   
-    if (i < size){
-		//printf("Value %d %d: %d\n",step,i,A[(i * step)]);
-        int sum_value_high = 0;
-        // specific cases
-        if(i == 0){
-            sum_value_high = A[1 * step] - floor( ((9.0/16.0) * (A[0] + A[2* step])) - ((1.0/16.0) * (A[2* step] + A[4* step])) + (1.0/2.0));
-        }
-        else if(i == size -2){
-            sum_value_high = A[ (2*size  - 3) * step] - floor( ((9.0/16.0) * (A[(2*size -4) * step] + A[(2*size -2)*step])) - ((1.0/16.0) * (A[(2*size - 6)* step] + A[(2*size - 2) * step])) + (1.0/2.0));
-        }
-        else if(i == size - 1){
-            sum_value_high = A[(2*size - 1)* step] - floor( ((9.0/8.0) * (A[(2*size  -2) * step])) -  ((1.0/8.0) * (A[(2*size  - 4)* step ])) + (1.0/2.0));
-        }
-        else{
-            // generic case
-            sum_value_high = A[(2*i  +1)* step] - floor( ((9.0/16.0) * (A[(2*i)* step ] + A[(2*i +2)* step])) - ((1.0/16.0) * (A[(2*i  - 2)* step] + A[(2*i  + 4)* step])) + (1.0/2.0));
-        }
-        
-        //store
-        B[(i * step)+(size * step)] = sum_value_high;
-
-		//printf("sum_value_low: %d: %d\n",i,sum_value_high);
-
-        //__syncthreads();
-        // low_part
-        //for (unsigned int i = 0; i < size; ++i){
-        
-        //}
-    }
-
-}
-
-__global__ void
-wavelet_transform_float(const float *A, float *B, const int n, const float *lowpass_filter,const float *highpass_filter, const int step){
-    unsigned int size = n;
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-
-    unsigned int full_size = size * 2;
-	int hi_start = -(LOWPASSFILTERSIZE / 2);
-	int hi_end = LOWPASSFILTERSIZE / 2;
-	int gi_start = -(HIGHPASSFILTERSIZE / 2 );
-    int gi_end = HIGHPASSFILTERSIZE / 2;
-    if (i < size){
-        float sum_value_low = 0;
-        for (int hi = hi_start; hi < hi_end + 1; ++hi){
-			int x_position = (2 * i) + hi;
-			if (x_position < 0) {
-				// turn negative to positive
-				x_position = x_position * -1;
-			}
-			else if (x_position > full_size - 1)
-			{
-				x_position = full_size - 1 - (x_position - (full_size -1 ));;
-			}
-			// now I need to restore the hi value to work with the array
-			sum_value_low += lowpass_filter[hi + hi_end] * A[x_position * step];
-			
-        }
-		// store the value
-		B[i * step] = sum_value_low;
-		float sum_value_high = 0;
-		// second process the Highpass filter
-		for (int gi = gi_start; gi < gi_end + 1; ++gi){
-			int x_position = (2 * i) + gi + 1;
-			if (x_position < 0) {
-				// turn negative to positive
-				x_position = x_position * -1;
-			}
-			else if (x_position >  full_size - 1)
-			{
-				x_position = full_size - 1 - (x_position - (full_size -1 ));
-			}
-			sum_value_high += highpass_filter[gi + gi_end] * A[x_position * step];
-		}
-		// store the value
-		B[(i * step) + (size * step)] = sum_value_high;
-
-    }
-}
 
 
 /**

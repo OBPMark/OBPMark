@@ -100,11 +100,11 @@ bool device_memory_init(
             return false;
         }
     }
-    err = cudaMalloc((void **)&compression_data->output_image, sizeof(int) * (compression_data->h_size + compression_data->pad_columns ) * (compression_data->w_size + compression_data->pad_rows));
+    /*err = cudaMalloc((void **)&compression_data->output_image, sizeof(int) * (compression_data->h_size + compression_data->pad_columns ) * (compression_data->w_size + compression_data->pad_rows));
     if (err != cudaSuccess)
     {
         return false;
-    }
+    }*/
     err = cudaMalloc((void **)&compression_data->transformed_image, sizeof(int) * (compression_data->h_size + compression_data->pad_columns ) * (compression_data->w_size + compression_data->pad_rows));
     if (err != cudaSuccess)
     {
@@ -188,7 +188,6 @@ void ccsds_wavelet_transform_2D(compression_image_data_t *device_object, unsigne
                 device_object->transformed_image + ((device_object->w_size + device_object->pad_rows) * i), 
                 size_w_lateral,
                 1);
-
             wavelet_transform_low_int<<<dimGrid,dimBlock,0,cuda_streams[i % NUMBER_STREAMS]>>>
             (device_object->input_image_gpu + ((device_object->w_size + device_object->pad_rows) * i), 
                 device_object->transformed_image + ((device_object->w_size + device_object->pad_rows) * i), 
@@ -199,6 +198,7 @@ void ccsds_wavelet_transform_2D(compression_image_data_t *device_object, unsigne
     }
     // SYSC all threads
     syncstreams();
+
     // encode columns
     unsigned int w_size_level = device_object->w_size / (1<<level);  // power of two (づ｡◕‿‿◕｡)づ
     unsigned int size_h_lateral = ((device_object->h_size + device_object->pad_columns)/ (1 <<level))/2; // power of two (づ｡◕‿‿◕｡)づ
@@ -284,6 +284,7 @@ void process_benchmark(
     while(iteration != (LEVELS_DWT )){ 
         ccsds_wavelet_transform_2D(compression_data, iteration);
         ++iteration;
+        
     }
     // finish the conversion 
     if(compression_data->type_of_compression)
@@ -382,23 +383,30 @@ void get_elapsed_time(
 	)
 {
 
+    float milliseconds_h_d = 0, milliseconds_d_h = 0;
+    cudaEventElapsedTime(&milliseconds_h_d, *t->start_memory_copy_device, *t->stop_memory_copy_device);
+    // kernel time 1
+    long unsigned int application_miliseconds = (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
+    //  memory transfer time device-host
+    cudaEventElapsedTime(&milliseconds_d_h, *t->start_memory_copy_host, *t->stop_memory_copy_host);
+
 	if (csv_format)
 	{
 		double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
-		printf("%.10f;%.10f;%.10f;\n", (float) 0, elapsed_time, (float) 0);
+		printf("%.10f;%.10f;%.10f;\n", (float) milliseconds_h_d, elapsed_time, (float) milliseconds_d_h);
 	}
 	else if (database_format)
 	{
 		
 		double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
-		printf("%.10f;%.10f;%.10f;%ld;\n", (float) 0, elapsed_time, (float) 0, timestamp);
+		printf("%.10f;%.10f;%.10f;%ld;\n", (float) milliseconds_h_d, elapsed_time, (float) milliseconds_d_h, timestamp);
 	}
 	else if(verbose_print)
 	{
 		double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
-		printf("Elapsed time Host->Device: %.10f milliseconds\n", (float) 0);
+		printf("Elapsed time Host->Device: %.10f milliseconds\n", (float) milliseconds_h_d);
 		printf("Elapsed time kernel: %.10f milliseconds\n", elapsed_time );
-		printf("Elapsed time Device->Host: %.10f milliseconds\n", (float) 0);
+		printf("Elapsed time Device->Host: %.10f milliseconds\n", (float) milliseconds_d_h);
 	}
     
 }

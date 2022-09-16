@@ -151,13 +151,17 @@ opencl: main_opencl
 opencl_conf:
 	mkdir -p $(OPENCL_TARGET)
 
+
+
+opencl_processing.o: opencl_conf $(OPENCL_SRC)/processing.c
+	$(CC) -DOPENCL $(CFLAGS) -c $(OPENCL_SRC)/processing.c  -o $(OPENCL_TARGET)/opencl_processing.o  $(OPFLAGS)
+
 opencl_device.o: opencl_conf $(OPENCL_SRC)/device.c
 	/bin/bash $(CONFIG_PATH)/CLHT.sh
 	$(CC) -DOPENCL $(CFLAGS) -c $(OPENCL_SRC)/device.c  -o $(OPENCL_TARGET)/device.o $(OPFLAGS)
-
-main_opencl: opencl_conf  opencl_device.o $(COMMON_OBJECTS)
+main_opencl: opencl_conf  opencl_device.o opencl_processing.o $(COMMON_OBJECTS)
 	mkdir -p $(BIN_PATH) 
-	$(CC) -DOPENCL $(CFLAGS) $(SRC_FOLDER)/main.cpp  $(OPENCL_TARGET)/device.o  $(COMMON_OBJECTS_PATH) -o $(OPENCL_EXEC)  $(OPFLAGS)
+	$(CC) -DOPENCL $(CFLAGS) $(SRC_FOLDER)/main.cpp  $(OPENCL_TARGET)/opencl_processing.o $(OPENCL_TARGET)/device.o  $(COMMON_OBJECTS_PATH) -o $(OPENCL_EXEC)  $(OPFLAGS)
 
 ###################################### CUDA ##################################
 # Shortcuts
