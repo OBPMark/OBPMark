@@ -190,10 +190,10 @@ int main(int argc, char **argv)
 	/* Find output image size */
     float ratio = (float) params->asize/ (float) params->rvalid;
     out_width = params->rvalid / ml_factor;
-    out_height = ceil((float) params->asize/(ratio * ml_factor));
+//    out_height = ceil((float) params->asize/(ratio * ml_factor));
 
 	/* Fix output height according to valid azimuth samples */
-	float azi_factor =(float) params->asize/(float)out_height;
+	float azi_factor =(float) params->asize/(float)out_width; //height;
 	out_height = floor(params->avalid/azi_factor)*params->npatch;
 
     /* Allocate input data */
