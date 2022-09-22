@@ -92,6 +92,7 @@ __global__ void SAR_DCE(float *data, radar_params_t *params, float const_k)
     if (i == 0){
         float val = cuda::std::arg(tmp[0]);
         val = val*const_k;
+        __threadfence();
         atomicAdd(&fDc, val);
     }
 }
@@ -192,7 +193,9 @@ __global__ void SAR_multilook(float *radar_data, float *image, radar_params_t *p
     value = fimg/(isx*isy);
     value = (value == 0)?0:log2(value);
     image[oIdx] = value;
+    __threadfence();
     atomicMax(&v_max, value);
+    __threadfence();
     atomicMin(&v_min, value);
 }
 
