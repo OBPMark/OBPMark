@@ -63,6 +63,37 @@ typedef struct {
 } radar_time_t; 
 
 #elif OPENCL
+
+/* OPENCL version */
+static const std::string type_def_kernel = "typedef short int uint16_t_cl;\ntypedef unsigned char uint8_t_cl;\ntypedef unsigned int uint32_t_cl;\n";
+#include <CL/cl.hpp>
+
+struct radar_data_t
+{
+    //OpenCL
+    cl::Program *program;
+    cl::Context *context;
+	cl::Device default_device;
+    cl::CommandQueue *queue;
+
+    cl::Buffer *range_data; //width: range, height: azimuth
+    cl::Buffer *azimuth_data; //width: azimuth, height: range
+    cl::Buffer *ml_data;
+    cl::Buffer *output_image;
+    cl::Buffer *rrf; //range reference function
+    cl::Buffer *arf; // azimuth reference function
+    cl::Buffer *offsets; //Offset table for RCMC
+	radar_params_t *params;
+    uint32_t out_width;
+    uint32_t out_height;
+};
+
+typedef struct {
+	time_t t_test;
+    time_t t_host_device;
+    time_t t_device_host;
+} radar_time_t; 
+
 #elif OPENMP
 /* OPENMP version */
 
