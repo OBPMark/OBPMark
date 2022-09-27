@@ -87,7 +87,7 @@ int load_data_from_files(
 
     /* open input data */
     char data_path[256];
-    unsigned int lines = pow(2,ceil(log2((float)params->asize+1)));
+    unsigned int lines = params->apatch;
     for (int i = 0; i < params->npatch; i++){
         if (default_input_folder)
             sprintf(data_path,"%s/%d_%d/1.2-radar-patch_%d_%d_%d.bin",DEFAULT_INPUT_FOLDER, height, width, i, lines, width);

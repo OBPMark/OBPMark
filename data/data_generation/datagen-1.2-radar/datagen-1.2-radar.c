@@ -106,10 +106,9 @@ int benchmark1_2_write_files(
 
     /* Write input data to files */
 	printf("Writing patch data to files...\n");
-    unsigned int lines = pow2(ceil(log2((float)params->asize+1)));
 	for(int i=0; i<params->npatch; i++)
 	{
-		sprintf(data_name, "%s/1.2-radar-patch_%d_%d_%d.bin", dir_name, i, lines, params->rsize);
+		sprintf(data_name, "%s/1.2-radar-patch_%d_%d_%d.bin", dir_name, i, params->apatch, params->rsize);
 		if(!write_framefp(data_name, &patches[i], 1)) {
 			printf("error: failed to write frame data: %d\n", i);
 			return 0;
