@@ -28,32 +28,40 @@ int main(int argc, char *argv[]){
     // read the files
     if (arguments_parameters.bit_depth == 8){
         // read 8 bit
-        fread(gold_refence, sizeof(unsigned char), arguments_parameters.number_of_values, file_A);
-        fread(test_data, sizeof(unsigned char), arguments_parameters.number_of_values, file_B);
+        for (unsigned long int i = 0; i < arguments_parameters.number_of_values; i++){
+            fread(&gold_refence[i], sizeof(unsigned char), 1, file_A);
+            fread(&test_data[i], sizeof(unsigned char), 1, file_B);
+        }
     }else if (arguments_parameters.bit_depth == 16){
         // read 16 bit
-        fread(gold_refence, sizeof(unsigned short int), arguments_parameters.number_of_values, file_A);
-        fread(test_data, sizeof(unsigned short int), arguments_parameters.number_of_values, file_B);
+        for (unsigned long int i = 0; i < arguments_parameters.number_of_values; i++){
+            fread(&gold_refence[i], sizeof(unsigned short int), 1, file_A);
+            fread(&test_data[i], sizeof(unsigned short int), 1, file_B);
+        }
     }else if (arguments_parameters.bit_depth == 32){
         // read 32 bit
-        fread(gold_refence, sizeof(unsigned int), arguments_parameters.number_of_values, file_A);
-        fread(test_data, sizeof(unsigned int), arguments_parameters.number_of_values, file_B);
+        for (unsigned long int i = 0; i < arguments_parameters.number_of_values; i++){
+            fread(&gold_refence[i], sizeof(unsigned int), 1, file_A);
+            fread(&test_data[i], sizeof(unsigned int), 1, file_B);
+        }
     }else{
         // read 64 bit
-        fread(gold_refence, sizeof(unsigned long int), arguments_parameters.number_of_values, file_A);
-        fread(test_data, sizeof(unsigned long int), arguments_parameters.number_of_values, file_B);
+        for (unsigned long int i = 0; i < arguments_parameters.number_of_values; i++){
+            fread(&gold_refence[i], sizeof(unsigned long int), 1, file_A);
+            fread(&test_data[i], sizeof(unsigned long int), 1, file_B);
+        }
     }
 
     // loop for compare the values
     for (unsigned long int i = 0; i < arguments_parameters.number_of_values; i++){
         // check if the values are different taking into account the range_verification that checks if the values are +/- range_verification
-        if (gold_refence[i] < test_data[i] - arguments_parameters.range_verification || gold_refence[i] > test_data[i] + arguments_parameters.range_verification){
+        if ((long int)(gold_refence[i]) < (long int)(test_data[i]) - (long int)(arguments_parameters.range_verification) ||  (long int)(gold_refence[i]) >  (long int)(test_data[i]) +  (long int)(arguments_parameters.range_verification)){
             if (arguments_parameters.verification_non_stop == false){
-                printf("Error in the position %lu, the value is %lu and the expected value is %lu", i, test_data[i], gold_refence[i]);
+                printf("Error in the position %lu, the value is %lu and the expected value is %lu\n", i, test_data[i], gold_refence[i]);
                 // break the loop
                 break;
             }else{
-                printf("Error in the position %lu, the value is %lu and the expected value is %lu", i, test_data[i], gold_refence[i]);
+                printf("Error in the position %lu, the value is %lu and the expected value is %lu\n", i, test_data[i], gold_refence[i]);
             }
         }
     }
