@@ -313,11 +313,17 @@ void dwt2D_compression_computation_float(
         for(unsigned int j = 0; j < w_size_padded; j++)		
         {
             if( aux_data[i][j] >= 0)
-                transformed_image[i][j] = (int)(aux_data[i][j] + 0.5);
-            else 
-                transformed_image[i][j] = (int)(aux_data[i][j] -0.5);
-
+			{
+				transformed_image[i][j] = (int)(aux_data[i][j] + 0.5);
+			}  
+            else
+			{
+				transformed_image[i][j] = (int)(aux_data[i][j] -0.5);
+			} 
+			printf("%d ", transformed_image[i][j]);
+            
         }
+		printf("\n");
     }
 	
     // copy the image
