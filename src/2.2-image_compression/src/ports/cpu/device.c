@@ -80,13 +80,14 @@ void process_benchmark(
 	}
 
 	unsigned int total_blocks =  (h_size_padded / BLOCKSIZEIMAGE )*(w_size_padded/ BLOCKSIZEIMAGE);
+	
 	int **block_string = NULL;
 	block_string = (int **)calloc(total_blocks,sizeof(long *));
 	for(unsigned int i = 0; i < total_blocks ; i++)
 	{
 		block_string[i] = (int *)calloc(BLOCKSIZEIMAGE * BLOCKSIZEIMAGE,sizeof(long));
 	}
-
+	
 	// read the image data
 	for (unsigned int i = 0; i < h_size_padded; ++ i)
 	{

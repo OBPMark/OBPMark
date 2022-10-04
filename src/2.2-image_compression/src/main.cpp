@@ -15,11 +15,6 @@
 #include "util_data_files.h"
 
 
-void print_output_result()
-{
-
-}
-
 void init_benchmark(compression_image_data_t* ccsds_data,compression_time_t* t ,bool csv_mode, bool database_mode, bool print_output, bool verbose_print, long int timestamp)
 {
     
