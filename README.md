@@ -29,6 +29,11 @@ In the meanwhile, users are invited to test out the existing implementations (se
 
 ## Changelog
 See separate file for [changelog.md](changelog.md)
+
+## Documentation
+Detailed technical description of the benchmarks are included in the OBPMark Technical Note. 
+
+See Git wiki page for documentation on the software implementations: https://github.com/OBPMark/OBPMark/wiki/
  
 # Contributors 
 Authors/Chairs:  
@@ -49,8 +54,11 @@ This repository contains a set of reference implementations for performing bench
 
 The following folders are in the repository: 
 
-	docs/	The TeX files for building the OBPMark specification. 
+	config/ Contains build configuration files for all benchmarks compliation formats (C, OpenMP, OpenCL, CUDA). Can be customized if needed.
+	data/	Contains input and output/verification data that is to be used during implementation and benchmark exeuction.
+	docs/	The OBPMark technical documentation.
 	src/	Source files for each of the benchmarks. 
+	tools/	Contains helper/support tools that are not required for the benchmarking. 
 
 The benchmarks are organised in the following structure ("Public Beta" current status also shown): 
 
@@ -65,5 +73,4 @@ The benchmarks are organised in the following structure ("Public Beta" current s
 	src/common/
 
 The entire set of benchmarks can be built by invoking the Makefile in the top src/ directory, or by invoking the individual Makefiles in each of the src sub-directories. 
-
 
