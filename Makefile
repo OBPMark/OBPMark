@@ -9,15 +9,11 @@ include config/all.config
 SUBDIRS := 1.1-image
 #SUBDIRS += 1.2-radar
 SUBDIRS += 2.1-data_compression
-SUBDIRS += 2.2-image_compression
+#SUBDIRS += 2.2-image_compression
 #SUBDIRS += 2.3-hyperspectral_compression
-#SUBDIRS += 3.1-aes_compression
-SUBDIRS += 4.1-fir_filter
-SUBDIRS += 4.2-fft
-SUBDIRS += 4.3-convolution
-SUBDIRS += 4.4-matrix_multiplication
-#SUBDIRS += 5.1-object_detection
-#SUBDIRS += 5.2-cloud_screening
+SUBDIRS += 3.1-aes_compression
+#SUBDIRS += 4.1-dvbs2x_modulation
+#SUBDIRS += 4.2-dvbs2x_demodulation
 
 # Targets
 
