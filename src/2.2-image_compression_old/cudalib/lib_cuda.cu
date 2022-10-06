@@ -139,11 +139,11 @@ wavelet_transform_low_int(const int *A, int *B, const int n, const int step){
     if (i < size){
         int sum_value_low = 0;
         if(i == 0){
-            sum_value_low = A[0] - (int)(- (B[(size * step)]/2.0) + (1.0/2.0));
+            sum_value_low = A[0] - floor(- (B[(size * step)]/2.0) + (1.0/2.0));
         }
         else
         {
-            sum_value_low = A[(2 * i) * step] - (int)( - (( B[(i * step) + (size * step) -(1 * step)] +  B[(i * step) + (size*step)])/ 4.0) + (1.0/2.0) );
+            sum_value_low = A[(2 * i) * step] - floor( - (( B[(i * step) + (size * step) -(1 * step)] +  B[(i * step) + (size*step)])/ 4.0) + (1.0/2.0) );
         }
         
         B[(i * step)] = sum_value_low;
@@ -158,17 +158,17 @@ wavelet_transform_int(const int *A, int *B, const int n, const int step){
         int sum_value_high = 0;
         // specific cases
         if(i == 0){
-            sum_value_high = A[1 * step] - (int)( ((9.0/16.0) * (A[0] + A[2* step])) - ((1.0/16.0) * (A[2* step] + A[4* step])) + (1.0/2.0));
+            sum_value_high = A[1 * step] - floor( ((9.0/16.0) * (A[0] + A[2* step])) - ((1.0/16.0) * (A[2* step] + A[4* step])) + (1.0/2.0));
         }
         else if(i == size -2){
-            sum_value_high = A[ (2*size  - 3) * step] - (int)( ((9.0/16.0) * (A[(2*size -4) * step] + A[(2*size -2)*step])) - ((1.0/16.0) * (A[(2*size - 6)* step] + A[(2*size - 2) * step])) + (1.0/2.0));
+            sum_value_high = A[ (2*size  - 3) * step] - floor( ((9.0/16.0) * (A[(2*size -4) * step] + A[(2*size -2)*step])) - ((1.0/16.0) * (A[(2*size - 6)* step] + A[(2*size - 2) * step])) + (1.0/2.0));
         }
         else if(i == size - 1){
-            sum_value_high = A[(2*size - 1)* step] - (int)( ((9.0/8.0) * (A[(2*size  -2) * step])) -  ((1.0/8.0) * (A[(2*size  - 4)* step ])) + (1.0/2.0));
+            sum_value_high = A[(2*size - 1)* step] - floor( ((9.0/8.0) * (A[(2*size  -2) * step])) -  ((1.0/8.0) * (A[(2*size  - 4)* step ])) + (1.0/2.0));
         }
         else{
             // generic case
-            sum_value_high = A[(2*i  +1)* step] - (int)( ((9.0/16.0) * (A[(2*i)* step ] + A[(2*i +2)* step])) - ((1.0/16.0) * (A[(2*i  - 2)* step] + A[(2*i  + 4)* step])) + (1.0/2.0));
+            sum_value_high = A[(2*i  +1)* step] - floor( ((9.0/16.0) * (A[(2*i)* step ] + A[(2*i +2)* step])) - ((1.0/16.0) * (A[(2*i  - 2)* step] + A[(2*i  + 4)* step])) + (1.0/2.0));
         }
         
         //store
