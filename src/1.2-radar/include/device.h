@@ -43,10 +43,12 @@ struct radar_data_t
 	uint32_t *offsets; //Offset table for RCMC
 	radar_params_t *params;
 	//cuda specific
+#ifndef CUFFT_DISABLE
     cufftHandle rrf_plan;
     cufftHandle arf_plan;
     cufftHandle range_plan;
     cufftHandle azimuth_plan;
+#endif
     //accessible from device
     radar_params_t *host_params;
     uint32_t out_width;
@@ -83,6 +85,7 @@ struct radar_data_t
     cl::Buffer *rrf; //range reference function
     cl::Buffer *arf; // azimuth reference function
     cl::Buffer *offsets; //Offset table for RCMC
+
 	radar_params_t *params;
     uint32_t out_width;
     uint32_t out_height;

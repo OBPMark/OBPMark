@@ -74,11 +74,13 @@ bool device_memory_init(
     radar_data->out_width = out_width;
     radar_data->host_params = params;
 
+#ifndef CUFFT_DISABLE
     /* FFT plans */
     cufftPlan1d(&radar_data->rrf_plan, next_power_of_two(params->rsize), CUFFT_C2C, 1);
     cufftPlan1d(&radar_data->arf_plan, params->apatch, CUFFT_C2C, 1);
     cufftPlan1d(&radar_data->range_plan, next_power_of_two(params->rsize), CUFFT_C2C, params->apatch * params->npatch);
     cufftPlan1d(&radar_data->azimuth_plan, params->apatch, CUFFT_C2C, params->rvalid * params->npatch);
+#endif
 
     cudaError_t err = cudaSuccess;
 
@@ -156,6 +158,43 @@ void copy_memory_to_device(
     cudaEventRecord(*t->stop_memory_copy_device);
 }
 
+#ifdef CUFFT_DISABLE
+const int FFT_FORWARD = 1;
+const int FFT_INVERSE = -1;
+void launch_fft(float *data, unsigned int width, unsigned int rows, unsigned int npatch, int direction)
+{
+    unsigned int group = (unsigned int) log2(width);
+    unsigned int nthreads = width>>1;
+    dim3 gridSize((nthreads-1)/BLOCK_SIZE+1,rows,npatch); //nthreads/BLOCK_SIZE+1, rows, 1);
+    dim3 blockSize(BLOCK_SIZE, 1, 1);
+    bin_reverse<<<gridSize, blockSize>>>(data, width, group);
+
+    float wtemp, wpr, wpi, theta;
+    int loop = 1;
+
+    if (nthreads % BLOCK_SIZE != 0){
+            // inferior part
+            blockSize.x = nthreads;
+            gridSize.x  = 1;
+    }
+    else{
+            // top part
+            blockSize.x = BLOCK_SIZE;
+            gridSize.x  = (unsigned int)(nthreads/BLOCK_SIZE);
+    }
+    while(loop < width){
+        // calculate values
+        theta = -M_PI/(loop*direction); // check
+        wtemp = sin(0.5*theta);
+        wpr = -2.0*wtemp*wtemp;
+        wpi = sin(theta);
+        //kernel launch
+        fft_kernel<<<gridSize, blockSize>>>(data, loop, wpr, wpi, nthreads, width);
+        // update loop values
+        loop = loop * 2;
+    }
+}
+#endif
 
 void process_benchmark(
 	radar_data_t *radar_data,
@@ -173,7 +212,11 @@ void process_benchmark(
     uint32_t nit = floor(params->tau * params->fs);
     SAR_range_ref<<<n_blocks,BLOCK_SIZE>>>(radar_data->rrf, radar_data->params, nit);
     // perform fft
+#ifndef CUFFT_DISABLE
     cufftExecC2C(radar_data->rrf_plan, (cufftComplex*) radar_data->rrf, (cufftComplex*) radar_data->rrf, CUFFT_FORWARD);
+#else
+    launch_fft(radar_data->rrf, next_power_of_two(params->rsize), 1, 1, FFT_FORWARD);
+#endif
 
 
     /* DOPPLER CENTROID */
@@ -191,17 +234,33 @@ void process_benchmark(
     // Compute azimuth reference
     SAR_azimuth_ref<<<n_blocks, BLOCK_SIZE>>>(radar_data->arf, radar_data->params);
     // perform fft
+#ifndef CUFFT_DISABLE
     cufftExecC2C(radar_data->arf_plan, (cufftComplex*) radar_data->arf, (cufftComplex*) radar_data->arf, CUFFT_FORWARD);
+#else
+    launch_fft(radar_data->arf, params->apatch, 1, 1, FFT_FORWARD);
+#endif
 
     /* Begin patch processing */
     //SAR Range Compress
+#ifndef CUFFT_DISABLE
     cufftExecC2C(radar_data->range_plan, (cufftComplex*) radar_data->range_data, (cufftComplex*) radar_data->range_data, CUFFT_FORWARD);
+#else
+    launch_fft(radar_data->range_data, next_power_of_two(params->rsize), params->apatch, params->npatch, FFT_FORWARD);
+#endif
     gridSize = {next_power_of_two(params->rsize)/TILE_SIZE, params->apatch/TILE_SIZE, params->npatch};
     SAR_ref_product<<<gridSize,blockSize>>>(radar_data->range_data, radar_data->rrf, next_power_of_two(params->rsize), params->apatch);
+#ifndef CUFFT_DISABLE
     cufftExecC2C(radar_data->range_plan, (cufftComplex*) radar_data->range_data, (cufftComplex*) radar_data->range_data, CUFFT_INVERSE);
+#else
+    launch_fft(radar_data->range_data, next_power_of_two(params->rsize), params->apatch, params->npatch, FFT_INVERSE);
+#endif
     //after IFFT data needs to be idvided by next_power_of_two(rsize), we do that when transposing
     SAR_transpose<<<gridSize, blockSize>>>(radar_data->range_data, radar_data->azimuth_data, next_power_of_two(params->rsize), params->apatch, params->apatch, params->rvalid);
+#ifndef CUFFT_DISABLE
     cufftExecC2C(radar_data->azimuth_plan, (cufftComplex*) radar_data->azimuth_data, (cufftComplex*) radar_data->azimuth_data, CUFFT_FORWARD);
+#else
+    launch_fft(radar_data->azimuth_data, params->apatch, params->rvalid, params->npatch, FFT_FORWARD);
+#endif
 
     gridSize= {params->apatch/TILE_SIZE,(params->rvalid-1)/TILE_SIZE+1,params->npatch};
     /* RCMC */
@@ -209,7 +268,11 @@ void process_benchmark(
 
     /* Azimuth Compress */
     SAR_ref_product<<<gridSize, blockSize>>>(radar_data->azimuth_data, radar_data->arf, params->apatch, params->rvalid);
+#ifndef CUFFT_DISABLE
     cufftExecC2C(radar_data->azimuth_plan, (cufftComplex*) radar_data->azimuth_data, (cufftComplex*) radar_data->azimuth_data, CUFFT_INVERSE);
+#else
+    launch_fft(radar_data->azimuth_data, params->apatch, params->rvalid, params->npatch, FFT_INVERSE);
+#endif
     //after IFFT data needs to be idvided by next_power_of_two(rsize), we do that when transposing
     SAR_transpose<<<gridSize, blockSize>>>(radar_data->azimuth_data, radar_data->range_data, params->apatch, next_power_of_two(params->rsize), params->rvalid, params->apatch);
 

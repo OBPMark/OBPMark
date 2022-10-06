@@ -196,7 +196,7 @@ void SAR_rcmc(framefp_t *data, uint32_t *offsets)
         for (int j = 0; j < width; j++)
         {
             uint32_t ind = i * width + j;
-            c_data[ind] = (offsets[ind]<(height*width)?c_data[offsets[ind]]:0);
+            if(offsets[ind]<(height*width)) c_data[ind] = c_data[offsets[ind]];
         }
 }
 

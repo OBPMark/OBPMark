@@ -7,8 +7,6 @@
  */
 #include "processing.h"
 
-__device__ void fft(float *data, int nn);
-__device__ void ifft(float *data, int nn);
 __device__ void complex_transpose(float *in, float *out, uint32_t nrows, uint32_t ncols, uint32_t in_width, uint32_t out_width);
 
 __device__ uint32_t next_power_of2(uint32_t n)
@@ -205,4 +203,59 @@ __global__ void quantize(float *data, uint8_t *image, uint32_t width, uint32_t h
     int x = blockIdx.x * TILE_SIZE + threadIdx.x; if(x >= width) return;
     int y = blockIdx.y * TILE_SIZE + threadIdx.y; if(y >= height) return;
     image[y*width+x] = min(255.f,floor(scale * (data[y*width+x]-v_min)));
+}
+
+__global__ void bin_reverse(float *data, unsigned int size, unsigned int group)
+{
+
+    unsigned int i = blockIdx.y + blockIdx.z * gridDim.y;
+    cuda::std::complex<float> *c_data = (cuda::std::complex<float>*) &data[i*size*2];
+    unsigned int id = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int j = 0;
+    if (id < size)
+    {
+        j = (__brev(id) >> (32 - group));
+        if(j <= id) return;
+        cuda::std::complex<float> swp = c_data[id];
+        c_data[id] = c_data[j];
+        c_data[j] = swp;
+    }
+    
+}
+
+__global__ void fft_kernel(float* data, int loop, float wpr ,float wpi, unsigned int theads, unsigned int size){
+    unsigned int row = blockIdx.y + blockIdx.z * gridDim.y;
+    float *B = &data[row*size*2];
+    float tempr, tempi;
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int id;
+    unsigned int j;
+    unsigned int inner_loop;
+    unsigned  int subset;
+    float wr = 1.0;
+    float wi = 0.0;
+    float wtemp = 0;
+
+    // get inner
+    subset = theads / loop;
+    id = i % subset;
+    inner_loop = i / subset;
+    //get wr and wi
+    for(unsigned int z = 0; z < inner_loop ; ++z){
+            wtemp=wr;
+            wr += wr*wpr - wi*wpi;
+            wi += wi*wpr + wtemp*wpi;
+
+        }
+    // get I
+    i = id *(loop * 2 * 2) + 1 + (inner_loop * 2);
+    j=i+(loop * 2 );
+
+    tempr = wr*B[j-1] - wi*B[j];
+    tempi = wr * B[j] + wi*B[j-1];
+
+    B[j-1] = B[i-1] - tempr;
+    B[j] = B[i] - tempi;
+    B[i-1] += tempr;
+    B[i] += tempi;
 }
