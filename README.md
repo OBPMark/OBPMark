@@ -54,10 +54,11 @@ This repository contains a set of reference implementations for performing bench
 
 The following folders are in the repository: 
 
-	config/ Contains build configuration files for all benchmarks compliation formats (C, OpenMP, OpenCL, CUDA). Can be customized if needed.
-	data/	Contains input and output/verification data that is to be used during implementation and benchmark exeuction.
-	docs/	The OBPMark technical documentation.
-	src/	Source files for each of the benchmarks. 
+	config/ 	Build configuration files for all benchmarks compliation formats (C, OpenMP, OpenCL, CUDA). Can be customized if needed.
+	data/		Input and output/verification data that is to be used during implementation and benchmark exeuction.
+	docs/		The OBPMark technical documentation.
+	scripts/	Scripts for running benchmarks with default configuration parameters.
+	src/		Source files for each of the benchmarks. 
 	tools/	Contains helper/support tools that are not required for the benchmarking. 
 
 The benchmarks are organised in the following structure ("Public Beta" current status also shown): 
