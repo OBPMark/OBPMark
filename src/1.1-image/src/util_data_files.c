@@ -8,7 +8,7 @@
 #include "util_data_files.h"
 
 #define MAX_FILENAME_LENGTH 256
-#define DEFAULT_INPUT_FOLDER "../../data/input_data/1.1-image"
+#define DEFAULT_INPUT_FOLDER "../data/input_data/1.1-image"
 
 
 int load_data_from_files(

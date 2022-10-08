@@ -55,7 +55,12 @@ void init(
         // this makes the priority to have a image copy and the 1º part of the computation is done first
         cudaStreamCreateWithPriority(&cuda_streams[x],cudaStreamDefault,x+1);
     }
-
+    cudaEventCreate(t->start_test);
+    cudaEventCreate(t->stop_test);
+    cudaEventCreate(t->start_memory_copy_device);
+    cudaEventCreate(t->stop_memory_copy_device);
+    cudaEventCreate(t->start_memory_copy_host);
+    cudaEventCreate(t->stop_memory_copy_host);
 
 }
 bool device_memory_init(

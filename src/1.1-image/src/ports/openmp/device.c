@@ -191,7 +191,6 @@ void clean(
 	free(image_data->offsets.f);
 	free(image_data->gains.f);
 	free(image_data->bad_pixels.f);
-	free(image_data->scrub_mask.f);
 	free(image_data->binned_frame.f);
     free(image_data->image_output.f);
 	free(image_data);
