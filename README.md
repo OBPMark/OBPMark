@@ -35,6 +35,10 @@ Detailed technical description of the benchmarks are included in the OBPMark Tec
 
 See Git wiki page for documentation on the software implementations: https://github.com/OBPMark/OBPMark/wiki/
  
+## Compilation and Usage
+
+Documentation regarding how to compile and use the software is located in the Git wiki page: https://github.com/OBPMark/OBPMark/wiki/User-Instructions
+
 # Contributors 
 Authors/Chairs:  
 - David Steenari, European Space Agency (ESA)  
@@ -44,7 +48,9 @@ Contributors:
 - Alvaro Jover-Alvarez, Universitat Politècnica de Catalunya and Barcelona Supercomputing Center (UPC/BSC):
 	- Implementation of OpenMP versions. 
 - Ivan Rodriguez Ferrandez, Universitat Politècnica de Catalunya and Barcelona Supercomputing Center (UPC/BSC):
-	- Implementation of OpenCL / CUDA versions.
+	- Implementation of Benchmark #1.1 "Image Calibration and Correction"
+	- Implementation of Benchmark #2.1 "CCSDS 121.0 Data Compression"
+	- Implementation of Benchmark #2.1 "CCSDS 122.0 Image Compression"
 	- Verification of implementations.  
 - Marc Solé Bonet, Barcelona Supercomputing Centrer (BSC):
 	- Implementation of Benchmark #3.1 "AES Encryption"
