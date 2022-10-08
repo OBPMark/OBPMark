@@ -30,7 +30,7 @@
 #endif
 
 /* Defines */
-#define DEFAULTOUTPUTFILENAME "output.bib"
+#define DEFAULTOUTPUTFILENAME "output.bin"
 
 
 #define LEVELS_DWT     3
