@@ -545,9 +545,9 @@ void get_elapsed_time(
         }
         else if(verbose_print)
         {
-            printf("Elapsed time Host->Device: %.10f milliseconds\n", (float) milliseconds_h_d);
-            printf("Elapsed time kernel: %lu milliseconds\n", application_miliseconds );
-            printf("Elapsed time Device->Host: %.10f milliseconds\n", (float) milliseconds_d_h);
+            printf("Elapsed time Host->Device: %.10f ms\n", (float) milliseconds_h_d);
+            printf("Elapsed time kernel: %lu ms\n", application_miliseconds );
+            printf("Elapsed time Device->Host: %.10f ms\n", (float) milliseconds_d_h);
         }
 
 }

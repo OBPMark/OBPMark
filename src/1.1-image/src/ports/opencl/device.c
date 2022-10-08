@@ -567,9 +567,9 @@ void get_elapsed_time(
 	}
 	else if(verbose_print)
 	{
-		printf("Elapsed time Host->Device: %.10f milliseconds\n", (float) 0);
-		printf("Elapsed time kernel: %.10f milliseconds\n", elapsed_time );
-		printf("Elapsed time Device->Host: %.10f milliseconds\n", device_to_host/ 1000000.0);
+		printf("Elapsed time Host->Device: %.10f ms\n", (float) 0);
+		printf("Elapsed time kernel: %.10f ms\n", elapsed_time );
+		printf("Elapsed time Device->Host: %.10f ms\n", device_to_host/ 1000000.0);
 	}
     /*device_object->memory_copy_host->wait();
     float elapsed_h_d = 0, elapsed = 0, elapsed_d_h = 0;
@@ -583,9 +583,9 @@ void get_elapsed_time(
     if (csv_format){
          printf("%.10f;%.10f;%.10f;\n", elapsed_h_d / 1000000.0,elapsed,elapsed_d_h / 1000000.0);
     }else{
-         printf("Elapsed time Host->Device: %.10f miliseconds\n", (elapsed_h_d / 1000000.0));
-         printf("Elapsed time kernel: %.10f miliseconds\n", elapsed );
-         printf("Elapsed time Device->Host: %.10f miliseconds\n", elapsed_d_h / 1000000.0);
+         printf("Elapsed time Host->Device: %.10f ms\n", (elapsed_h_d / 1000000.0));
+         printf("Elapsed time kernel: %.10f ms\n", elapsed );
+         printf("Elapsed time Device->Host: %.10f ms\n", elapsed_d_h / 1000000.0);
     }*/
 }
 

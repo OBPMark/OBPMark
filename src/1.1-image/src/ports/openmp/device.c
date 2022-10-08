@@ -166,9 +166,9 @@ void get_elapsed_time(
 	else if(verbose_print)
 	{
 		double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
-		printf("Elapsed time Host->Device: %.10f milliseconds\n", (float) 0);
+		//printf("Elapsed time Host->Device: %.10f milliseconds\n", (float) 0);
 		printf("Elapsed time kernel: %.10f milliseconds\n", t->t_test * 1000.f);
-		printf("Elapsed time Device->Host: %.10f milliseconds\n", (float) 0);
+		//printf("Elapsed time Device->Host: %.10f milliseconds\n", (float) 0);
 	}
 }
 
