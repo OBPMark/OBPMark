@@ -65,7 +65,7 @@ The benchmarks are organised in the following structure ("Public Beta" current s
 	src/1.1-image/				-- Available in C (sequential), OpenMP, OpenCL and CUDA.
 	src/1.2-radar/				-- Currently under development, see "radar-dev" branch.
 	src/2.1-data_compression/		-- Available in C (sequential), OpenMP, OpenCL and CUDA.
-	src/2.2-image_compression/		-- Currently under development, see "ccsds122-dev" branch.
+	src/2.2-image_compression/		-- Available in C (sequential), OpenMP, OpenCL and CUDA.
 	src/2.3-hyperspectral_compression/	-- TBA.
 	src/3.1-aes_encryption/			-- Available in C (sequential), OpenMP, OpenCL and CUDA.
 	src/4.1-dvbs2x_modulation/		-- TBA.
