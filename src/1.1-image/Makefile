@@ -14,10 +14,10 @@ EXEC_PATH	:= $(BIN_PATH)/$(EXEC_NAME)
 ################################################################################
 COMMON_PATH = ../../src/common
 
-_COMMON_INCLUDES = image_util.h image_mem_util.h image_file_util.h 
-_COMMON_SOURCES  = image_mem_util.c image_file_util.c util_data_rand.c util_arg.c util_data_files.c 
-COMMON_OBJECTS   = image_mem_util.o image_file_util.o util_data_rand.o util_arg.o util_data_files.o 
-COMMON_OBJECTS_PATH = $(COM_TARGET)/image_mem_util.o $(COM_TARGET)/image_file_util.o $(COM_TARGET)/util_data_rand.o $(COM_TARGET)/util_arg.o $(COM_TARGET)/util_data_files.o
+_COMMON_INCLUDES = image_util.h image_mem_util.h image_file_util.h util_prints.h
+_COMMON_SOURCES  = image_mem_util.c image_file_util.c util_data_rand.c util_arg.c util_data_files.c util_prints.c
+COMMON_OBJECTS   = image_mem_util.o image_file_util.o util_data_rand.o util_arg.o util_data_files.o util_prints.o
+COMMON_OBJECTS_PATH = $(COM_TARGET)/image_mem_util.o $(COM_TARGET)/image_file_util.o $(COM_TARGET)/util_data_rand.o $(COM_TARGET)/util_arg.o $(COM_TARGET)/util_data_files.o $(COM_TARGET)/util_prints.o
 
 COMMON_INCLUDES = $(pathsubst %,$(COMMON_PATH)/%,$(_COMMON_INCLUDES))
 COMMON_SOURCES  = $(pathsubst %,$(COMMON_PATH)/%,$(_COMMON_SOURCES))
@@ -90,6 +90,9 @@ util_arg.o: common_conf $(SRC_FOLDER)/util_arg.c
 
 util_data_files.o: common_conf $(SRC_FOLDER)/util_data_files.c
 	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/util_data_files.c -o $(COM_TARGET)/util_data_files.o
+
+util_prints.o: common_conf $(SRC_FOLDER)/util_prints.c
+	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/util_prints.c -o $(COM_TARGET)/util_prints.o
 
 ################################### SEQUENTIAL ################################
 # Shortcuts

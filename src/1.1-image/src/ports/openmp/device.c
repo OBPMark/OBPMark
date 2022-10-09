@@ -147,29 +147,13 @@ void copy_memory_to_host(
 void get_elapsed_time(
 	image_data_t *image_data, 
 	image_time_t *t, 
-	bool csv_format,
-	bool database_format,
-	bool verbose_print,
+	print_info_data_t *benchmark_info,
 	long int timestamp
 	)
 {	
 
-	if (csv_format)
-	{
-		printf("%.10f;%.10f;%.10f;\n", (float) 0, t->t_test* 1000.f, (float) 0);
-	}
-	else if (database_format)
-	{
-		
-		printf("%.10f;%.10f;%.10f;%ld;\n", (float) 0, t->t_test* 1000.f, (float) 0, timestamp);
-	}
-	else if(verbose_print)
-	{
-		double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
-		//printf("Elapsed time Host->Device: %.10f milliseconds\n", (float) 0);
-		printf("Elapsed time kernel: %.10f milliseconds\n", t->t_test * 1000.f);
-		//printf("Elapsed time Device->Host: %.10f milliseconds\n", (float) 0);
-	}
+	print_execution_info(benchmark_info, false, timestamp,0, t->t_test * 1000.f,0);
+
 }
 
 

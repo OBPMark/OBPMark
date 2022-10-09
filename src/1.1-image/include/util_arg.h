@@ -33,6 +33,7 @@ int arguments_handler(
 	bool *print_output,
 	bool *verbose_output,
 	bool *random_data,
+	bool *no_output_file,
 	char *input_folder
 	);
 

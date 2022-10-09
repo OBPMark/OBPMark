@@ -26,11 +26,12 @@ void print_usage(const char *exec_name)
 	printf(" -F : location forder of the input data\n");
 	printf(" -c : print time in CSV\n");
 	printf(" -C : print time in CSV with timestamp\n");
+	printf(" -v : do not generate the output file\n");
 	printf(" -t : print time in verbose\n");
 	printf(" -o : print output\n");
 }
 
-int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int *h_size, unsigned int *frames, bool *csv_mode, bool *database_mode, bool *print_output, bool *verbose_output, bool *random_data, char *input_folder)
+int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int *h_size, unsigned int *frames, bool *csv_mode, bool *database_mode, bool *print_output, bool *verbose_output, bool *random_data, bool *no_output_file, char *input_folder)
 {
 	if(argc < 3) {
 		print_usage(argv[0]);
@@ -47,6 +48,7 @@ int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int 
 			case 'c' : *csv_mode = true;break;
 			case 'C' : *database_mode = true;break;
 			case 'r' : *random_data = true;break;
+			case 'v' : *no_output_file = true;break;
 			case 'o' : *print_output = true;break;
 			case 't' : *verbose_output = true;break;
 			default: print_usage(argv[0]); return ARG_ERROR;

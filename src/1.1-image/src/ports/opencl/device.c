@@ -542,9 +542,7 @@ void copy_memory_to_host(
 void get_elapsed_time(
 	image_data_t *image_data, 
 	image_time_t *t, 
-	bool csv_format,
-	bool database_format,
-	bool verbose_print,
+	print_info_data_t *benchmark_info,
 	long int timestamp
 	)
 {	
@@ -554,23 +552,7 @@ void get_elapsed_time(
     double host_to_device =   (t->t_hots_device) / ((double)(CLOCKS_PER_SEC / 1000)); 
     double device_to_host = t->t_device_host->getProfilingInfo<CL_PROFILING_COMMAND_END>() - t->t_device_host->getProfilingInfo<CL_PROFILING_COMMAND_START>();
 
-    if (csv_format)
-	{
-		
-		printf("%.10f;%.10f;%.10f;\n", host_to_device, elapsed_time, device_to_host/ 1000000.0);
-	}
-	else if (database_format)
-	{
-		
-		
-		printf("%.10f;%.10f;%.10f;%ld;\n", host_to_device, elapsed_time, device_to_host/ 1000000.0, timestamp);
-	}
-	else if(verbose_print)
-	{
-		printf("Elapsed time Host->Device: %.10f ms\n", (float) 0);
-		printf("Elapsed time kernel: %.10f ms\n", elapsed_time );
-		printf("Elapsed time Device->Host: %.10f ms\n", device_to_host/ 1000000.0);
-	}
+   print_execution_info(benchmark_info, true, timestamp,host_to_device,elapsed_time,device_to_host);
     /*device_object->memory_copy_host->wait();
     float elapsed_h_d = 0, elapsed = 0, elapsed_d_h = 0;
     elapsed_h_d = device_object->memory_copy_device_a->getProfilingInfo<CL_PROFILING_COMMAND_END>() - device_object->memory_copy_device_a->getProfilingInfo<CL_PROFILING_COMMAND_START>();

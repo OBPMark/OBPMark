@@ -46,11 +46,8 @@ void init_benchmark(
 	unsigned int h_size,
 	unsigned int num_frames,
 	
-	bool csv_mode, 
-	bool print_output,
-	bool database_mode,
-	bool verbose_print,
-	long int timestamp
+	long int timestamp,
+	print_info_data_t *benchmark_info
 	)
 {
 	image_time_t *t = (image_time_t *)malloc(sizeof(image_time_t));
@@ -63,9 +60,8 @@ void init_benchmark(
 	/* Device object init */
 	init(image_data, t, 0, DEVICESELECTED, device);
 
-	if(!csv_mode && !database_mode){
-		printf("Using device: %s\n", device);
-	}
+	print_device_info(benchmark_info, device);
+	print_benchmark_info(benchmark_info);
 
 	/* Initialize memory on the device and copy data */
 	device_memory_init(image_data, input_frames, offset_map, bad_pixel_map, gain_map, w_size/2, h_size/2);
@@ -78,16 +74,20 @@ void init_benchmark(
 	copy_memory_to_host(image_data, t, output_image);
 
 	/* Get benchmark times */
-	get_elapsed_time(image_data, t, csv_mode, database_mode,verbose_print, timestamp);
-	if(print_output)
+
+	get_elapsed_time(image_data, t, benchmark_info, timestamp);
+	if(benchmark_info->print_output)
 	{
 		print_output_result(output_image);
 	}
 	else 
 	{
 		// write the output image to a file call "output.bin"
-
-		write_frame32 (output_file, output_image, !csv_mode && !database_mode);
+		if (!benchmark_info->no_output_file)
+		{
+			write_frame32 (output_file, output_image, !benchmark_info->csv_mode && !benchmark_info->database_mode);
+		}
+		
 	}
 
 	/* Clean and free device object */
@@ -103,6 +103,7 @@ int main(int argc, char **argv)
 	bool verbose_output = false;
 	bool database_mode = false;
 	bool random_data = false;
+	bool no_output_file = false;
 
 	int file_loading_output = 0;
 
@@ -129,7 +130,7 @@ int main(int argc, char **argv)
 	char input_folder[100] = "";
 
 	/* Command line argument handling */
-	ret = arguments_handler(argc, argv, &w_size, &h_size, &num_processing_frames, &csv_mode, &database_mode, &print_output, &verbose_output, &random_data, input_folder);
+	ret = arguments_handler(argc, argv, &w_size, &h_size, &num_processing_frames, &csv_mode, &database_mode, &print_output, &verbose_output, &random_data, &no_output_file, input_folder);
 	if(ret == ARG_ERROR) {
 		exit(-1);
 	}
@@ -142,6 +143,18 @@ int main(int argc, char **argv)
 	mem_size_bad_map	     = size_frame * sizeof(uint8_t);
 	size_reduction_image	 = (w_size/2) * (h_size/2);
 	mem_size_reduction_image = size_reduction_image* sizeof(uint32_t);
+
+	/* Init print information data */
+	print_info_data_t *benchmark_info = (print_info_data_t *)malloc(sizeof(print_info_data_t));
+	benchmark_info -> w_size = w_size;
+	benchmark_info -> h_size = h_size;
+	benchmark_info -> num_frames = num_processing_frames;
+	benchmark_info -> csv_mode = csv_mode;
+	benchmark_info -> print_output = print_output;
+	benchmark_info -> database_mode = database_mode;
+	benchmark_info -> verbose_print = verbose_output;
+	benchmark_info -> random_data = random_data;
+	benchmark_info -> no_output_file = no_output_file;
 
 	/* Allocate memory for frames */
 	input_frames = (frame16_t*)malloc(sizeof(frame16_t)* num_frames);
@@ -197,9 +210,7 @@ int main(int argc, char **argv)
 	init_benchmark(
 		input_frames, output_image,
 		offset_map, bad_pixel_map, gain_map,
-		w_size, h_size, num_frames,
-		csv_mode, print_output,database_mode,
-		verbose_output,get_timestamp()
+		w_size, h_size, num_frames,get_timestamp(), benchmark_info
 		);
 
 	/* Free input data */
@@ -216,6 +227,7 @@ int main(int argc, char **argv)
 	free(offset_map);
 	free(gain_map);
 	free(bad_pixel_map);
+	free(benchmark_info);
 
 	return 0;
 }

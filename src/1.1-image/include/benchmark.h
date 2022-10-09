@@ -30,6 +30,8 @@
 #endif
 
 /* Defines */
+/* Print Defines */
+
 
 /* Frames defines */
 #define MINIMUNWSIZE		1024

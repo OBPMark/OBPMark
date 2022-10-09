@@ -7,6 +7,7 @@
 #define DEVICE_H_
 
 #include "obpmark.h"
+#include "util_prints.h"
 #include "benchmark.h"
 #include "obpmark_image.h"
 
@@ -227,9 +228,7 @@ void copy_memory_to_host(
 void get_elapsed_time(
 	image_data_t *image_data, 
 	image_time_t *t, 
-	bool csv_format,
-	bool database_format,
-	bool verbose_print,
+	print_info_data_t *benchmark_info,
 	long int timestamp
 	);
 
