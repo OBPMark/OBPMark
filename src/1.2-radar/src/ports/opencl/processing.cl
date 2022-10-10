@@ -264,74 +264,65 @@ quantize(global float *data, global unsigned char *image, const unsigned int wid
 }
 
 //FFT
-void fft_kernel(global float *data, const int nn, const int isign){
-	int n, mmax, m, j, istep, i;
-    float wtemp, wr, wpr, wpi, wi, theta;
+void kernel
+bin_reverse(global float *data, const unsigned int size, const unsigned int group)
+{
+
+    unsigned int i = get_global_id(1);
+    cfloat *c_data = (cfloat*) &data[i*size*2];
+    unsigned int id = get_global_id(0);
+    if (id < size)
+    {
+        unsigned int j = id;
+        j = (j & 0x55555555) << 1 | (j & 0xAAAAAAAA) >> 1;
+        j = (j & 0x33333333) << 2 | (j & 0xCCCCCCCC) >> 2;
+        j = (j & 0x0F0F0F0F) << 4 | (j & 0xF0F0F0F0) >> 4;
+        j = (j & 0x00FF00FF) << 8 | (j & 0xFF00FF00) >> 8;
+        j = (j & 0x0000FFFF) << 16 | (j & 0xFFFF0000) >> 16;
+        j >>= (32-group);
+        if(j <= id) return;
+        cfloat swp = c_data[id];
+        c_data[id] = c_data[j];
+        c_data[j] = swp;
+    }
+}
+
+void kernel
+fft_kernel(global float *data, const int loop, const float wpr, const float wpi, unsigned int theads, unsigned int size){
+    unsigned int row = get_global_id(1);
+    float *B = &data[row*size*2];
     float tempr, tempi;
-    float swp;
- 
-    // reverse-binary reindexing
-    n = nn<<1;
-    j=1;
-    for (i=1; i<n; i+=2) {
-        if (j>i) {
-            swp = data[j-1];
-            data[j-1] = data[i-1];
-            data[i-1] = swp;
-            swp = data[j];
-            data[j] = data[i];
-            data[i] = swp;
-        }
-        m = nn;
-        while (m>=2 && j>m) {
-            j -= m;
-            m >>= 1;
-        }
-        j += m;
-    };
+    unsigned int i = get_global_id(0);
+    unsigned int id;
+    unsigned int j;
+    unsigned int inner_loop;
+    unsigned  int subset;
+    float wr = 1.0;
+    float wi = 0.0;
+    float wtemp = 0;
 
-    // here begins the Danielson-Lanczos section
-    mmax=2;
-    while (n>mmax) {
-        istep = mmax<<1;
-        theta = -(2*(float)M_PI/(mmax*isign));
-        wtemp = sin(0.5*theta);
-        wpr = -2.0*wtemp*wtemp;
-        wpi = sin(theta);
-        wr = 1.0;
-        wi = 0.0;
-
-        for (m=1; m < mmax; m += 2) {
-            for (i=m; i <= n; i += istep) {
-                j=i+mmax;
-                tempr = wr*data[j-1] - wi*data[j];
-                tempi = wr * data[j] + wi*data[j-1];
- 				
-                data[j-1] = data[i-1] - tempr;
-                data[j] = data[i] - tempi;
-                data[i-1] += tempr;
-                data[i] += tempi;
-            }
-            
+    // get inner
+    subset = theads / loop;
+    id = i % subset;
+    inner_loop = i / subset;
+    //get wr and wi
+    for(unsigned int z = 0; z < inner_loop ; ++z){
             wtemp=wr;
             wr += wr*wpr - wi*wpi;
             wi += wi*wpr + wtemp*wpi;
 
         }
-        mmax=istep;
-    }
-}
+    // get I
+    i = id *(loop * 2 * 2) + 1 + (inner_loop * 2);
+    j=i+(loop * 2 );
 
-void kernel
-fft(global float* data, const int nn){
-    unsigned int i=get_global_id(0);
-    fft_kernel(&data[i*nn*2], nn, 1);
-}
+    tempr = wr*B[j-1] - wi*B[j];
+    tempi = wr * B[j] + wi*B[j-1];
 
-void kernel
-ifft(global float* data, const int nn){
-    unsigned int i=get_global_id(0);
-    fft_kernel(&data[i*nn*2], nn, -1);
+    B[j-1] = B[i-1] - tempr;
+    B[j] = B[i] - tempi;
+    B[i-1] += tempr;
+    B[i] += tempi;
 }
 
 

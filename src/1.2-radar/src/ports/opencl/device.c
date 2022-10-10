@@ -161,6 +161,41 @@ void copy_memory_to_device(
     T_STOP(t->t_host_device);
 }
 
+const int FFT_FORWARD = 1;
+const int FFT_INVERSE = -1;
+
+void launch_fft(cl::Kernel fft_kernel, cl::Kernel bin_rev_kernel, cl::CommandQueue *queue, cl::Buffer *data, unsigned int width, unsigned int rows, unsigned int npatch, int direction)
+{
+    unsigned int group = (unsigned int) log2(width);
+    bin_rev_kernel.setArg(0, *data);
+    bin_rev_kernel.setArg(1, width);
+    bin_rev_kernel.setArg(2, group);
+    queue->enqueueNDRangeKernel(bin_rev_kernel, cl::NullRange, cl::NDRange(width, rows * npatch), cl::NullRange, NULL, NULL);
+
+    unsigned int nthreads = width>>1;
+    float wtemp, wpr, wpi, theta;
+    int loop = 1;
+
+    while(loop < width){
+        // calculate values
+        theta = -M_PI/(loop*direction); // check
+        wtemp = sin(0.5*theta);
+        wpr = -2.0*wtemp*wtemp;
+        wpi = sin(theta);
+        queue->finish();
+        //kernel launch
+        fft_kernel.setArg(0, *data);
+        fft_kernel.setArg(1, loop);
+        fft_kernel.setArg(2, wpr);
+        fft_kernel.setArg(3, wpi);
+        fft_kernel.setArg(4, nthreads);
+        fft_kernel.setArg(5, width);
+        queue->enqueueNDRangeKernel(fft_kernel, cl::NullRange, cl::NDRange(nthreads, rows * npatch), cl::NullRange, NULL, NULL);
+        // update loop values
+        loop = loop * 2;
+    }
+    queue->finish();
+}
 
 void process_benchmark(
 	radar_data_t *radar_data,
@@ -170,6 +205,9 @@ void process_benchmark(
     radar_params_t *params = radar_data->params;
 
     T_START(t->t_test);
+
+    cl::Kernel fft_kernel=cl::Kernel(*radar_data->program, "fft_kernel");
+    cl::Kernel bin_rev_kernel=cl::Kernel(*radar_data->program, "bin_reverse");
 
     unsigned int nit = floor(params->tau * params->fs);   
     /* RANGE REFERENCE */
@@ -181,12 +219,9 @@ void process_benchmark(
     rrf_kernel.setArg(4, nit);
     radar_data->queue->enqueueNDRangeKernel(rrf_kernel, cl::NullRange, cl::NDRange(params->rsize), cl::NullRange, NULL, NULL);
     radar_data->queue->finish();
-    //FIXME fft
-    cl::Kernel fft_kernel=cl::Kernel(*radar_data->program, "fft");
-    fft_kernel.setArg(0, *radar_data->rrf);
-    fft_kernel.setArg(1, next_power_of_two(params->rsize));
-    radar_data->queue->enqueueNDRangeKernel(fft_kernel, cl::NullRange, cl::NDRange(1), cl::NullRange, NULL, NULL);
-    radar_data->queue->finish();
+
+    launch_fft(fft_kernel, bin_rev_kernel, radar_data->queue, radar_data->rrf, next_power_of_two(params->rsize), 1, 1, FFT_FORWARD);
+
 
     /* DOPPLER CENTROID */
     cl::Kernel DCE_kernel=cl::Kernel(*radar_data->program, "SAR_DCE");
@@ -222,18 +257,11 @@ void process_benchmark(
     arf_kernel.setArg(7, params->apatch);
     radar_data->queue->enqueueNDRangeKernel(arf_kernel, cl::NullRange, cl::NDRange(params->apatch), cl::NullRange, NULL, NULL);
     radar_data->queue->finish();
-    //FIXME fft
-    fft_kernel.setArg(0, *radar_data->arf);
-    fft_kernel.setArg(1, params->apatch);
-    radar_data->queue->enqueueNDRangeKernel(fft_kernel, cl::NullRange, cl::NDRange(1), cl::NullRange, NULL, NULL);
-    radar_data->queue->finish();
+
+    launch_fft(fft_kernel, bin_rev_kernel, radar_data->queue, radar_data->arf, params->apatch, 1, 1, FFT_FORWARD);
 
     /* RANGE COMPRESS */
-    //FIXME fft
-    fft_kernel.setArg(0, *radar_data->range_data);
-    fft_kernel.setArg(1, next_power_of_two(params->rsize));
-    radar_data->queue->enqueueNDRangeKernel(fft_kernel, cl::NullRange, cl::NDRange(params->apatch*params->npatch), cl::NullRange, NULL, NULL);
-    radar_data->queue->finish();
+    launch_fft(fft_kernel, bin_rev_kernel, radar_data->queue, radar_data->range_data, next_power_of_two(params->rsize), params->apatch, params->npatch, FFT_FORWARD);
 
     cl::Kernel ref_kernel=cl::Kernel(*radar_data->program, "SAR_ref_product");
     ref_kernel.setArg(0, *radar_data->range_data);
@@ -242,12 +270,9 @@ void process_benchmark(
     ref_kernel.setArg(3, params->apatch);
     radar_data->queue->enqueueNDRangeKernel(ref_kernel, cl::NullRange, cl::NDRange(next_power_of_two(params->rsize), params->apatch, params->npatch), cl::NullRange, NULL, NULL);
     radar_data->queue->finish();
-    //FIXME ifft
-    cl::Kernel ifft_kernel=cl::Kernel(*radar_data->program, "ifft");
-    ifft_kernel.setArg(0, *radar_data->range_data);
-    ifft_kernel.setArg(1, next_power_of_two(params->rsize));
-    radar_data->queue->enqueueNDRangeKernel(ifft_kernel, cl::NullRange, cl::NDRange(params->apatch*params->npatch), cl::NullRange, NULL, NULL);
-    radar_data->queue->finish();
+
+    launch_fft(fft_kernel, bin_rev_kernel, radar_data->queue, radar_data->range_data, next_power_of_two(params->rsize), params->apatch, params->npatch, FFT_INVERSE);
+
 
     cl::Kernel trans_kernel=cl::Kernel(*radar_data->program, "SAR_transpose");
     trans_kernel.setArg(0, *radar_data->range_data);
@@ -260,11 +285,7 @@ void process_benchmark(
     radar_data->queue->finish();
 
     /* AZIMUTH COMPRESS */
-    //FIXME fft
-    fft_kernel.setArg(0, *radar_data->azimuth_data);
-    fft_kernel.setArg(1, params->apatch);
-    radar_data->queue->enqueueNDRangeKernel(fft_kernel, cl::NullRange, cl::NDRange(params->rvalid*params->npatch), cl::NullRange, NULL, NULL);
-    radar_data->queue->finish();
+    launch_fft(fft_kernel, bin_rev_kernel, radar_data->queue, radar_data->azimuth_data, params->apatch, params->rvalid, params->npatch, FFT_FORWARD);
 
     cl::Kernel rcmc_kernel=cl::Kernel(*radar_data->program, "SAR_rcmc");
     rcmc_kernel.setArg(0, *radar_data->azimuth_data);
@@ -280,11 +301,8 @@ void process_benchmark(
     ref_kernel.setArg(3, params->rvalid);
     radar_data->queue->enqueueNDRangeKernel(ref_kernel, cl::NullRange, cl::NDRange(params->apatch, params->rvalid, params->npatch), cl::NullRange, NULL, NULL);
     radar_data->queue->finish();
-    //FIXME ifft
-    ifft_kernel.setArg(0, *radar_data->azimuth_data);
-    ifft_kernel.setArg(1, params->apatch);
-    radar_data->queue->enqueueNDRangeKernel(ifft_kernel, cl::NullRange, cl::NDRange(params->rvalid*params->npatch), cl::NullRange, NULL, NULL);
-    radar_data->queue->finish();
+
+    launch_fft(fft_kernel, bin_rev_kernel, radar_data->queue, radar_data->azimuth_data, params->apatch, params->rvalid, params->npatch, FFT_INVERSE);
 
     trans_kernel.setArg(0, *radar_data->azimuth_data);
     trans_kernel.setArg(1, *radar_data->range_data);
