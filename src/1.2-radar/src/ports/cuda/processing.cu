@@ -210,8 +210,8 @@ __global__ void bin_reverse(float *data, unsigned int size, unsigned int group)
 
     unsigned int i = blockIdx.y + blockIdx.z * gridDim.y;
     cuda::std::complex<float> *c_data = (cuda::std::complex<float>*) &data[i*size*2];
-    unsigned int id = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int j = 0;
+    unsigned int id = blockIdx.x * blockDim.x + threadIdx.x;
     if (id < size)
     {
         j = (__brev(id) >> (32 - group));
@@ -220,7 +220,6 @@ __global__ void bin_reverse(float *data, unsigned int size, unsigned int group)
         c_data[id] = c_data[j];
         c_data[j] = swp;
     }
-    
 }
 
 __global__ void fft_kernel(float* data, int loop, float wpr ,float wpi, unsigned int theads, unsigned int size){

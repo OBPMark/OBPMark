@@ -165,7 +165,7 @@ void launch_fft(float *data, unsigned int width, unsigned int rows, unsigned int
 {
     unsigned int group = (unsigned int) log2(width);
     unsigned int nthreads = width>>1;
-    dim3 gridSize((nthreads-1)/BLOCK_SIZE+1,rows,npatch); //nthreads/BLOCK_SIZE+1, rows, 1);
+    dim3 gridSize((width-1)/BLOCK_SIZE+1,rows,npatch); 
     dim3 blockSize(BLOCK_SIZE, 1, 1);
     bin_reverse<<<gridSize, blockSize>>>(data, width, group);
 
