@@ -10,7 +10,8 @@ int main(int argc, char *argv[]){
     ValidatorParameters arguments_parameters;
     // init arguments_parameters
     arguments_parameters.verification_non_stop = false;
-    arguments_parameters.range_verification = 0;
+    arguments_parameters.summary = false;
+    arguments_parameters.range_verification = 1;
     arguments_parameters.number_of_values = 0;
     arguments_parameters.bit_depth = BIT_DEPTH;
     arguments_parameters.input_file_A[0] = '\0';
@@ -52,6 +53,9 @@ int main(int argc, char *argv[]){
         }
     }
 
+    long unsigned int nerr = 0;
+    long unsigned int max_diff = 0;
+    long int diff = 0;
     // loop for compare the values
     for (unsigned long int i = 0; i < arguments_parameters.number_of_values; i++){
         // check if the values are different taking into account the range_verification that checks if the values are +/- range_verification
@@ -61,10 +65,20 @@ int main(int argc, char *argv[]){
                 // break the loop
                 break;
             }else{
-                printf("Error in the position %lu, the value is %lu and the expected value is %lu\n", i, test_data[i], gold_refence[i]);
+                if(arguments_parameters.summary) 
+                {
+                    nerr++;
+                    diff = (long int) gold_refence[i]- (long int) test_data[i];
+                    if(diff < 0) diff = -diff;
+                    if(diff > max_diff) max_diff = diff;
+                }
+                else printf("Error in the position %lu, the value is %lu and the expected value is %lu\n", i, test_data[i], gold_refence[i]);
             }
         }
     }
+
+    if(arguments_parameters.summary)
+        printf("Number of errors: %lu \nMaximum difference: %lu\n", nerr, max_diff);
     // free the memory
     free(gold_refence);
     free(test_data);
@@ -87,6 +101,7 @@ void print_usage(const char * appName)
     printf(" -b: bit depth, default %s \n", str);
     printf(" -s size: number of elements to read \n");
     printf(" -n: non stop verification, the program does not stop in the first discrepancy \n");
+    printf(" -m: summary, if non stop verification, print the number of discrepancies and max difference \n");
 	printf(" -h: print help information\n");
 
 }
@@ -102,6 +117,7 @@ int arguments_handler(int argc, char ** argv, ValidatorParameters* arguments_par
             case 'b' : args +=1; arguments_parameters->bit_depth = atoi(argv[args]);break;
             case 's' : args +=1; arguments_parameters->number_of_values = atoi(argv[args]);break;
             case 'n' : arguments_parameters->verification_non_stop = true;break;
+            case 'm' : arguments_parameters->summary = true;break;
 			case 'i' : args +=1;
 					   strcpy(arguments_parameters->input_file_A,argv[args]);
 					   args +=1;
