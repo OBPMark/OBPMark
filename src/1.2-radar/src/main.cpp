@@ -32,25 +32,6 @@ void print_output_result(frame8_t *output_image)
 	}
 }
 
-void print_input_result(framefp_t *output_image)
-{
-	unsigned int h_position; 
-	unsigned int w_position;
-	printf("%d %d\n", output_image->h, output_image->w);
-
-	/* Print output */
-	for(h_position=0; h_position < output_image->h; h_position++)
-	{
-		
-		for(w_position=0; w_position < output_image->w; w_position++)
-		{
-			//FIXME chaneg to the 1D and 2D version
-			printf("%f, ", output_image->f[(h_position * (output_image->w) + w_position)]);
-		}
-		printf("\n");
-	}
-}
-
 int write_output(char filename[], frame8_t *f)
 {
 	FILE *framefile;
@@ -60,25 +41,12 @@ int write_output(char filename[], frame8_t *f)
 	size_t bytes_expected = width * sizeof(char);
 	size_t bytes_total=0;
 	unsigned int x, y;
-//	uint8_t *vals = (uint8_t*) malloc(height*width);
-//	for(x=0; x<height; x++)
-//	    for(y=0; y<width; y++)
-//	        vals[x*width+y] = (uint8_t) f->f[x*width+y];
 
 	framefile = fopen(filename, "w");
 	if(framefile == NULL) {
 		printf("error: failed to open file: %s\n", filename);
 		return 0;
 	}
- //	char aux[15];
- //   fprintf(framefile, "P2\n%ld %ld\n", width, height);
- //   fprintf(framefile, "255\n");
-
- //   for(x = 0; x<height; x++){
- //       for(y = 0; y<width; y++)
- //           fprintf(framefile, "%d ", f->f[x*width+y]);
- //       fprintf(framefile, "\n");
- //   }
 
 	for(x=0; x<height; x++)
 	{
@@ -190,7 +158,6 @@ int main(int argc, char **argv)
 	/* Find output image size */
     float ratio = (float) params->asize/ (float) params->rvalid;
     out_width = params->rvalid / ml_factor;
-//    out_height = ceil((float) params->asize/(ratio * ml_factor));
 
 	/* Fix output height according to valid azimuth samples */
 	float azi_factor =(float) params->asize/(float)out_width; //height;
@@ -220,8 +187,7 @@ int main(int argc, char **argv)
 	/* Init device and run test */
 	init_benchmark(input_data, output_img, params, csv_mode, print_output, database_mode, verbose_output, get_timestamp());
 
-	for(int i = 0; i<params->npatch; i++)
-        free(input_data[i].f);
+	for(int i = 0; i<params->npatch; i++) free(input_data[i].f);
 	free(input_data);
 	free(params);
 	free(output_img->f);

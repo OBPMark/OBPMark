@@ -26,7 +26,8 @@ __device__ uint32_t next_power_of2(uint32_t n)
 static __device__ float fDc = 0;
 static __device__ float v_max = FLT_MIN;
 static __device__ float v_min = FLT_MAX;
-/* Debug kernels */
+
+/* Debug kernels 
 __global__ void printffDc()
 {
     printf("fDc: %.12f\n",fDc);
@@ -36,6 +37,7 @@ __global__ void printfM()
     printf("Max: %.12f\n",v_max);
     printf("Min: %.12f\n",v_min);
 }
+*/
 
 
 __global__ void SAR_range_ref(float *rrf, radar_params_t *params, uint32_t nit)
@@ -60,9 +62,9 @@ __global__ void SAR_rcmc_table(radar_params_t *params, uint32_t *offsets)
 
     delta = j * (params->PRF/params->avalid) + fDc;
     offset = (1/sqrt(1-pow(params->lambda * delta / (2 * params->vr), 2))-1) * (params->ro + i * (c/(2*params->fs)));
-    offset = round (offset / (c/(2*params->fs))) * width;
+    offset = round (offset / (c/(2*params->fs)));
     ind = i * width + j;
-    offsets[ind] = ind + offset;
+    offsets[ind] = (int)offset + i;
 }
 
 __global__ void SAR_DCE(float *data, radar_params_t *params, float const_k)
@@ -132,11 +134,14 @@ __global__ void SAR_transpose(float *in, float *out, uint32_t in_width, uint32_t
 __global__ void SAR_rcmc(float *data, uint32_t *offsets, uint32_t width, uint32_t height)
 {
 
-    uint32_t i = blockIdx.y * TILE_SIZE + threadIdx.y; if (i >= height) return;
-    uint32_t j = blockIdx.x * TILE_SIZE + threadIdx.x; if (j >= width) return;
-    cuda::std::complex<float> *c_data = &((cuda::std::complex<float>*) data)[(i+blockIdx.z*height) * width];
-    uint32_t ind = i * width + j;
-    if (offsets[ind] < (height * width)) c_data[ind] = c_data[offsets[ind]];
+    uint32_t j = blockIdx.x * BLOCK_SIZE + threadIdx.x; if (j >= width) return;
+    cuda::std::complex<float> *c_data = &((cuda::std::complex<float>*) data)[(blockIdx.y*height) * width];
+    for(uint32_t i = 0; i < height; i++)
+    {
+        uint32_t ind = i * width + j;
+        if(offsets[ind]<height) c_data[ind] = c_data[j+offsets[ind]*width];
+        else c_data[ind] = 0;
+    }
 }
 
 /* UTIL float atomic Max and atomic Min */

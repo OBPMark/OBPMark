@@ -1,20 +1,11 @@
 /** 
- * \brief OBPMark "Image corrections and calibrations." processing task.
+ * \brief OBPMark "Radar image generation." processing task.
  * \file processing.c
- * \author david.steenari@esa.int
+ * \author marc.solebonet@bsc.es
  * European Space Agency Community License V2.3 applies.
  * For more info see the LICENSE file in the root folder.
  */
 #include "processing.h"
-
-void printF(float *data, uint32_t width, uint32_t height)
-{
-//    for(int i = 0; i < 3; i++){
-        for(int j = 0; j < 5; j++)
-            printf("%f%+fi ", data[2*j], data[2*j+1]); //i*next_power_of2(width)*2+j*2], data[i*next_power_of2(width)*2+j*2+1]);
-        printf("\n");
-//    }
-}
 
 void fft(float *data, int nn);
 void ifft(float *data, int nn);
@@ -33,6 +24,7 @@ uint32_t next_power_of2(uint32_t n)
     return v;
 }
 
+/* DEBUG
 void print_data(framefp_t *data, int npatch)
 {
 	char* output_file = (char*)"debug.txt";
@@ -47,7 +39,6 @@ void print_data(framefp_t *data, int npatch)
         fprintf(framefile,"Patch %d/%d:\n", i+1, npatch);
         std::complex<float> *c_data = (std::complex<float>*) data[i].f;
 
-        /* Print output */
         for(h_position=0; h_position < data[i].h; h_position++)
         {
             for(w_position=0; w_position < data[i].w/2; w_position++)
@@ -62,12 +53,12 @@ void print_data(framefp_t *data, int npatch)
     }
 }
 
+
 void print_output(framefp_t *output_image)
 {
 	unsigned int h_position; 
 	unsigned int w_position;
 
-	/* Print output */
 	for(h_position=0; h_position < output_image->h; h_position++)
 	{
 		
@@ -95,6 +86,7 @@ void print_params(radar_params_t *params)
     printf("Rsize: %d\n", params->rsize);
     printf("NPatch: %d\n", params->npatch);
 }
+*/
 
 void ref_func(float *ref, float fc, float slope, float tau, float fs, uint32_t length, uint32_t fftlen)
 {
@@ -127,9 +119,9 @@ void SAR_rcmc_table(radar_params_t *params, uint32_t *offsets, float fDc, uint32
         {
             delta = j * (params->PRF/params->avalid) + fDc;
             offset = (1/sqrt(1-pow(params->lambda * delta / (2 * params->vr), 2))-1) * (params->ro + i * (c/(2*params->fs)));
-            offset = round (offset / (c/(2*params->fs))) * width;
+            offset = round (offset / (c/(2*params->fs)));
             ind = i * width + j;
-            offsets[ind] = ind + offset;
+            offsets[ind] = (int)offset + i;
         }
     }
 }
@@ -205,7 +197,8 @@ void SAR_rcmc(framefp_t *data, uint32_t *offsets)
         for (int j = 0; j < width; j++)
         {
             uint32_t ind = i * width + j;
-            if(offsets[ind]<(height*width)) c_data[ind] = c_data[offsets[ind]];
+            if(offsets[ind]<height) c_data[ind] = c_data[j+offsets[ind]*width];
+            else c_data[ind] = 0;
         }
 }
 

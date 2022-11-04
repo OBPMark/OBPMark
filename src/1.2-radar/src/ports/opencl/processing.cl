@@ -149,11 +149,12 @@ SAR_DCE(global const float *data, const unsigned int apatch, const unsigned int 
     }
 }
 
+/* DEBUG fDc
 void kernel
 printfDc()
 {
     printf("fDc: %f\n", fDc);
-}
+} */
 
 void kernel
 SAR_rcmc_table(global unsigned int *offsets, const unsigned int apatch, const unsigned int avalid, const float PRF, const float lambda, const float vr, const float ro, const float fs)
@@ -166,10 +167,10 @@ SAR_rcmc_table(global unsigned int *offsets, const unsigned int apatch, const un
     unsigned int width = apatch;
 
     delta = j * (PRF/avalid) + fDc;
-    offset = (1/sqrt(1-pow(lambda * delta / (2 * vr), 2))-1) * (ro + i * (c/(2*fs)));
-    offset = round (offset / (c/(2*fs))) * width;
+    offset = (pow(sqrt(1-pow((double)lambda * delta / (2 * vr), 2)),-1)-1) * (ro + i * (c/(2*fs)));
+    offset = round (offset / (c/(2*fs)));
     ind = i * width + j;
-    offsets[ind] = ind + offset;
+    offsets[ind] = (int)offset + i;
 }
 
 void kernel
@@ -214,12 +215,15 @@ void kernel
 SAR_rcmc(global float *data, global unsigned int *offsets, unsigned int width, unsigned int height)
 {
 
-    unsigned int i = get_global_id(1);
     unsigned int j = get_global_id(0);
-    unsigned int k = get_global_id(2);
-    cfloat *c_data = &((cfloat*) data)[(i+k*height) * width];
-    unsigned int ind = i * width + j;
-    if (offsets[ind] < (height * width)) c_data[ind] = c_data[offsets[ind]];
+    unsigned int k = get_global_id(1);
+    cfloat *c_data = &((cfloat*) data)[(k*height) * width];
+    for(unsigned int i = 0; i < height; i++)
+    {
+        unsigned int ind = i * width + j;
+        if(offsets[ind]<height) c_data[ind] = c_data[j+offsets[ind]*width];
+        else c_data[ind] = 0;
+    }
 }
 
 void kernel
@@ -263,7 +267,7 @@ quantize(global float *data, global unsigned char *image, const unsigned int wid
     image[y*width+x] = min(255.f,floor(scale * (data[y*width+x]-v_min)));
 }
 
-//FFT
+//FFT from gpu4sbench
 void kernel
 bin_reverse(global float *data, const unsigned int size, const unsigned int group)
 {

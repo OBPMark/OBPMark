@@ -262,11 +262,15 @@ void process_benchmark(
     launch_fft(radar_data->azimuth_data, params->apatch, params->rvalid, params->npatch, FFT_FORWARD);
 #endif
 
-    gridSize= {params->apatch/TILE_SIZE,(params->rvalid-1)/TILE_SIZE+1,params->npatch};
     /* RCMC */
+    blockSize = {BLOCK_SIZE,1,1};
+    gridSize= {(params->apatch)/BLOCK_SIZE,params->npatch,1};
     SAR_rcmc<<<gridSize,blockSize>>>(radar_data->azimuth_data , radar_data->offsets, params->apatch, params->rvalid);
 
+    /* RCMC */
     /* Azimuth Compress */
+    blockSize = {TILE_SIZE,TILE_SIZE,1};
+    gridSize= {params->apatch/TILE_SIZE,(params->rvalid-1)/TILE_SIZE+1,params->npatch};
     SAR_ref_product<<<gridSize, blockSize>>>(radar_data->azimuth_data, radar_data->arf, params->apatch, params->rvalid);
 #ifndef CUFFT_DISABLE
     cufftExecC2C(radar_data->azimuth_plan, (cufftComplex*) radar_data->azimuth_data, (cufftComplex*) radar_data->azimuth_data, CUFFT_INVERSE);

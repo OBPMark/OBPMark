@@ -292,7 +292,7 @@ void process_benchmark(
     rcmc_kernel.setArg(1, *radar_data->offsets);
     rcmc_kernel.setArg(2, params->apatch);
     rcmc_kernel.setArg(3, params->rvalid);
-    radar_data->queue->enqueueNDRangeKernel(rcmc_kernel, cl::NullRange, cl::NDRange(params->apatch, params->rvalid, params->npatch), cl::NullRange, NULL, NULL);
+    radar_data->queue->enqueueNDRangeKernel(rcmc_kernel, cl::NullRange, cl::NDRange(params->apatch, params->npatch, 1), cl::NullRange, NULL, NULL);
     radar_data->queue->finish();
 
     ref_kernel.setArg(0, *radar_data->azimuth_data);
