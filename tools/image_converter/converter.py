@@ -12,6 +12,8 @@ def arguments():
     parser.add_argument('-c', '--conversion', type=str, required=True, help='conversion png to bitfile or bitfile to png, p is for png to bitfile, b is for bitfile to png, f is for bitfile to fits, t is for fits to bitfile, pf is for png to fits')
     # the rest of the arguments are a list of the files to be converted
     parser.add_argument('-f', '--files', required=True , nargs='+', help='list of files to be converted')
+    # add argument to set the image width 
+    parser.add_argument('-w', '--width', type = int, default = 0, help='width of the image in pixels, default assumes squared image')
     # add argument to select the bit depth of the bitfile
     parser.add_argument('-d', '--bit_depth', type=int, default=16, help='bit depth of the bitfile, default is 16')
     # add brightness argument for the 32 bit bitfile
@@ -42,7 +44,7 @@ def png_to_bitfile(file):
 
 
 
-def bitfile_to_png(file, bit_depth, brightness):
+def bitfile_to_png(file, width, bit_depth, brightness):
     # read the bitfile
     if bit_depth == 16:
         np_bit_depth = np.uint16 
@@ -74,8 +76,12 @@ def bitfile_to_png(file, bit_depth, brightness):
             image_data[i] = value
             
     # create the image array when the image is a square with the square root of the length of the bitfile, each value is the average of the RGB values
-    img = np.zeros((int(np.sqrt(len(image_data))), int(np.sqrt(len(image_data))), 3), dtype=np_bit_depth)
     # print the image shape
+    if width == 0:
+        img = np.zeros((int(np.sqrt(len(image_data))), int(np.sqrt(len(image_data))), 3), dtype=np_bit_depth)
+    else:
+        img = np.zeros((int(len(image_data)/width), int(width), 3), dtype=np_bit_depth)
+
     # read each pixel
     for i in range(img.shape[0]):
         for j in range(img.shape[1]):
@@ -135,7 +141,7 @@ def main():
     elif args.conversion == 'b':
         # convert bitfile to png
         for file in args.files:
-            bitfile_to_png(file, args.bit_depth, args.brightness)
+            bitfile_to_png(file, args.width, args.bit_depth, args.brightness)
     elif args.conversion == 'f':
         # convert bitfile to fits
         for file in args.files:
