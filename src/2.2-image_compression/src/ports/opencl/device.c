@@ -426,41 +426,23 @@ void copy_memory_to_host(
 }
 
 
+
 void get_elapsed_time(
 	compression_image_data_t *compression_data, 
-	compression_time_t *t,
-	bool csv_format,
-	bool database_format,
-	bool verbose_print,
+	compression_time_t *t, 
+	print_info_data_t *benchmark_info,
 	long int timestamp
 	)
-{
+{	
 
     float milliseconds_h_d = 0, milliseconds_d_h = 0;
     milliseconds_h_d = t->evt_copy_mains->getProfilingInfo<CL_PROFILING_COMMAND_END>() - t->evt_copy_mains->getProfilingInfo<CL_PROFILING_COMMAND_START>();
     milliseconds_h_d += t->evt_copy_auxiliar_float_1->getProfilingInfo<CL_PROFILING_COMMAND_END>() - t->evt_copy_auxiliar_float_1->getProfilingInfo<CL_PROFILING_COMMAND_START>();
     milliseconds_h_d += t->evt_copy_auxiliar_float_2->getProfilingInfo<CL_PROFILING_COMMAND_END>() - t->evt_copy_auxiliar_float_2->getProfilingInfo<CL_PROFILING_COMMAND_START>();
     milliseconds_d_h = t->evt_copy_back->getProfilingInfo<CL_PROFILING_COMMAND_END>() - t->evt_copy_back->getProfilingInfo<CL_PROFILING_COMMAND_START>();
-    
+    double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000));
 
-	if (csv_format)
-	{
-		double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
-		printf("%.10f;%.10f;%.10f;\n", (float) milliseconds_h_d, elapsed_time, (float) milliseconds_h_d);
-	}
-	else if (database_format)
-	{
-		
-		double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
-		printf("%.10f;%.10f;%.10f;%ld;\n", (float) milliseconds_h_d, elapsed_time, (float) milliseconds_h_d, timestamp);
-	}
-	else if(verbose_print)
-	{
-		double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
-		printf("Elapsed time Host->Device: %.10f ms\n", (float) milliseconds_h_d);
-		printf("Elapsed time kernel: %.10f ms\n", elapsed_time );
-		printf("Elapsed time Device->Host: %.10f ms\n", (float) milliseconds_h_d);
-	}
+    print_execution_info(benchmark_info, true, timestamp,milliseconds_h_d,(float)(elapsed_time),milliseconds_d_h);
     
 }
 

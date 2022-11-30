@@ -7,6 +7,7 @@
 #define DEVICE_H_
 
 #include "obpmark.h"
+#include "util_prints.h"
 #include "benchmark.h"
 #include "obpmark_time.h"
 #include "output_format_utils.h"
@@ -467,11 +468,9 @@ void copy_memory_to_host(
  * \brief Function that summarize the execution time of the benchmark.
  */
 void get_elapsed_time(
-	compression_image_data_t *image_data, 
-	compression_time_t *t,
-	bool csv_format,
-	bool database_format,
-	bool verbose_print,
+	compression_image_data_t *compression_data, 
+	compression_time_t *t, 
+	print_info_data_t *benchmark_info,
 	long int timestamp
 	);
 

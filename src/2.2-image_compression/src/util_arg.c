@@ -28,13 +28,27 @@ void print_usage(const char *exec_name)
 	printf(" -f : input data file\n");
 	printf(" -c : print time in CSV\n");
 	printf(" -C : print time in CSV with timestamp\n");
-	printf(" -t : print time in verbose\n");
+	printf(" -v : print time in verbose\n");
+	printf(" -t : no generate output file\n");
 	printf(" -o : print output\n");
-	printf(" -O : output file name\n");
 }
 
 
-int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int *h_size, unsigned int *bit_size, unsigned int *segment_size, bool *type, bool *csv_mode, bool *database_mode, bool *print_output, bool *verbose_output, char *input_file, char *output_file)
+int arguments_handler(
+	int argc, 
+	char **argv, 
+	unsigned int *w_size, 
+	unsigned int *h_size, 
+	unsigned int *bit_size, 
+	unsigned int *segment_size, 
+	bool *type, 
+	bool *csv_mode, 
+	bool *database_mode, 
+	bool *print_output, 
+	bool *verbose_output, 
+	bool *no_output_file,
+	bool *extended_csv_mode,
+	char *input_file)
 {
 	if(argc < 3) {
 		print_usage(argv[0]);
@@ -50,11 +64,12 @@ int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int 
 			case 'f' : args +=1; strcpy(input_file,argv[args]);break;
 			case 's' : args +=1; *segment_size = atoi(argv[args]);break;
 			case 'y' : *type = true;break;
+			case 'E' : *extended_csv_mode = true;break;
 			case 'c' : *csv_mode = true;break;
 			case 'C' : *database_mode = true;break;
 			case 'o' : *print_output = true;break;
-			case 'O' : args +=1; strcpy(output_file,argv[args]);break;
-			case 't' : *verbose_output = true;break;
+			case 'v' : *verbose_output = true;break;
+			case 't' : *no_output_file = true;break;
 			default: print_usage(argv[0]); return ARG_ERROR;
 		}
 
@@ -92,13 +107,9 @@ int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int 
 		print_usage(argv[0]);
 		return ARG_ERROR;
 	}
-	// check if the output file is not empty
-	if(strcmp(output_file, "") == 0) {
-		// set default output file name
-		strcpy(output_file, DEFAULTOUTPUTFILENAME);
-	}
 	
-		
+	// if extended csv mode is enabled, csv mode is enabled too
+	if(*extended_csv_mode) *csv_mode = true;
 
 	return ARG_SUCCESS;
 }

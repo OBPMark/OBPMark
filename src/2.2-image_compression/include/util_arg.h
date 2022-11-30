@@ -23,19 +23,20 @@
  * \brief Command line argument handler.
  */
 int arguments_handler(
-	int argc,
-	char **argv,
-	unsigned int *w_size,
-	unsigned int *h_size,
-	unsigned int *bit_size,
-	unsigned int *segment_size,
-	bool *type,
-	bool *csv_mode,
-	bool *database_mode,
-	bool *print_output,
-	bool *verbose_output,
-	char *input_file,
-	char *output_file
+	int argc, 
+	char **argv, 
+	unsigned int *w_size, 
+	unsigned int *h_size, 
+	unsigned int *bit_size, 
+	unsigned int *segment_size, 
+	bool *type, 
+	bool *csv_mode, 
+	bool *database_mode, 
+	bool *print_output, 
+	bool *verbose_output, 
+	bool *no_output_file,
+	bool *extended_csv_mode,
+	char *input_file
 	);
 
 /**

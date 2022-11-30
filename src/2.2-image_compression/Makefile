@@ -14,10 +14,10 @@ EXEC_PATH	:= $(BIN_PATH)/$(EXEC_NAME)
 ################################################################################
 COMMON_PATH = ../../src/common
 
-_COMMON_INCLUDES = image_util.h image_mem_util.h image_file_util.h output_format_utils.h
-_COMMON_SOURCES  = image_mem_util.c image_file_util.c  util_arg.c util_data_files.c output_format_utils.c
-COMMON_OBJECTS   = image_mem_util.o image_file_util.o  util_arg.o util_data_files.o  output_format_utils.o
-COMMON_OBJECTS_PATH = $(COM_TARGET)/image_mem_util.o $(COM_TARGET)/image_file_util.o  $(COM_TARGET)/util_arg.o $(COM_TARGET)/util_data_files.o $(COM_TARGET)/output_format_utils.o
+_COMMON_INCLUDES = image_util.h image_mem_util.h image_file_util.h output_format_utils.h util_prints.h
+_COMMON_SOURCES  = image_mem_util.c image_file_util.c  util_arg.c util_data_files.c output_format_utils.c util_prints.c
+COMMON_OBJECTS   = image_mem_util.o image_file_util.o  util_arg.o util_data_files.o  output_format_utils.o util_prints.o
+COMMON_OBJECTS_PATH = $(COM_TARGET)/image_mem_util.o $(COM_TARGET)/image_file_util.o  $(COM_TARGET)/util_arg.o $(COM_TARGET)/util_data_files.o $(COM_TARGET)/output_format_utils.o $(COM_TARGET)/util_prints.o
 
 COMMON_INCLUDES = $(pathsubst %,$(COMMON_PATH)/%,$(_COMMON_INCLUDES))
 COMMON_SOURCES  = $(pathsubst %,$(COMMON_PATH)/%,$(_COMMON_SOURCES))
@@ -91,6 +91,9 @@ util_data_files.o: common_conf $(SRC_FOLDER)/util_data_files.c
 output_format_utils.o: common_conf $(SRC_FOLDER)/output_format_utils.c
 	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/output_format_utils.c -o $(COM_TARGET)/output_format_utils.o
 
+util_prints.o: common_conf $(SRC_FOLDER)/util_prints.c
+	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/util_prints.c -o $(COM_TARGET)/util_prints.o
+
 ################################### SEQUENTIAL ################################
 # Shortcuts
 .PHONY: CPU
@@ -121,6 +124,8 @@ all-openmp: openmp
 OpenMP: openmp
 
 # Build target
+openmp: CFLAGS += -DOPENMP
+openmp: CFLAGS += $(OMPFLAGS)
 openmp: main_openmp
 
 openmp_conf:
@@ -146,6 +151,8 @@ all-opencl: opencl
 OpenCL: opencl
 
 # Build target
+opencl: CFLAGS += -DOPENCL
+opencl: CFLAGS += $(OPFLAGS)
 opencl: main_opencl
 
 opencl_conf:
@@ -171,6 +178,8 @@ all-cuda: cuda
 CUDA: cuda
 
 # Build target
+cuda: CFLAGS += -DCUDA 
+cuda: CFLAGS += $(CUFLAGS)
 cuda: main_cuda
 
 cuda_conf:
@@ -196,6 +205,8 @@ HIP: hip
 Hip: hip
 
 # Build target
+hip: CFLAGS += -DHIP 
+hip: CFLAGS += $(HIPCCFLAGS)
 hip: main_hip
 
 hip_conf:
