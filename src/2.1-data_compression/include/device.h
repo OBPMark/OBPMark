@@ -12,6 +12,7 @@
 #include "output_format_utils.h"
 #include "benchmark.h"
 #include "math.h"
+#include "util_prints.h"
 
 /* Typedefs */
 #ifdef CUDA
@@ -238,12 +239,11 @@ void copy_memory_to_host(
 /**
  * \brief Function that summarize the execution time of the benchmark.
  */
+
 void get_elapsed_time(
 	compression_data_t *compression_data, 
 	compression_time_t *t, 
-	bool csv_format,
-	bool database_format,
-	bool verbose_print,
+	print_info_data_t *benchmark_info,
 	long int timestamp
 	);
 

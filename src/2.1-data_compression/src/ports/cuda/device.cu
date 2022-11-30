@@ -517,41 +517,23 @@ void copy_memory_to_host(
 }
 
 
+
 void get_elapsed_time(
 	compression_data_t *compression_data, 
 	compression_time_t *t, 
-	bool csv_format,
-	bool database_format,
-	bool verbose_print,
+	print_info_data_t *benchmark_info,
 	long int timestamp
 	)
-{
-	    //cudaEventSynchronize(*compression_data->stop_memory_copy_host);
-        float milliseconds_h_d = 0, milliseconds_d_h = 0;
-        // memory transfer time host-device
-        cudaEventElapsedTime(&milliseconds_h_d, *t->start_memory_copy_device, *t->stop_memory_copy_device);
-        // kernel time 1
-        long unsigned int application_miliseconds = (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
-        //  memory transfer time device-host
-        cudaEventElapsedTime(&milliseconds_d_h, *t->start_memory_copy_host, *t->stop_memory_copy_host);
-        
-        if (csv_format)
-        {
-            printf("%.10f;%lu;%.10f;\n", milliseconds_h_d,application_miliseconds,milliseconds_d_h);
-        }
-        else if (database_format)
-        {
-            printf("%.10f;%lu;%.10f;%ld;\n", milliseconds_h_d,application_miliseconds,milliseconds_d_h, timestamp);
-        }
-        else if(verbose_print)
-        {
-            printf("Elapsed time Host->Device: %.10f ms\n", (float) milliseconds_h_d);
-            printf("Elapsed time kernel: %lu ms\n", application_miliseconds );
-            printf("Elapsed time Device->Host: %.10f ms\n", (float) milliseconds_d_h);
-        }
+{	
+    float milliseconds_h_d = 0, milliseconds_d_h = 0;
+    // memory transfer time host-device
+    cudaEventElapsedTime(&milliseconds_h_d, *t->start_memory_copy_device, *t->stop_memory_copy_device);
+    long unsigned int application_miliseconds = (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
+    //  memory transfer time device-host
+    cudaEventElapsedTime(&milliseconds_d_h, *t->start_memory_copy_host, *t->stop_memory_copy_host);
+    print_execution_info(benchmark_info, true, timestamp,milliseconds_h_d,(float)(application_miliseconds),milliseconds_d_h);
 
 }
-
 
 void clean(
 	compression_data_t *compression_data,

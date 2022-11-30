@@ -713,6 +713,27 @@ void copy_memory_to_host(
 }
 
 
+
+void get_elapsed_time(
+	compression_data_t *compression_data, 
+	compression_time_t *t, 
+	print_info_data_t *benchmark_info,
+	long int timestamp
+	)
+{	
+    float milliseconds_h_d = 0, milliseconds_d_h = 0;
+    milliseconds_h_d = t->t_host_device->getProfilingInfo<CL_PROFILING_COMMAND_END>() - t->t_host_device->getProfilingInfo<CL_PROFILING_COMMAND_START>();
+    long unsigned int application_miliseconds = (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
+	double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000));
+    //  memory transfer time device-host
+    milliseconds_d_h = t->t_device_host_1->getProfilingInfo<CL_PROFILING_COMMAND_END>() - t->t_device_host_1->getProfilingInfo<CL_PROFILING_COMMAND_START>();
+    milliseconds_d_h += t->t_device_host_2->getProfilingInfo<CL_PROFILING_COMMAND_END>() - t->t_device_host_2->getProfilingInfo<CL_PROFILING_COMMAND_START>();
+    milliseconds_d_h += t->t_device_host_3->getProfilingInfo<CL_PROFILING_COMMAND_END>() - t->t_device_host_3->getProfilingInfo<CL_PROFILING_COMMAND_START>();
+    milliseconds_d_h += t->t_device_host_4->getProfilingInfo<CL_PROFILING_COMMAND_END>() - t->t_device_host_4->getProfilingInfo<CL_PROFILING_COMMAND_START>();
+	print_execution_info(benchmark_info, true, timestamp,milliseconds_h_d,(float)(elapsed_time),milliseconds_d_h);
+}
+
+
 void get_elapsed_time(
 	compression_data_t *compression_data, 
 	compression_time_t *t, 

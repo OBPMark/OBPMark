@@ -27,7 +27,9 @@ void print_usage(const char *exec_name)
 	printf(" -f : file that contains input data\n");
 	printf(" -c : print time in CSV\n");
 	printf(" -C : print time in CSV with timestamp\n");
-	printf(" -t : print time in verbose\n");
+	printf(" -E : extended csv output\n");
+	printf(" -v : verbose print\n");
+	printf(" -t : no generate output file\n");
 	printf(" -o : print output\n");
 }
 
@@ -44,6 +46,8 @@ int arguments_handler(
 	bool *print_output,
 	bool *verbose_output,
 	bool *debug_mode,
+	bool *no_output_file,
+	bool *extended_csv_mode,
 	char *input_file
 	)
 
@@ -63,10 +67,12 @@ int arguments_handler(
             case 'j' : args +=1; *j_blocksize = atoi(argv[args]);break;
             case 'p' : *preprocessor_active = true;break;
 			case 'c' : *csv_mode = true;break;
+			case 'E' : *extended_csv_mode = true;break;
 			case 'D' : *debug_mode = true;break;
 			case 'C' : *database_mode = true;break;
 			case 'o' : *print_output = true;break;
-			case 't' : *verbose_output = true;break;
+			case 'v' : *verbose_output = true;break;
+			case 't' : *no_output_file = true;break;
 			default: print_usage(argv[0]); return ARG_ERROR;
 		}
 
@@ -118,6 +124,9 @@ int arguments_handler(
         return ARG_ERROR;
     }
     fclose(file);
+	
+	// if extended csv mode is enabled, csv mode is enabled too
+	if(*extended_csv_mode) *csv_mode = true;
     
 
 	return ARG_SUCCESS;
