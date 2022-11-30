@@ -127,7 +127,7 @@ OpenMP: openmp
 
 # Build target
 openmp: CFLAGS += -DOPENMP
-opencl: CFLAGS += $(OMPFLAGS)
+openmp: CFLAGS += $(OMPFLAGS)
 openmp: main_openmp
 
 openmp_conf:
