@@ -73,6 +73,8 @@ all: cpu openmp opencl cuda #hip
 #	@echo "error: must specify target: cpu, openmp, opencl, cuda, hip"
 
 ################################### COMMON ################################
+
+
 common_conf:
 	mkdir -p $(COM_TARGET)
 
@@ -124,6 +126,8 @@ all-openmp: openmp
 OpenMP: openmp
 
 # Build target
+openmp: CFLAGS += -DOPENMP
+opencl: CFLAGS += $(OMPFLAGS)
 openmp: main_openmp
 
 openmp_conf:
@@ -149,6 +153,8 @@ all-opencl: opencl
 OpenCL: opencl
 
 # Build target
+opencl: CFLAGS += -DOPENCL
+opencl: CFLAGS += $(OPFLAGS)
 opencl: main_opencl
 
 opencl_conf:
@@ -169,7 +175,9 @@ all-cuda: cuda
 .PHONY: CUDA
 CUDA: cuda
 
-# Build target
+# Build target add -DCUDA to CFLAGS
+cuda: CFLAGS += -DCUDA 
+cuda: CFLAGS += $(CUFLAGS)
 cuda: main_cuda
 
 cuda_conf:
@@ -195,6 +203,8 @@ HIP: hip
 Hip: hip
 
 # Build target
+hip: CFLAGS += -DHIP 
+hip: CFLAGS += $(HIPCCFLAGS)
 hip: main_hip
 
 hip_conf:

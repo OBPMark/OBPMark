@@ -55,7 +55,21 @@ void init_benchmark(
 	/* Init number of frames */
 	image_data->num_frames = num_frames;
 	char device[100] = "";
-	char* output_file = (char*)"output.bin";
+	// generate output filename that is output_<num_frames>_<w_size>_IMPLEMENTATION_NAME_FILE.bin
+	char output_filename[100] = "output_";
+	char num_frames_str[10];
+	char w_size_str[10];
+	// genearate output filename
+	sprintf(num_frames_str, "%d", num_frames - 4); // NOTE: -4 because of the 4 extra frames that are needed for computation
+	sprintf(w_size_str, "%d", w_size);
+	strcat(output_filename, num_frames_str);
+	strcat(output_filename, "_");
+	strcat(output_filename, w_size_str);
+	strcat(output_filename, "_");
+	strcat(output_filename, IMPLEMENTATION_NAME_FILE);
+	strcat(output_filename, ".bin");
+	char* output_file = (char*)output_filename;
+	benchmark_info->output_file = output_file;
 
 	/* Device object init */
 	init(image_data, t, 0, DEVICESELECTED, device);
@@ -85,7 +99,11 @@ void init_benchmark(
 		// write the output image to a file call "output.bin"
 		if (!benchmark_info->no_output_file)
 		{
-			write_frame32 (output_file, output_image, !benchmark_info->csv_mode && !benchmark_info->database_mode);
+			int result = write_frame32 (output_file, output_image, 0);
+			if (result == 1 && !benchmark_info->csv_mode && !benchmark_info->database_mode)
+			{
+				printf("Done. Outputs written to %s\n", output_file);
+			}
 		}
 		
 	}
@@ -104,6 +122,7 @@ int main(int argc, char **argv)
 	bool database_mode = false;
 	bool random_data = false;
 	bool no_output_file = false;
+	bool extended_csv_mode = false;
 
 	int file_loading_output = 0;
 
@@ -130,7 +149,7 @@ int main(int argc, char **argv)
 	char input_folder[100] = "";
 
 	/* Command line argument handling */
-	ret = arguments_handler(argc, argv, &w_size, &h_size, &num_processing_frames, &csv_mode, &database_mode, &print_output, &verbose_output, &random_data, &no_output_file, input_folder);
+	ret = arguments_handler(argc, argv, &w_size, &h_size, &num_processing_frames, &csv_mode, &database_mode, &print_output, &verbose_output, &random_data, &no_output_file, &extended_csv_mode, input_folder);
 	if(ret == ARG_ERROR) {
 		exit(-1);
 	}
@@ -155,6 +174,10 @@ int main(int argc, char **argv)
 	benchmark_info -> verbose_print = verbose_output;
 	benchmark_info -> random_data = random_data;
 	benchmark_info -> no_output_file = no_output_file;
+	benchmark_info -> input_folder = input_folder;
+	benchmark_info -> extended_csv_mode = extended_csv_mode;
+
+
 
 	/* Allocate memory for frames */
 	input_frames = (frame16_t*)malloc(sizeof(frame16_t)* num_frames);

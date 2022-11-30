@@ -24,14 +24,15 @@ void print_usage(const char *exec_name)
 	printf(" -h size : height of the input image in pixels \n");
 	printf(" -r : random data\n");
 	printf(" -F : location forder of the input data\n");
+	printf(" -E : extended csv output\n");
 	printf(" -c : print time in CSV\n");
 	printf(" -C : print time in CSV with timestamp\n");
-	printf(" -v : do not generate the output file\n");
-	printf(" -t : print time in verbose\n");
+	printf(" -v : verbose print\n");
+	printf(" -t : no generate output file\n");
 	printf(" -o : print output\n");
 }
 
-int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int *h_size, unsigned int *frames, bool *csv_mode, bool *database_mode, bool *print_output, bool *verbose_output, bool *random_data, bool *no_output_file, char *input_folder)
+int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int *h_size, unsigned int *frames, bool *csv_mode, bool *database_mode, bool *print_output, bool *verbose_output, bool *random_data, bool *no_output_file, bool *extended_csv_mode, char *input_folder)
 {
 	if(argc < 3) {
 		print_usage(argv[0]);
@@ -46,11 +47,12 @@ int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int 
 			case 'f' : args +=1; *frames = atoi(argv[args]);break;
 			case 'F' : args +=1; strcpy(input_folder,argv[args]);break;
 			case 'c' : *csv_mode = true;break;
+			case 'E' : *extended_csv_mode = true;break;
 			case 'C' : *database_mode = true;break;
 			case 'r' : *random_data = true;break;
-			case 'v' : *no_output_file = true;break;
+			case 'v' : *verbose_output= true;break;
 			case 'o' : *print_output = true;break;
-			case 't' : *verbose_output = true;break;
+			case 't' : *no_output_file = true;break;
 			default: print_usage(argv[0]); return ARG_ERROR;
 		}
 
@@ -73,6 +75,8 @@ int arguments_handler(int argc, char **argv, unsigned int *w_size, unsigned int 
 		print_usage(argv[0]);
 		return ARG_ERROR;
 	}
+	// if extended csv mode is enabled, csv mode is enabled too
+	if(*extended_csv_mode) *csv_mode = true;
 
 	return ARG_SUCCESS;
 }
