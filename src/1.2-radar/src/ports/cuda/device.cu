@@ -304,9 +304,7 @@ void copy_memory_to_host(
 void get_elapsed_time(
 	radar_data_t *radar_data, 
 	radar_time_t *t, 
-	bool csv_format,
-	bool database_format,
-	bool verbose_print,
+    print_info_data_t *benchmark_info.c,
 	long int timestamp
 	)
 {	
@@ -319,20 +317,7 @@ void get_elapsed_time(
     //  memory transfer time device-host
     cudaEventElapsedTime(&milliseconds_d_h, *t->start_memory_copy_host, *t->stop_memory_copy_host);
 
-	if (csv_format)
-	{
-		printf("%.10f;%.10f;%.10f;\n", milliseconds_h_d, milliseconds, milliseconds_d_h);
-	}
-	else if (database_format)
-	{
-		printf("%.10f;%.10f;%.10f;%ld;\n", milliseconds_h_d, milliseconds, milliseconds_d_h, timestamp);
-	}
-	else if(verbose_print)
-	{
-		printf("Elapsed time Host->Device: %.10f milliseconds\n", milliseconds_h_d);
-		printf("Elapsed time kernel: %.10f milliseconds\n", milliseconds );
-		printf("Elapsed time Device->Host: %.10f milliseconds\n", milliseconds_d_h);
-	}
+    print_execution_info(benchmark_info, true, timestamp,milliseconds_h_d,milliseconds,milliseconds_d_h);
 }
 
 

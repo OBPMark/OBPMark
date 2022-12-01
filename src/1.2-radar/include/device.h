@@ -7,10 +7,12 @@
 #define DEVICE_H_
 
 #include "obpmark.h"
+#include "util_prints.h"
 #include "benchmark.h"
 #include "obpmark_image.h"
 
 typedef struct {
+    //platform input parameters
     float lambda;
     float PRF;
     float tau;
@@ -18,6 +20,7 @@ typedef struct {
     float vr;
     float ro;
     float slope;
+
     uint32_t asize;     //total number of azimuth samples
     uint32_t avalid;    //number of meaningfull azimuth samples in a patch
     uint32_t apatch;    //total number of azimuth samples in a patch
@@ -204,9 +207,7 @@ void copy_memory_to_host(
 void get_elapsed_time(
 	radar_data_t *radar_data, 
 	radar_time_t *t, 
-	bool csv_format,
-	bool database_format,
-	bool verbose_print,
+    print_info_data_t *benchmark_info,
 	long int timestamp
 	);
 

@@ -32,6 +32,8 @@ int arguments_handler(
         bool *print_output,
         bool *verbose_output,
         bool *random_data,
+        bool *no_output_file,
+        bool *extended_csv_mode,
         char *input_folder
         );
 

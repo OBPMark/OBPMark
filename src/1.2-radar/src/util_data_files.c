@@ -8,7 +8,6 @@
 #include "util_data_files.h"
 
 #define MAX_FILENAME_LENGTH 256
-#define DEFAULT_INPUT_FOLDER "../../data/input_data/1.2-radar"
 
 int read_params(char filename[], radar_params_t *array);
 
@@ -33,11 +32,11 @@ int load_params_from_file(
     char params_path[256];
     if (default_input_folder)
     {
-        sprintf(params_path,"%s/%d_%d/1.2-radar-params_%d_%d.bin",DEFAULT_INPUT_FOLDER, height, width, height, width);
+        sprintf(params_path,"%s/%d_%d/1.2-radar-params_%d_%d.bin",DEFAULT_INPUT_FOLDER, width, height, width, height);
     }
     else
     {
-        sprintf(params_path,"%s/1.2-radar-params_%d_%d.bin",input_folder,height,width);
+        sprintf(params_path,"%s/1.2-radar-params_%d_%d.bin",input_folder,width,height);
     }
     if(!read_params(params_path, params)) return FILE_LOADING_ERROR;
     return FILE_LOADING_SUCCESS;
@@ -90,9 +89,9 @@ int load_data_from_files(
     unsigned int lines = params->apatch;
     for (int i = 0; i < params->npatch; i++){
         if (default_input_folder)
-            sprintf(data_path,"%s/%d_%d/1.2-radar-patch_%d_%d_%d.bin",DEFAULT_INPUT_FOLDER, height, width, i, lines, width);
+            sprintf(data_path,"%s/%d_%d/1.2-radar-patch_%d_%d_%d.bin",DEFAULT_INPUT_FOLDER, width, height, i, width, lines);
         else
-            sprintf(data_path,"%s/1.2-radar-patch_%d_%d_%d.bin",input_folder, i, lines, width);
+            sprintf(data_path,"%s/1.2-radar-patch_%d_%d_%d.bin",input_folder, i, width, lines);
 
         if(!read_framefp(data_path, &input_data[i])) return FILE_LOADING_ERROR;
     }

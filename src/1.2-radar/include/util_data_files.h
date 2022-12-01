@@ -19,6 +19,8 @@
 #define FILE_LOADING_ERROR 3
 #define FILE_LOADING_SUCCESS 0
 
+#define DEFAULT_INPUT_FOLDER "../../data/input_data/1.2-radar"
+
 
 int load_data_from_files(
         framefp_t *input_data, 
@@ -27,6 +29,7 @@ int load_data_from_files(
         unsigned int width, 
         char *input_folder
 	);
+
 int load_params_from_file(
         radar_params_t *params, 
         unsigned int height,

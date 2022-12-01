@@ -18,19 +18,21 @@ long int get_timestamp(){
 
 void print_usage(const char *exec_name)
 {
-	printf("usage: %s -w [size] -h [size] -f [size]\n", exec_name);
-	printf(" -w size : width of the input data in samples\n");
-	printf(" -h size : height of the input data in samples\n");
-	printf(" -m size : Multilook factor (number of width samples per pixel)\n");
+	printf("usage: %s -w [size] -h [size] -m [value]\n", exec_name);
+	printf(" -w size : width (range) of the input data in samples\n");
+	printf(" -h size : height (azimuth) of the input data in samples\n");
+	printf(" -m value : Multilook factor (number of range samples per pixel)\n");
 	printf(" -r : random data\n");
-	printf(" -F : location folder of the input data\n");
+	printf(" -F : location forder of the input data\n");
+	printf(" -E : extended csv output\n");
 	printf(" -c : print time in CSV\n");
 	printf(" -C : print time in CSV with timestamp\n");
-	printf(" -t : print time in verbose\n");
+	printf(" -v : verbose print\n");
+	printf(" -t : no generate output file\n");
 	printf(" -o : print output\n");
 }
 
-int arguments_handler(int argc, char **argv, unsigned int *in_height, unsigned int *in_width, unsigned int *ml_factor, bool *csv_mode, bool *database_mode, bool *print_output, bool *verbose_output, bool *random_data, char *input_folder)
+int arguments_handler(int argc, char **argv, unsigned int *in_height, unsigned int *in_width, unsigned int *ml_factor, bool *csv_mode, bool *database_mode, bool *print_output, bool *verbose_output, bool *random_data, bool *no_output_file, bool *extended_csv_mode, char *input_folder)
 {
 	if(argc < 4) {
 		print_usage(argv[0]);
@@ -45,14 +47,17 @@ int arguments_handler(int argc, char **argv, unsigned int *in_height, unsigned i
 			case 'm' : args +=1; *ml_factor = atoi(argv[args]);break;
 			case 'F' : args +=1; strcpy(input_folder,argv[args]);break;
 			case 'c' : *csv_mode = true;break;
+			case 'E' : *extended_csv_mode = true;break;
 			case 'C' : *database_mode = true;break;
 			case 'r' : *random_data = true;break;
+			case 'v' : *verbose_output= true;break;
 			case 'o' : *print_output = true;break;
-			case 't' : *verbose_output = true;break;
+			case 't' : *no_output_file = true;break;
 			default: print_usage(argv[0]); return ARG_ERROR;
 		}
 
 	}
+
 
 	if(*in_width < MINIMUNWSIZE) {
 		printf("-w need to be set and bigger than or equal to %d\n\n", MINIMUNWSIZE);
@@ -71,7 +76,8 @@ int arguments_handler(int argc, char **argv, unsigned int *in_height, unsigned i
 		print_usage(argv[0]);
 		return ARG_ERROR;
 	}
-
+	// if extended csv mode is enabled, csv mode is enabled too
+	if(*extended_csv_mode) *csv_mode = true;
 
 	return ARG_SUCCESS;
 }

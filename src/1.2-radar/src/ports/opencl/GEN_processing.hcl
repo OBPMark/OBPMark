@@ -230,7 +230,7 @@ std::string kernel_code =
 "int y = get_global_id(0); if(y >= height) return;\n"
 "image[y*width+x] = min(255.f,floor(scale * (data[y*width+x]-v_min)));\n"
 "}\n"
-"//FFT\n"
+"//FFT from gpu4sbench\n"
 "void kernel\n"
 "bin_reverse(global float *data, const unsigned int size, const unsigned int group)\n"
 "{\n"

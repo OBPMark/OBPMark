@@ -20,16 +20,26 @@
 /* Device libraries */
 #ifdef CUDA
 #include <cuda_runtime.h>
+#define IMPLEMENTATION_NAME "CUDA"
+#define IMPLEMENTATION_NAME_FILE "cuda"
 #elif OPENCL
 /* OPENCL version */
 #include <CL/cl.hpp>
 #include <iostream>
+#define IMPLEMENTATION_NAME "OpenCL"
+#define IMPLEMENTATION_NAME_FILE "opencl"
 #elif OPENMP
 /* OPENMP version */
 #include <omp.h>
+#define IMPLEMENTATION_NAME "OpenMP"
+#define IMPLEMENTATION_NAME_FILE "openmp"
 #elif HIP
 #include "hip/hip_runtime.h"
+#define IMPLEMENTATION_NAME "HIP"
+#define IMPLEMENTATION_NAME_FILE "hip"
 #else
+#define IMPLEMENTATION_NAME "CPU"
+#define IMPLEMENTATION_NAME_FILE "cpu"
 #endif
 
 /* Defines */
