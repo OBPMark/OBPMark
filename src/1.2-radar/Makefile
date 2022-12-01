@@ -166,6 +166,7 @@ main_opencl: opencl_conf  opencl_device.o $(COMMON_OBJECTS)
 
 # Disable cuFFT
 #CUFLAGS += -DCUFFT_DISABLE
+CUFLAGS += -lcufft 
 
 # Shortcuts
 .PHONY: all-cuda
@@ -180,14 +181,14 @@ cuda_conf:
 	mkdir -p $(CUDA_TARGET)
 
 cuda_device.o: cuda_conf $(CUDA_SRC)/device.cu
-	$(NVCC) $(NVCCFLAGS) $(CUFLAGS) -lcufft -DCUDA -c $(CUDA_SRC)/device.cu -o $(CUDA_TARGET)/cuda_device.o
+	$(NVCC) $(NVCCFLAGS) $(CUFLAGS) -DCUDA -c $(CUDA_SRC)/device.cu -o $(CUDA_TARGET)/cuda_device.o
 
 cuda_processing.o: cuda_conf $(CUDA_SRC)/processing.cu
-	$(NVCC)  $(NVCCFLAGS) $(CUFLAGS) -lcufft -DCUDA -c $(CUDA_SRC)/processing.cu  -o $(CUDA_TARGET)/cuda_processing.o
+	$(NVCC)  $(NVCCFLAGS) $(CUFLAGS) -DCUDA -c $(CUDA_SRC)/processing.cu  -o $(CUDA_TARGET)/cuda_processing.o
 
 main_cuda: cuda_conf  cuda_device.o cuda_processing.o  $(COMMON_OBJECTS)
 	mkdir -p $(BIN_PATH) 
-	$(CC)  -DCUDA $(SRC_FOLDER)/main.cpp  $(CUDA_TARGET)/cuda_device.o $(CUDA_TARGET)/cuda_processing.o  $(COMMON_OBJECTS_PATH) -o $(CUDA_EXEC) $(CFLAGS) $(CUFLAGS) -lcufft
+	$(CC)  -DCUDA $(SRC_FOLDER)/main.cpp  $(CUDA_TARGET)/cuda_device.o $(CUDA_TARGET)/cuda_processing.o  $(COMMON_OBJECTS_PATH) -o $(CUDA_EXEC) $(CFLAGS) $(CUFLAGS) 
 	#
 
 ###################################### HIP ###################################

@@ -304,7 +304,7 @@ void copy_memory_to_host(
 void get_elapsed_time(
 	radar_data_t *radar_data, 
 	radar_time_t *t, 
-    print_info_data_t *benchmark_info.c,
+    print_info_data_t *benchmark_info,
 	long int timestamp
 	)
 {	
