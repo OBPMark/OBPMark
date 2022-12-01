@@ -124,6 +124,8 @@ all-openmp: openmp
 OpenMP: openmp
 
 # Build target
+openmp: CFLAGS += -DOPENMP
+openmp: CFLAGS += $(OMPFLAGS)
 openmp: main_openmp
 
 openmp_conf:
@@ -149,6 +151,8 @@ all-opencl: opencl
 OpenCL: opencl
 
 # Build target
+opencl: CFLAGS += -DOPENCL
+opencl: CFLAGS += $(OPFLAGS)
 opencl: main_opencl
 
 opencl_conf:
@@ -174,7 +178,9 @@ all-cuda: cuda
 .PHONY: CUDA
 CUDA: cuda
 
-# Build target
+# Build target add -DCUDA to CFLAGS
+cuda: CFLAGS += -DCUDA 
+cuda: CFLAGS += $(CUFLAGS)
 cuda: main_cuda
 
 cuda_conf:
@@ -189,7 +195,6 @@ cuda_processing.o: cuda_conf $(CUDA_SRC)/processing.cu
 main_cuda: cuda_conf  cuda_device.o cuda_processing.o  $(COMMON_OBJECTS)
 	mkdir -p $(BIN_PATH) 
 	$(CC)  -DCUDA $(SRC_FOLDER)/main.cpp  $(CUDA_TARGET)/cuda_device.o $(CUDA_TARGET)/cuda_processing.o  $(COMMON_OBJECTS_PATH) -o $(CUDA_EXEC) $(CFLAGS) $(CUFLAGS) 
-	#
 
 ###################################### HIP ###################################
 # Shortcuts
@@ -201,6 +206,8 @@ HIP: hip
 Hip: hip
 
 # Build target
+hip: CFLAGS += -DHIP 
+hip: CFLAGS += $(HIPCCFLAGS)
 hip: main_hip
 
 hip_conf:
