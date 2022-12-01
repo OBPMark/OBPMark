@@ -86,7 +86,7 @@ int benchmark1_2_write_files(
     char para_name[50];
     char dir_name[25];
 
-    sprintf(dir_name, "out/%d_%d", params->asize, params->rsize);
+    sprintf(dir_name, "out/%d_%d", params->rsize, params->asize);
     //create directory
     struct stat st = {0};
     if (stat("out", &st) == -1){
@@ -96,7 +96,7 @@ int benchmark1_2_write_files(
         printf("Creating directory...\n");
         mkdir(dir_name, 0755);
     }
-    sprintf(para_name, "%s/1.2-radar-params_%d_%d.bin", dir_name, params->asize, params->rsize);
+    sprintf(para_name, "%s/1.2-radar-params_%d_%d.bin", dir_name, params->rsize, params->asize);
 
     printf("Writing parameter data to file...\n");
     if(!write_params(para_name, params)) {
@@ -108,7 +108,7 @@ int benchmark1_2_write_files(
 	printf("Writing patch data to files...\n");
 	for(int i=0; i<params->npatch; i++)
 	{
-		sprintf(data_name, "%s/1.2-radar-patch_%d_%d_%d.bin", dir_name, i, params->apatch, params->rsize);
+		sprintf(data_name, "%s/1.2-radar-patch_%d_%d_%d.bin", dir_name, i, params->rsize, params->apatch);
 		if(!write_framefp(data_name, &patches[i], 1)) {
 			printf("error: failed to write frame data: %d\n", i);
 			return 0;
