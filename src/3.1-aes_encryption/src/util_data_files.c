@@ -7,7 +7,6 @@
 
 #include "util_data_files.h"
 
-#define DEFAULT_INPUT_FOLDER "../../data/input_data/3.1-aes_encryption"
 
 
 

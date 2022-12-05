@@ -17,10 +17,10 @@ EXEC_PATH	:= $(BIN_PATH)/$(EXEC_NAME)
 
 COMMON_PATH = ../../src/common
 
-_COMMON_INCLUDES = image_util.h image_mem_util.h image_file_util.h 
-_COMMON_SOURCES  = image_mem_util.c image_file_util.c util_data_rand.c util_arg.c util_data_files.c 
-COMMON_OBJECTS   = image_mem_util.o image_file_util.o util_data_rand.o util_arg.o util_data_files.o 
-COMMON_OBJECTS_PATH = $(COM_TARGET)/image_mem_util.o $(COM_TARGET)/image_file_util.o $(COM_TARGET)/util_data_rand.o $(COM_TARGET)/util_arg.o $(COM_TARGET)/util_data_files.o
+_COMMON_INCLUDES = image_util.h image_mem_util.h image_file_util.h util_prints.h
+_COMMON_SOURCES  = image_mem_util.c image_file_util.c util_data_rand.c util_arg.c util_data_files.c util_prints.c
+COMMON_OBJECTS   = image_mem_util.o image_file_util.o util_data_rand.o util_arg.o util_data_files.o util_prints.o
+COMMON_OBJECTS_PATH = $(COM_TARGET)/image_mem_util.o $(COM_TARGET)/image_file_util.o $(COM_TARGET)/util_data_rand.o $(COM_TARGET)/util_arg.o $(COM_TARGET)/util_data_files.o $(COM_TARGET)/util_prints.o
 
 
 COMMON_INCLUDES = $(pathsubst %,$(COMMON_PATH)/%,$(_COMMON_INCLUDES))
@@ -95,6 +95,9 @@ util_arg.o: common_conf $(SRC_FOLDER)/util_arg.c
 util_data_files.o: common_conf $(SRC_FOLDER)/util_data_files.c
 	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/util_data_files.c -o $(COM_TARGET)/util_data_files.o
 
+util_prints.o: common_conf $(SRC_FOLDER)/util_prints.c
+	$(CC) $(CFLAGS) -c $(SRC_FOLDER)/util_prints.c -o $(COM_TARGET)/util_prints.o
+
 ################################### SEQUENTIAL ################################
 # Shortcuts
 .PHONY: CPU
@@ -124,6 +127,8 @@ all-openmp: openmp
 OpenMP: openmp
 
 # Build target
+openmp: CFLAGS += -DOPENMP
+openmp: CFLAGS += $(OMPFLAGS)
 openmp: main_openmp
 
 openmp_conf:
@@ -147,19 +152,22 @@ all-cuda: cuda
 .PHONY: CUDA
 CUDA: cuda
 
+#Select fine or course grain
+#CUFLAGS += -DCUDA_FINE
+
 # Build target
+cuda: CFLAGS += -DCUDA 
+cuda: CFLAGS += $(CUFLAGS)
 cuda: main_cuda
 
 cuda_conf:
 	mkdir -p $(CUDA_TARGET)
 
-GRAIN?=CUDA_COARSE
-
 cuda_processing.o: cuda_conf $(CUDA_SRC)/processing.cu
-	$(NVCC) $(NVCCFLAGS) $(CUFLAGS) -DCUDA -D$(GRAIN) -c $(CUDA_SRC)/processing.cu  -o $(CUDA_TARGET)/cuda_processing.o
+	$(NVCC) $(NVCCFLAGS) $(CUFLAGS) -DCUDA -c $(CUDA_SRC)/processing.cu  -o $(CUDA_TARGET)/cuda_processing.o
 
 cuda_device.o: cuda_conf $(CUDA_SRC)/device.cu
-	$(NVCC) $(NVCCFLAGS) $(CUFLAGS) -DCUDA -D$(GRAIN) -c $(CUDA_SRC)/device.cu  -o $(CUDA_TARGET)/cuda_device.o
+	$(NVCC) $(NVCCFLAGS) $(CUFLAGS) -DCUDA -c $(CUDA_SRC)/device.cu  -o $(CUDA_TARGET)/cuda_device.o
 
 main_cuda: cuda_conf cuda_processing.o cuda_device.o $(COMMON_OBJECTS)
 	mkdir -p $(BIN_PATH) 
@@ -173,6 +181,8 @@ all-opencl: opencl
 OpenCL: opencl
 
 # Build target
+opencl: CFLAGS += -DOPENCL
+opencl: CFLAGS += $(OPFLAGS)
 opencl: main_opencl
 
 opencl_conf:
@@ -196,22 +206,22 @@ HIP: hip
 Hip: hip
 
 # Build target
+hip: CFLAGS += -DHIP 
+hip: CFLAGS += $(HIPCCFLAGS)
 hip: main_hip
 
 hip_conf:
 	mkdir -p $(HIP_TARGET)
 
-GRAIN?=CUDA_COARSE
-
 hip_device.o: hip_conf $(HIP_SRC)/device.cpp
-	$(HIPCC) $(HIPCCFLAGS) -DHIP -D$(GRAIN) -c $(HIP_SRC)/device.cpp -o $(HIP_TARGET)/hip_device.o $(CFLAGS)
+	$(HIPCC) $(HIPCCFLAGS) -DHIP -c $(HIP_SRC)/device.cpp -o $(HIP_TARGET)/hip_device.o $(CFLAGS)
 
 hip_processing.o: hip_conf $(HIP_SRC)/processing.cpp
-	$(HIPCC)  $(HIPCCFLAGS) -DHIP -D$(GRAIN) -c $(HIP_SRC)/processing.cpp -o $(HIP_TARGET)/lib_processing.o $(CFLAGS)
+	$(HIPCC)  $(HIPCCFLAGS) -DHIP -c $(HIP_SRC)/processing.cpp -o $(HIP_TARGET)/lib_processing.o $(CFLAGS)
 
 main_hip: hip_conf hip_device.o hip_processing.o  $(COMMON_OBJECTS)
 	mkdir -p $(BIN_PATH)
-	$(HIPCC) -DHIP -D$(GRAIN) $(SRC_FOLDER)/main.cpp -x none $(HIP_TARGET)/hip_device.o  $(HIP_TARGET)/lib_processing.o $(COMMON_OBJECTS_PATH) -o $(HIP_EXEC) $(CFLAGS) $(HIPCCFLAGS)
+	$(HIPCC) -DHIP $(SRC_FOLDER)/main.cpp -x none $(HIP_TARGET)/hip_device.o  $(HIP_TARGET)/lib_processing.o $(COMMON_OBJECTS_PATH) -o $(HIP_EXEC) $(CFLAGS) $(HIPCCFLAGS)
 ##################################### CLEAN ##################################
 .PHONY: clean
 clean:

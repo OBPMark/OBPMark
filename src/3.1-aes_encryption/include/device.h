@@ -9,6 +9,7 @@
 
 #include "obpmark.h"
 #include "obpmark_time.h"
+#include "util_prints.h"
 #include "benchmark.h"
 
 /* Common Typedefs */
@@ -258,9 +259,7 @@ void copy_memory_to_host(
  */
 void get_elapsed_time(
 	AES_time_t *t, 
-	bool csv_format,
-	bool database_format,
-	bool verbose_print,
+    print_info_data_t *benchmark_info,
 	long int timestamp
 	);
 

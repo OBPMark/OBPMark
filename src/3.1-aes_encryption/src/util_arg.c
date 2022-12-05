@@ -22,16 +22,18 @@ void print_usage(const char *exec_name)
 	printf(" -l size : length of the plaintext to encrypt. Must be multiple of 16 \n");
 	printf(" -k size : encryption key size (128, 192 or 256)\n");
 	printf(" -r : random data\n");
-	printf(" -F : location folder of the input data\n");
+	printf(" -F : location forder of the input data\n");
+	printf(" -E : extended csv output\n");
 	printf(" -c : print time in CSV\n");
 	printf(" -C : print time in CSV with timestamp\n");
-	printf(" -t : print time in verbose\n");
+	printf(" -v : verbose print\n");
+	printf(" -t : no generate output file\n");
 	printf(" -o : print output\n");
 
 }
 
 
-int arguments_handler(int argc, char **argv, unsigned int *data_length, unsigned int *key_size, bool *csv_mode, bool *database_mode, bool *print_output, bool *verbose_output, bool *random_data, char *input_folder)
+int arguments_handler(int argc, char **argv, unsigned int *data_length, unsigned int *key_size, bool *csv_mode, bool *database_mode, bool *print_output, bool *verbose_output, bool *random_data, bool *no_output_file, bool *extended_csv_mode, char *input_folder)
 {
 	if(argc < 2){
         print_usage(argv[0]); 
@@ -44,10 +46,12 @@ int arguments_handler(int argc, char **argv, unsigned int *data_length, unsigned
 			case 'k' : args +=1; *key_size = atoi(argv[args]); break;
 			case 'F' : args +=1; strcpy(input_folder,argv[args]);break;
 			case 'c' : *csv_mode = true;break;
+			case 'E' : *extended_csv_mode = true;break;
 			case 'C' : *database_mode = true;break;
 			case 'r' : *random_data = true;break;
+			case 'v' : *verbose_output= true;break;
 			case 'o' : *print_output = true;break;
-			case 't' : *verbose_output = true;break;
+			case 't' : *no_output_file = true;break;
 			default: print_usage(argv[0]); return ARG_ERROR;
 		}
 
@@ -76,6 +80,9 @@ int arguments_handler(int argc, char **argv, unsigned int *data_length, unsigned
 			print_usage(argv[0]);
 			return ARG_ERROR;
 	}
+	
+	// if extended csv mode is enabled, csv mode is enabled too
+	if(*extended_csv_mode) *csv_mode = true;
 
 	return ARG_SUCCESS;
 }

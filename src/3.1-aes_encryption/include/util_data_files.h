@@ -18,6 +18,8 @@
 #define FILE_LOADING_ERROR 3
 #define FILE_LOADING_SUCCESS 0
 
+#define DEFAULT_INPUT_FOLDER "../../data/input_data/3.1-aes_encryption"
+
 
 int load_data_from_files(
 
