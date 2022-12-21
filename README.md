@@ -54,6 +54,7 @@ Contributors:
 	- Verification of implementations.  
 - Marc Solé Bonet, Barcelona Supercomputing Centrer (BSC):
 	- Implementation of Benchmark #3.1 "AES Encryption"
+	- Implementation of Benchmark #1.2 "Radar Image Processing"
 
 ## Description
 This repository contains a set of reference implementations for performing benchmarks on devices and systems on-board spacecraft. 
@@ -70,7 +71,7 @@ The following folders are in the repository:
 The benchmarks are organised in the following structure ("Public Beta" current status also shown): 
 
 	src/1.1-image/				-- Available in C (sequential), OpenMP, OpenCL and CUDA.
-	src/1.2-radar/				-- Currently under development, see "radar-dev" branch.
+	src/1.2-radar/				-- Available in C (sequential), OpenMP, OpenCL and CUDA.
 	src/2.1-data_compression/		-- Available in C (sequential), OpenMP, OpenCL and CUDA.
 	src/2.2-image_compression/		-- Available in C (sequential), OpenMP, OpenCL and CUDA.
 	src/2.3-hyperspectral_compression/	-- TBA.
