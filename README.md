@@ -50,7 +50,7 @@ Contributors:
 - Ivan Rodriguez Ferrandez, Universitat Politècnica de Catalunya and Barcelona Supercomputing Center (UPC/BSC):
 	- Implementation of Benchmark #1.1 "Image Calibration and Correction"
 	- Implementation of Benchmark #2.1 "CCSDS 121.0 Data Compression"
-	- Implementation of Benchmark #2.1 "CCSDS 122.0 Image Compression"
+	- Implementation of Benchmark #2.2 "CCSDS 122.0 Image Compression"
 	- Verification of implementations.  
 - Marc Solé Bonet, Barcelona Supercomputing Centrer (BSC):
 	- Implementation of Benchmark #3.1 "AES Encryption"
