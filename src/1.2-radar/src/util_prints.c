@@ -26,6 +26,9 @@ void print_benchmark_info(
         printf("\n");
         // print implementation name
         printf("Implementation          = %s\n", IMPLEMENTATION_NAME);
+#ifdef OPENMP
+        printf("Number of threads       = %d\n", omp_get_max_threads());
+#endif
         // print the command line arguments
         printf("Range samples           = %d \n", print_info_data->w_size);
         printf("Azimuth samples         = %d \n", print_info_data->h_size);

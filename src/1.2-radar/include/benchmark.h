@@ -20,26 +20,35 @@
 /* Device libraries */
 #ifdef CUDA
 #include <cuda_runtime.h>
-#define IMPLEMENTATION_NAME "CUDA"
-#define IMPLEMENTATION_NAME_FILE "cuda"
+#define IMPL_NAME "CUDA"
+#define IMPL_NAME_FILE "cuda"
+#define FFTL_NAME "CUFFT"
 #elif OPENCL
 /* OPENCL version */
 #include <CL/cl.hpp>
 #include <iostream>
-#define IMPLEMENTATION_NAME "OpenCL"
-#define IMPLEMENTATION_NAME_FILE "opencl"
+#define IMPL_NAME "OpenCL"
+#define IMPL_NAME_FILE "opencl"
 #elif OPENMP
 /* OPENMP version */
 #include <omp.h>
-#define IMPLEMENTATION_NAME "OpenMP"
-#define IMPLEMENTATION_NAME_FILE "openmp"
+#define IMPL_NAME "OpenMP"
+#define IMPL_NAME_FILE "openmp"
 #elif HIP
 #include "hip/hip_runtime.h"
-#define IMPLEMENTATION_NAME "HIP"
-#define IMPLEMENTATION_NAME_FILE "hip"
+#define IMPL_NAME "HIP"
+#define IMPL_NAME_FILE "hip"
+#define FFTL_NAME "HIPFFT"
 #else
-#define IMPLEMENTATION_NAME "CPU"
-#define IMPLEMENTATION_NAME_FILE "cpu"
+#define IMPL_NAME "CPU"
+#define IMPL_NAME_FILE "cpu"
+#endif
+#ifdef FFT_LIB
+#define IMPLEMENTATION_NAME IMPL_NAME " + " FFTL_NAME
+#define IMPLEMENTATION_NAME_FILE IMPL_NAME_FILE "lib"
+#else
+#define IMPLEMENTATION_NAME IMPL_NAME
+#define IMPLEMENTATION_NAME_FILE IMPL_NAME_FILE
 #endif
 
 /* Defines */

@@ -1,5 +1,5 @@
 # OBPMark Benchmark #1.2 "Image processing" Makefile
-# Author: David Steenari (ESA)
+# Author: Marc Sole (BSC)
 include ../../config/all.config
 
 ################################# CONFIGURUATION ##############################
@@ -32,20 +32,28 @@ SEQ_EXEC	:= $(EXEC_PATH)_$(SEQ_NAME)
 
 # - OpenMP -
 OPENMP_TARGET	:= $(BUILD_PATH)/$(OPENMP_FOLDER)
-OPENMP_EXEC	:= $(EXEC_PATH)_$(OPENMP_NAME)
+OPENMP_EXEC	:= $(EXEC_PATH)_$(OPENMP_NAME)$(FFT)
 
 # - OpenCL - 
 OPENCL_TARGET	:= $(BUILD_PATH)/$(OPENCL_FOLDER)
-OPENCL_EXEC	:= $(EXEC_PATH)_$(OPENCL_NAME)
+OPENCL_EXEC	:= $(EXEC_PATH)_$(OPENCL_NAME)$(FFT)
 
 # - CUDA - 
 CUDA_TARGET	:= $(BUILD_PATH)/$(CUDA_FOLDER)
-CUDA_EXEC	:= $(EXEC_PATH)_$(CUDA_NAME)
+CUDA_EXEC	:= $(EXEC_PATH)_$(CUDA_NAME)$(FFT)
 
 # - HIP - 
 HIP_TARGET	:= $(BUILD_PATH)/$(HIP_FOLDER)
-HIP_EXEC	:= $(EXEC_PATH)_$(HIP_NAME)
+HIP_EXEC	:= $(EXEC_PATH)_$(HIP_NAME)$(FFT)
 
+# - FFT Lib -
+FFT =
+ifeq ($(FFT),lib)
+openmp: OMPFLAGS += -DFFT_LIB
+opencl: OPFLAGS += -DFFT_LIB
+cuda: CUFLAGS += -DFFT_LIB -lcufft
+hip: HIPCCFLAGS += -DFFT_LIB -lhipfft
+endif
 ############################## LOAD EXTERNAL CONFIG ############################
 
 ifeq ($(MAKECMDGOALS),cpu)
@@ -168,9 +176,7 @@ main_opencl: opencl_conf  opencl_device.o $(COMMON_OBJECTS)
 
 ###################################### CUDA ##################################
 
-# Disable cuFFT
-#CUFLAGS += -DCUFFT_DISABLE
-CUFLAGS += -lcufft 
+# 
 
 # Shortcuts
 .PHONY: all-cuda
