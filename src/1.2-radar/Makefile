@@ -70,6 +70,11 @@ endif
 
 ifeq ($(MAKECMDGOALS),cuda)
 include $(CONFIG_PATH)/$(CUDA_CONFIG)
+ifeq ($(shell test `$(NVCC) --version | grep release |tr -dc '0-9' | head -c 3` -gt 112; echo $$?),0)
+CUDA_VER	?= 11.2
+else 
+CUDA_VER	?= 10.2
+endif
 endif
 
 ifeq ($(MAKECMDGOALS),hip)
@@ -190,6 +195,7 @@ cuda: CFLAGS += $(CUFLAGS)
 cuda: main_cuda
 
 cuda_conf:
+	ln -sf $(CUDA_FOLDER)-$(CUDA_VER) $(CUDA_SRC)
 	mkdir -p $(CUDA_TARGET)
 
 cuda_device.o: cuda_conf $(CUDA_SRC)/device.cu
