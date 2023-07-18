@@ -46,7 +46,7 @@ struct radar_data_t
 	uint32_t *offsets; //Offset table for RCMC
 	radar_params_t *params;
 	//cuda specific
-#ifndef CUFFT_DISABLE
+#ifdef FFT_LIB
     cufftHandle rrf_plan;
     cufftHandle arf_plan;
     cufftHandle range_plan;
