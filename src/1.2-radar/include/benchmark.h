@@ -20,6 +20,9 @@
 /* Device libraries */
 #ifdef CUDA
 #include <cuda_runtime.h>
+#ifdef FFT_LIB
+#include <cufft.h>
+#endif
 #define IMPL_NAME "CUDA"
 #define IMPL_NAME_FILE "cuda"
 #define FFTL_NAME "CUFFT"
@@ -32,8 +35,12 @@
 #elif OPENMP
 /* OPENMP version */
 #include <omp.h>
+#ifdef FFT_LIB
+#include <fftw3.h>
+#endif
 #define IMPL_NAME "OpenMP"
 #define IMPL_NAME_FILE "openmp"
+#define FFTL_NAME "FFTW3"
 #elif HIP
 #include "hip/hip_runtime.h"
 #define IMPL_NAME "HIP"
