@@ -24,70 +24,22 @@ uint32_t next_power_of2(uint32_t n)
     return v;
 }
 
-/* Debug
-void print_data(framefp_t *data, int npatch)
+#ifdef FFT_LIB 
+void normalize(float *data, int nn)
 {
-	char* output_file = (char*)"debug.txt";
-	FILE *framefile;
-	framefile = fopen(output_file, "w");
-	if(framefile == NULL) {
-		printf("error: failed to open file: %s\n", output_file);
-	}
-	unsigned int h_position; 
-	unsigned int w_position;
-    for(int i = 0; i < npatch; i++){
-        fprintf(framefile,"Patch %d/%d:\n", i+1, npatch);
-        std::complex<float> *c_data = (std::complex<float>*) data[i].f;
-
-        for(h_position=0; h_position < data[i].h; h_position++)
-        {
-            for(w_position=0; w_position < data[i].w/2; w_position++)
-            {
-                std::complex<float> val = c_data[(h_position * (data[i].w/2) + w_position)];
-                fprintf(framefile, "% 20.10f", real(val));
-                fprintf(framefile, "%+20.10fi ", imag(val));
-
-            }
-            fprintf(framefile,"\n");
-        }
-    }
-}
-
-void print_output(framefp_t *output_image)
-{
-	unsigned int h_position; 
-	unsigned int w_position;
-
-	for(h_position=0; h_position < output_image->h; h_position++)
-	{
-		
-		for(w_position=0; w_position < output_image->w; w_position++)
-		{
-			//FIXME chaneg to the 1D and 2D version
-			printf("%f, ", output_image->f[(h_position * (output_image->w) + w_position)]);
-		}
-		printf("\n");
+	for(int i = 0; i<nn; i++){
+		data[2*i  ] = data[2*i  ]/nn;
+		data[2*i+1] = data[2*i+1]/nn;
 	}
 }
+#endif
 
-void print_params(radar_params_t *params)
-{
-    printf("Lambda: %.24f\n", params->lambda);
-    printf("PRF: %.24f\n", params->PRF);
-    printf("Tau: %.24f\n", params->tau);
-    printf("Fs: %.24f\n", params->fs);
-    printf("Vr: %.24f\n", params->vr);
-    printf("Ro: %.24f\n", params->ro);
-    printf("Slope: %.24f\n", params->slope);
-    printf("Asize: %d\n", params->asize);
-    printf("Avalid: %d\n", params->avalid);
-    printf("Apatch: %d\n", params->apatch);
-    printf("Rsize: %d\n", params->rsize);
-    printf("NPatch: %d\n", params->npatch);
-}
-*/
-
-void ref_func(float *ref, float fc, float slope, float tau, float fs, uint32_t length, uint32_t fftlen)
+void ref_func(float *ref, float fc, float slope, float tau, float fs, uint32_t length, uint32_t fftlen
+#ifdef FFT_LIB
+		, fftwf_plan plan
+#endif 
+	     )
+	
 {
     std::complex<float> *c_ref = (std::complex<float>*) ref;
     uint32_t nit = floor(tau * fs);
@@ -98,13 +50,24 @@ void ref_func(float *ref, float fc, float slope, float tau, float fs, uint32_t l
         phase = 2 * pi * fc * phase + pi * slope * phase * phase;
         c_ref[i] = std::polar(1.f,phase);
     }
+#ifdef FFT_LIB
+    fftwf_execute(plan);
+#else
     fft(ref, fftlen);
+#endif
 }
 
-void SAR_range_ref(float *rrf, radar_params_t *params)
+void SAR_range_ref(float *rrf, radar_params_t *params
+#ifdef FFT_LIB
+		, fftwf_plan plan
+#endif
+		)
 {
-    ref_func(rrf, 0, params->slope, params->tau, params->fs, params->rsize, next_power_of2(params->rsize));
-
+    ref_func(rrf, 0, params->slope, params->tau, params->fs, params->rsize, next_power_of2(params->rsize)
+#ifdef FFT_LIB
+		    , plan
+#endif 
+		    );
 }
 
 void SAR_rcmc_table(radar_params_t *params, uint32_t *offsets, float fDc, uint32_t width)
@@ -143,7 +106,11 @@ float SAR_DCE(float *aux, framefp_t data, radar_params_t *params)
     return mean*params->PRF/(2*pi);
 }
 
-void SAR_azimuth_ref(float *arf, radar_params_t *params, float fDc)
+void SAR_azimuth_ref(float *arf, radar_params_t *params, float fDc
+#ifdef FFT_LIB
+		, fftwf_plan plan
+#endif 
+		)
 {
     //Compute parameters for azimuth
     float rnge = params->ro+(params->rvalid/2)*(c/(2*params->fs));        //range perpendicular to azimuth
@@ -151,7 +118,11 @@ void SAR_azimuth_ref(float *arf, radar_params_t *params, float fDc)
     float tauz = (rdc*(params->lambda/10) * 0.8) / params->vr;            //Tau in the azimuth
     float chirp = -(2*params->vr*params->vr)/params->lambda/rdc;          //Azimuth chirp rate
 
-    ref_func(arf, fDc, chirp, tauz, params->PRF, params->apatch, params->apatch);
+    ref_func(arf, fDc, chirp, tauz, params->PRF, params->apatch, params->apatch
+#ifdef FFT_LIB
+		    , plan
+#endif 
+		    );
 }
 
 void reference_multiplication(framefp_t *data, float *ref)
@@ -165,28 +136,46 @@ void reference_multiplication(framefp_t *data, float *ref)
             c_data[i*width+j] = c_data[i*width+j] * std::conj(c_ref[j]);
 }
 
-void SAR_range_compression(framefp_t *data, float *rrf)
+void SAR_range_compression(framefp_t *data, float *rrf
+#ifdef FFT_LIB
+		, fftwf_plan forw, fftwf_plan inv
+#endif 
+		)
 {
     //fft data by rows
-    for(int k = 0; k<data->h; k++)
-        fft(&data->f[k*data->w], data->w>>1);
+#ifdef FFT_LIB
+    fftwf_execute(forw);
+#else
+    for(int k = 0; k<data->h; k++) fft(&data->f[k*data->w], data->w>>1);
+#endif
 
     //multply with conjugate of reference function
     reference_multiplication(data, rrf);
 
     //return to freq domain with ifft
-    for(int k = 0; k<data->h; k++)
-        ifft(&data->f[k*data->w], data->w>>1);
+#ifdef FFT_LIB
+    fftwf_execute(inv);
+    for(int k = 0; k<data->h; k++) normalize(&data->f[k*data->w], data->w>>1);
+#else
+    for(int k = 0; k<data->h; k++) ifft(&data->f[k*data->w], data->w>>1);
+#endif
     
 }
 
-void SAR_rcmc(framefp_t *data, uint32_t *offsets)
+void SAR_rcmc(framefp_t *data, uint32_t *offsets
+#ifdef FFT_LIB
+		, fftwf_plan plan
+#endif
+	     )
 {
     std::complex<float> *c_data = (std::complex<float>*) data->f;
 
     //fft data by rows
-    for(int k = 0; k<data->h; k++)
-        fft(&data->f[k*data->w], data->w>>1);
+#ifdef FFT_LIB
+    fftwf_execute(plan);
+#else
+    for(int k = 0; k<data->h; k++) fft(&data->f[k*data->w], data->w>>1);
+#endif
 
     //RCMC
     uint32_t height = data->h;
@@ -201,14 +190,22 @@ void SAR_rcmc(framefp_t *data, uint32_t *offsets)
         }
 }
 
-void SAR_azimuth_compression(framefp_t *data, float *arf)
+void SAR_azimuth_compression(framefp_t *data, float *arf
+#ifdef FFT_LIB
+		, fftwf_plan plan
+#endif
+		)
 {
     //multiply row by arf
     reference_multiplication(data,arf);
 
     //return to freq domain with ifft
-    for(int k = 0; k<data->h; k++)
-        ifft(&data->f[k*data->w], data->w>>1);
+#ifdef FFT_LIB
+    fftwf_execute(plan);
+    for(int k = 0; k<data->h; k++) normalize(&data->f[k*data->w], data->w>>1);
+#else
+    for(int k = 0; k<data->h; k++) ifft(&data->f[k*data->w], data->w>>1);
+#endif
 }
 
 void SAR_multilook(framefp_t *radar_data, framefp_t *image, radar_params_t *params, uint32_t patch, float *max, float *min)
@@ -253,7 +250,11 @@ void SAR_focus(radar_data_t *data){
     float max = FLT_MIN;
     float min = FLT_MAX;
     /* Compute Range Reference Function */
-    SAR_range_ref(data->rrf, data->params);
+    SAR_range_ref(data->rrf, data->params
+#ifdef FFT_LIB
+		    , data->rrf_plan
+#endif
+		    );
 
     /* Compute Doppler Centroid */
     float fDc = SAR_DCE(data->aux, data->range_data[0], data->params);
@@ -262,23 +263,39 @@ void SAR_focus(radar_data_t *data){
     SAR_rcmc_table(data->params, data->offsets, fDc, data->params->apatch);
 
     /* Compute Azimuth Reference Function */
-    SAR_azimuth_ref(data->arf, data->params, fDc);
+    SAR_azimuth_ref(data->arf, data->params, fDc
+#ifdef FFT_LIB
+		    , data->arf_plan
+#endif
+		    );
 
     /* Begin Patch computation loop */
 #pragma omp parallel for
     for (int i = 0; i < data->params->npatch; i++)
     {
         /* Range Compression */
-        SAR_range_compression(&data->range_data[i], data->rrf);
+        SAR_range_compression(&data->range_data[i], data->rrf
+#ifdef FFT_LIB
+			, data->range_plan[i], data->range_plan_inv[i]
+#endif 
+			);
 
         /* Transpose to operate with Azimuth data */
         complex_transpose(&data->range_data[i], &data->azimuth_data[i], data->params->apatch, data->params->rvalid);
 
         /* Range Cell Migration Correction */
-        SAR_rcmc(&data->azimuth_data[i], data->offsets);
+        SAR_rcmc(&data->azimuth_data[i], data->offsets
+#ifdef FFT_LIB
+			, data->azimuth_plan[i]
+#endif
+			);
 
         /* Azimuth Compression */
-        SAR_azimuth_compression(&data->azimuth_data[i], data->arf);
+        SAR_azimuth_compression(&data->azimuth_data[i], data->arf
+#ifdef FFT_LIB
+			, data->azimuth_plan_inv[i]
+#endif 
+			);
 
         /* Transpose back to Range data */
         complex_transpose(&data->azimuth_data[i], &data->range_data[i], data->params->rvalid, data->params->apatch);

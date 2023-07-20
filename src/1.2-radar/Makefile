@@ -49,7 +49,7 @@ HIP_EXEC	:= $(EXEC_PATH)_$(HIP_NAME)$(FFT)
 # - FFT Lib -
 FFT =
 ifeq ($(FFT),lib)
-openmp: OMPFLAGS += -DFFT_LIB
+openmp: OMPFLAGS += -DFFT_LIB -lfftw3f_omp -lfftw3f -lm
 opencl: OPFLAGS += -DFFT_LIB
 cuda: CUFLAGS += -DFFT_LIB -lcufft
 hip: HIPCCFLAGS += -DFFT_LIB -lhipfft
@@ -147,14 +147,14 @@ openmp_conf:
 # FIXME this could probably be deleted, test first  (OMP_NUM_THREADS)
 
 openmp_processing.o: openmp_conf $(OPENMP_SRC)/processing.c
-	$(CC) $(CFLAGS) $(OMPFLAGS) -DOPENMP -c $(OPENMP_SRC)/processing.c  -o $(OPENMP_TARGET)/openmp_processing.o
+	$(CC) $(CFLAGS) -c $(OPENMP_SRC)/processing.c  -o $(OPENMP_TARGET)/openmp_processing.o $(OMPFLAGS)
 
 openmp_device.o: cpu_conf $(OPENMP_SRC)/device.c
-	$(CC) $(CFLAGS) $(OMPFLAGS) -DOPENMP -c $(OPENMP_SRC)/device.c -o $(OPENMP_TARGET)/openmp_device.o
+	$(CC) $(CFLAGS) -c $(OPENMP_SRC)/device.c -o $(OPENMP_TARGET)/openmp_device.o $(OMPFLAGS)
 
 main_openmp: openmp_conf openmp_processing.o openmp_device.o $(COMMON_OBJECTS)
 	mkdir -p $(BIN_PATH) 
-	$(CC) $(CFLAGS) $(OMPFLAGS) -DOPENMP $(SRC_FOLDER)/main.cpp  $(OPENMP_TARGET)/openmp_processing.o $(OPENMP_TARGET)/openmp_device.o $(COMMON_OBJECTS_PATH) -o $(OPENMP_EXEC)
+	$(CC) $(CFLAGS) $(SRC_FOLDER)/main.cpp $(OPENMP_TARGET)/openmp_processing.o $(OPENMP_TARGET)/openmp_device.o $(COMMON_OBJECTS_PATH) -o $(OPENMP_EXEC) $(OMPFLAGS)
 
 ##################################### OPENCL #################################
 # Shortcuts
@@ -195,7 +195,7 @@ cuda: CFLAGS += $(CUFLAGS)
 cuda: main_cuda
 
 cuda_conf:
-	ln -sf $(CUDA_FOLDER)-$(CUDA_VER) $(CUDA_SRC)
+	ln -sfn $(CUDA_FOLDER)-$(CUDA_VER) $(CUDA_SRC)
 	mkdir -p $(CUDA_TARGET)
 
 cuda_device.o: cuda_conf $(CUDA_SRC)/device.cu

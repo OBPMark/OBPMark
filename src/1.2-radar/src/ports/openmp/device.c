@@ -7,140 +7,181 @@
 #include "processing.h"
 
 void init(
-	radar_data_t *radar_data,
-	radar_time_t *t,
-	char *device_name
-	)
+		radar_data_t *radar_data,
+		radar_time_t *t,
+		char *device_name
+	 )
 {
-    init(radar_data,t, 0,0, device_name);
+	init(radar_data,t, 0,0, device_name);
 }
 
 
 void init(
-	radar_data_t *radar_data,
-	radar_time_t *t,
-	int platform,
-	int device,
-	char *device_name
-	)
+		radar_data_t *radar_data,
+		radar_time_t *t,
+		int platform,
+		int device,
+		char *device_name
+	 )
 {
-    // TBD Feature: device name. -- Bulky generic platform implementation
+	// TBD Feature: device name. -- Bulky generic platform implementation
 	strcpy(device_name,"Generic device");
 
 }
 
 
 bool device_memory_init(
-	radar_data_t *radar_data,
-	radar_params_t *params,
-    unsigned int out_height,
-    unsigned int out_width
-	)
+		radar_data_t *radar_data,
+		radar_params_t *params,
+		unsigned int out_height,
+		unsigned int out_width
+		)
 {	
-    unsigned int patch_width = params->rsize<<1;
-    unsigned int patch_extended_width = next_power_of2(params->rsize)<<1;
-    unsigned int patch_height = params->apatch;
+	unsigned int patch_width = params->rsize<<1;
+	unsigned int patch_extended_width = next_power_of2(params->rsize)<<1;
+	unsigned int patch_height = params->apatch;
 
 	/* radar_data_t memory allocation */
 	//RANGE & AZIMUTH DATA
 	radar_data->range_data = (framefp_t *) malloc(sizeof(framefp_t) * params->npatch);
 	radar_data->azimuth_data = (framefp_t *) malloc(sizeof(framefp_t) * params->npatch);
 	for(int i = 0; i < params->npatch; i++)
-    {
-        radar_data->range_data[i].f = (float*) calloc(patch_height*patch_extended_width, sizeof(float));
-        radar_data->range_data[i].h = patch_height;
-        radar_data->range_data[i].w = patch_extended_width;
+	{
+		radar_data->range_data[i].f = (float*) calloc(patch_height*patch_extended_width, sizeof(float));
+		radar_data->range_data[i].h = patch_height;
+		radar_data->range_data[i].w = patch_extended_width;
 
-        radar_data->azimuth_data[i].f = (float *) calloc(patch_width * patch_height, sizeof(float));
-        radar_data->azimuth_data[i].h = params->rvalid;
-        radar_data->azimuth_data[i].w = patch_height<<1;
-    }
-  	//MULTILOOK DATA
-  	radar_data->ml_data.f = (float*) malloc(sizeof(float)*out_width*out_height);
-  	radar_data->ml_data.w = out_width;
-  	radar_data->ml_data.h = out_height;
-  	
-  	//OUTPUT DATA
-  	radar_data->output_image.f = (uint8_t*) malloc(sizeof(uint8_t)*out_width*out_height);
-  	radar_data->output_image.w = out_width;
-  	radar_data->output_image.h = out_height;
+		radar_data->azimuth_data[i].f = (float *) calloc(patch_width * patch_height, sizeof(float));
+		radar_data->azimuth_data[i].h = params->rvalid;
+		radar_data->azimuth_data[i].w = patch_height<<1;
+	}
+	//MULTILOOK DATA
+	radar_data->ml_data.f = (float*) malloc(sizeof(float)*out_width*out_height);
+	radar_data->ml_data.w = out_width;
+	radar_data->ml_data.h = out_height;
 
-  	//PARAMS
-  	radar_data->params = (radar_params_t*) malloc(sizeof(radar_params_t));
-    
-    //RANGE REF. FUNCTION
-    radar_data->rrf = (float*) calloc(patch_extended_width, sizeof(float));
+	//OUTPUT DATA
+	radar_data->output_image.f = (uint8_t*) malloc(sizeof(uint8_t)*out_width*out_height);
+	radar_data->output_image.w = out_width;
+	radar_data->output_image.h = out_height;
+
+	//PARAMS
+	radar_data->params = (radar_params_t*) malloc(sizeof(radar_params_t));
+
+	//RANGE REF. FUNCTION
+	radar_data->rrf = (float*) calloc(patch_extended_width, sizeof(float));
 
 	//AZIMUTH REF. FUNCTION
-    radar_data->arf = (float*) calloc(patch_height<<1, sizeof(float));
+	radar_data->arf = (float*) calloc(patch_height<<1, sizeof(float));
 
-    //DOPPLER AUXILIAR BUFFER
-    radar_data->aux = (float*) calloc(patch_width, sizeof(float));
+	//DOPPLER AUXILIAR BUFFER
+	radar_data->aux = (float*) calloc(patch_width, sizeof(float));
 
-    //RCMC TABLE
-    radar_data->offsets = (uint32_t *) malloc(sizeof(uint32_t) * params->rvalid * patch_height);
+	//RCMC TABLE
+	radar_data->offsets = (uint32_t *) malloc(sizeof(uint32_t) * params->rvalid * patch_height);
 
-    return true;
+#ifdef FFT_LIB
+	fftwf_init_threads();
+	fftwf_plan_with_nthreads(omp_get_max_threads());
+	/* FFT plans */
+	radar_data->rrf_plan = fftwf_plan_dft_1d(next_power_of2(params->rsize), (fftwf_complex*) radar_data->rrf, (fftwf_complex*) radar_data->rrf, FFTW_FORWARD, FFTW_ESTIMATE);
+	radar_data->arf_plan = fftwf_plan_dft_1d(params->apatch, (fftwf_complex*) radar_data->arf, (fftwf_complex*) radar_data->arf, FFTW_FORWARD, FFTW_ESTIMATE);
+
+	radar_data->range_plan = (fftwf_plan *) malloc(sizeof(fftwf_plan) * params->npatch);
+	radar_data->range_plan_inv = (fftwf_plan *) malloc(sizeof(fftwf_plan) * params->npatch);
+	radar_data->azimuth_plan = (fftwf_plan *) malloc(sizeof(fftwf_plan) * params->npatch);
+	radar_data->azimuth_plan_inv = (fftwf_plan *) malloc(sizeof(fftwf_plan) * params->npatch);
+	int N_range[] = {(int)next_power_of2(params->rsize)};
+	int N_azimuth[] = {(int)params->apatch};
+	for (int i = 0; i < params->npatch; i++) {
+		radar_data->range_plan[i]    = fftwf_plan_many_dft(1, N_range, params->apatch,
+			          		                   (fftwf_complex*) radar_data->range_data[i].f, N_range, 
+			          		                   1, next_power_of2(params->rsize),
+			          		                   (fftwf_complex*) radar_data->range_data[i].f, N_range,
+			          		                   1, next_power_of2(params->rsize),
+			          		                   FFTW_FORWARD, FFTW_ESTIMATE);
+		radar_data->range_plan_inv[i] = fftwf_plan_many_dft(1, N_range, params->apatch,
+			          		                   (fftwf_complex*) radar_data->range_data[i].f, N_range, 
+			          		                   1, next_power_of2(params->rsize),
+			          		                   (fftwf_complex*) radar_data->range_data[i].f, N_range,
+			          		                   1, next_power_of2(params->rsize),
+			          		                   FFTW_BACKWARD, FFTW_ESTIMATE);
+		radar_data->azimuth_plan[i]  = fftwf_plan_many_dft(1, N_azimuth, params->rvalid,
+						                   (fftwf_complex*) radar_data->azimuth_data[i].f, N_azimuth, 
+						                   1, params->apatch,
+						                   (fftwf_complex*) radar_data->azimuth_data[i].f, N_azimuth,
+						                   1, params->apatch,
+						                   FFTW_FORWARD, FFTW_ESTIMATE);
+		radar_data->azimuth_plan_inv[i] = fftwf_plan_many_dft(1, N_azimuth, params->rvalid,
+						                   (fftwf_complex*) radar_data->azimuth_data[i].f, N_azimuth, 
+						                   1, params->apatch,
+						                   (fftwf_complex*) radar_data->azimuth_data[i].f, N_azimuth,
+						                   1, params->apatch,
+						                   FFTW_BACKWARD, FFTW_ESTIMATE);
+	}
+#endif
+
+	return true;
 }
 
 void copy_memory_to_device(
-	radar_data_t *radar_data,
-	radar_time_t *t,
-	framefp_t *input_data,
-	radar_params_t *input_params
-	)
+		radar_data_t *radar_data,
+		radar_time_t *t,
+		framefp_t *input_data,
+		radar_params_t *input_params
+		)
 {
-    /* Copy params */
-    memcpy(radar_data->params, input_params, sizeof(radar_params_t));
-    uint32_t width = radar_data->params->rsize<<1;
-    uint32_t height = radar_data->params->apatch;
-    uint32_t line_width = next_power_of2(width);
-    for (uint32_t i = 0; i < radar_data->params->npatch; i++ )
-        for(uint32_t j = 0; j < height; j++)
-            memcpy(&radar_data->range_data[i].f[j * line_width], &input_data[i].f[j * width], width * sizeof(float));
+	/* Copy params */
+	memcpy(radar_data->params, input_params, sizeof(radar_params_t));
+	uint32_t width = radar_data->params->rsize<<1;
+	uint32_t height = radar_data->params->apatch;
+	uint32_t line_width = next_power_of2(width);
+	for (uint32_t i = 0; i < radar_data->params->npatch; i++ )
+		for(uint32_t j = 0; j < height; j++)
+			memcpy(&radar_data->range_data[i].f[j * line_width], &input_data[i].f[j * width], width * sizeof(float));
 }
 
 
 void process_benchmark(
-	radar_data_t *radar_data,
-	radar_time_t *t
-	)
+		radar_data_t *radar_data,
+		radar_time_t *t
+		)
 {    
 
 	/* Loop through each frames and perform pre-processing. */
 	const double start_wtime = omp_get_wtime();
-    SAR_focus(radar_data);
+	SAR_focus(radar_data);
 	t->t_test = omp_get_wtime() - start_wtime;
 
 }
 
 void copy_memory_to_host(
-	radar_data_t *radar_data,
-	radar_time_t *t,
-	frame8_t *output_radar
-	)
+		radar_data_t *radar_data,
+		radar_time_t *t,
+		frame8_t *output_radar
+		)
 {
-    uint32_t  width = radar_data->output_image.w;
-    uint32_t  height = radar_data->output_image.h;
-    memcpy(output_radar->f, radar_data->output_image.f, sizeof(uint8_t) * width * height);
+	uint32_t  width = radar_data->output_image.w;
+	uint32_t  height = radar_data->output_image.h;
+	memcpy(output_radar->f, radar_data->output_image.f, sizeof(uint8_t) * width * height);
 }
 
 
 void get_elapsed_time(
-	radar_data_t *radar_data, 
-	radar_time_t *t, 
-    print_info_data_t *benchmark_info,
-	long int timestamp
-	)
+		radar_data_t *radar_data, 
+		radar_time_t *t, 
+		print_info_data_t *benchmark_info,
+		long int timestamp
+		)
 {
 	print_execution_info(benchmark_info, false, timestamp,0, t->t_test * 1000.f,0);
 }
 
 
 void clean(
-	radar_data_t *radar_data,
-	radar_time_t *t
-	)
+		radar_data_t *radar_data,
+		radar_time_t *t
+	  )
 {
 
 	/* Clean time */
@@ -148,18 +189,32 @@ void clean(
 
 	/* Clean radar data */
 	for(int i = 0; i < radar_data->params->npatch; i++)
-    {
-        free(radar_data->range_data[i].f);
-        free(radar_data->azimuth_data[i].f);
-    }
-    free(radar_data->range_data);
-    free(radar_data->azimuth_data);
-    free(radar_data->ml_data.f);
-    free(radar_data->output_image.f);
-    free(radar_data->params);
-    free(radar_data->rrf);
-    free(radar_data->arf);
-    free(radar_data->offsets);
-    free(radar_data->aux);
-    free(radar_data);
+	{
+		free(radar_data->range_data[i].f);
+		free(radar_data->azimuth_data[i].f);
+#ifdef FFT_LIB
+	  	fftwf_destroy_plan(radar_data->range_plan[i]);
+	  	fftwf_destroy_plan(radar_data->range_plan_inv[i]);
+	  	fftwf_destroy_plan(radar_data->azimuth_plan[i]);
+	  	fftwf_destroy_plan(radar_data->azimuth_plan_inv[i]);
+#endif
+	}
+	free(radar_data->range_data);
+	free(radar_data->azimuth_data);
+	free(radar_data->ml_data.f);
+	free(radar_data->output_image.f);
+	free(radar_data->params);
+	free(radar_data->rrf);
+	free(radar_data->arf);
+	free(radar_data->offsets);
+	free(radar_data->aux);
+#ifdef FFT_LIB
+	fftwf_destroy_plan(radar_data->rrf_plan);
+	fftwf_destroy_plan(radar_data->arf_plan);
+	free(radar_data->range_plan);
+	free(radar_data->range_plan_inv);
+	free(radar_data->azimuth_plan);
+	free(radar_data->azimuth_plan_inv);
+#endif
+	free(radar_data);
 }
