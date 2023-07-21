@@ -88,7 +88,7 @@ void print_execution_info(
 {
      // generate benchmark metrics
     float total_time = host_to_device_time + execution_time + device_to_host_time;
-    // calculate the throughput in MSamples/s
+    // calculate the throughput in Mpixel/s
     float throughput = (print_info_data->w_size * print_info_data->h_size) / (total_time * 1000);
 
     if (print_info_data->csv_mode)
