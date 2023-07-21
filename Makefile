@@ -7,7 +7,7 @@ include config/all.config
 
 # Benchmarks to build 
 SUBDIRS := 1.1-image
-#SUBDIRS += 1.2-radar
+SUBDIRS += 1.2-radar
 SUBDIRS += 2.1-data_compression
 SUBDIRS += 2.2-image_compression
 #SUBDIRS += 2.3-hyperspectral_compression
