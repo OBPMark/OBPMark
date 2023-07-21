@@ -3,7 +3,7 @@ BIN_PATH=../bin/1.1-image/obpmark-1.1-image
 
 IMAGE_WIDTH=1024
 IMAGE_HEIGHT=1024
-IMAGE_FRAMES=10
+IMAGE_FRAMES=8
 
 # FIXME add file reading
 
