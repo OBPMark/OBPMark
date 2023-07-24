@@ -91,7 +91,8 @@ void print_execution_info(
     float total_time = host_to_device_time + execution_time + device_to_host_time;
     // calculate the throughput in MSamples/s
     //FIXME check if it's the most appropiate way to compute throughput
-    float throughput = (print_info_data->w_size * print_info_data->h_size) / (total_time * 1000);
+    float throughput = (print_info_data->w_size * print_info_data->h_size * 
+                        print_info_data->num_patch) / (total_time * 1000);
 
     if (print_info_data->csv_mode)
 	{

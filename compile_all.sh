@@ -13,7 +13,7 @@ input_word=$1
 for word in $valid_words
 do
     if [ "$input_word" == "$word" ]; then
-        if [ "all" == "$input_word"]
+        if [ "all" == "$input_word" ]
         then
             echo "Compiling all"
             # compile all
@@ -43,7 +43,6 @@ do
             # compile opencl
             make clean
             make opencl
-        
         elif [ "hip" == "$input_word" ]
         then
             echo "Compiling Hip"

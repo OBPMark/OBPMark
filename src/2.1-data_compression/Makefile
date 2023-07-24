@@ -132,8 +132,6 @@ openmp: main_openmp
 
 openmp_conf:
 	mkdir -p $(OPENMP_TARGET)
-	export OMP_NUM_THREADS=$(OMP_NUM_THREADS) 
-# FIXME this could probably be deleted, test first  (OMP_NUM_THREADS)
 
 openmp_processing.o: openmp_conf $(OPENMP_SRC)/processing.c
 	$(CC) $(CFLAGS) $(OMPFLAGS) -DOPENMP -c $(OPENMP_SRC)/processing.c  -o $(OPENMP_TARGET)/openmp_processing.o
