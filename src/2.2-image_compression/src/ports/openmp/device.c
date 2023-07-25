@@ -183,7 +183,7 @@ void get_elapsed_time(
 	//double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000));
 	double bpe_time =   (t->t_bpe) / ((double)(CLOCKS_PER_SEC / 1000));
 	double dwt_time =   (t->t_dwt) / ((double)(CLOCKS_PER_SEC / 1000));
-	print_execution_info(benchmark_info, false, timestamp,0,(float)(bpe_time), (float)(dwt_time),0);
+	print_execution_info(benchmark_info, false, timestamp,0,(float)(dwt_time), (float)(bpe_time) ,0);
 }
 
 
