@@ -13,6 +13,7 @@ int load_data_from_file(
 	compression_image_data_t * ccsds_data
 	)
 {
+    int result = 0;
     FILE *file = fopen(filename, "rb");
     if(file == NULL)
     {
@@ -25,21 +26,36 @@ int load_data_from_file(
     {
         for (int i = 0; i < ccsds_data->h_size * ccsds_data->w_size; i++)
         {
-            fread(&ccsds_data->input_image[i], sizeof(char), 1, file);
+            result = fread(&ccsds_data->input_image[i], sizeof(char), 1, file);
+            if(result != 1)
+            {
+                printf("error: failed to read file: %s\n", filename);
+                return FILE_LOADING_ERROR;
+            }
         }
     }
     else if (ccsds_data->bit_size <= 16)
     {
         for (int i = 0; i < ccsds_data->h_size * ccsds_data->w_size; i++)
         {
-            fread(&ccsds_data->input_image[i], sizeof(short int), 1, file);
+            result = fread(&ccsds_data->input_image[i], sizeof(short int), 1, file);
+            if(result != 1)
+            {
+                printf("error: failed to read file: %s\n", filename);
+                return FILE_LOADING_ERROR;
+            }
         }
     }
     else if (ccsds_data->bit_size <= 32)
     {
         for (int i = 0; i < ccsds_data->h_size * ccsds_data->w_size; i++)
         {
-            fread(&ccsds_data->input_image[i], sizeof(unsigned int), 1, file);
+            result = fread(&ccsds_data->input_image[i], sizeof(unsigned int), 1, file);
+            if(result != 1)
+            {
+                printf("error: failed to read file: %s\n", filename);
+                return FILE_LOADING_ERROR;
+            }
         }
     }
     else

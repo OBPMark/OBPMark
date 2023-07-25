@@ -82,12 +82,14 @@ void print_execution_info(
     bool include_memory_transfer,
     long int timestamp,
     float host_to_device_time,
-    float execution_time,
+    float execution_time_dwt,
+    float execution_time_bpe,
     float device_to_host_time
     )
 {
      // generate benchmark metrics
-    float total_time = host_to_device_time + execution_time + device_to_host_time;
+    float total_time = host_to_device_time + execution_time_dwt + execution_time_bpe + device_to_host_time;
+    float execution_time = execution_time_dwt + execution_time_bpe;
     // calculate the throughput in Mpixel/s
     float throughput = (print_info_data->w_size * print_info_data->h_size) / (total_time * 1000);
 
@@ -95,7 +97,7 @@ void print_execution_info(
 	{
         if (print_info_data->extended_csv_mode)
         {
-            printf("%s;%s;%d;%d;%d;%d;%d;%.10f;%.10f;%.10f;%.10f;%.10f;%s;%s;\n", 
+            printf("%s;%s;%d;%d;%d;%d;%d;%.10f;%.10f;%.10f;%.10f;%.10f;%.10f;%s;%s;\n", 
             BENCHMARK_ID, 
             IMPLEMENTATION_NAME, 
             print_info_data->w_size, 
@@ -104,9 +106,10 @@ void print_execution_info(
             print_info_data->segment_size,
             print_info_data->type,
             host_to_device_time, 
-            execution_time, 
+            execution_time_dwt,
+            execution_time_bpe, 
             device_to_host_time, 
-            host_to_device_time + execution_time + device_to_host_time, 
+            host_to_device_time + execution_time_dwt + execution_time_bpe + device_to_host_time, 
             throughput,
             print_info_data->input_file, 
             print_info_data->output_file);
@@ -131,6 +134,8 @@ void print_execution_info(
         if(include_memory_transfer){
            printf("Elapsed time Host->Device = %.2f ms\n", host_to_device_time);
         }
+        printf("Elapsed time DWT = %.2f ms\n", execution_time_dwt );
+        printf("Elapsed time BPE = %.2f ms\n", execution_time_bpe );
 		printf("Elapsed time execution = %.2f ms\n", execution_time );
         if (include_memory_transfer){
             printf("Elapsed time Device->Host = %.2f ms\n", device_to_host_time);

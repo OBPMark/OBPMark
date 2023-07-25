@@ -384,10 +384,12 @@ void get_elapsed_time(
     float milliseconds_h_d = 0, milliseconds_d_h = 0;
     cudaEventElapsedTime(&milliseconds_h_d, *t->start_memory_copy_device, *t->stop_memory_copy_device);
     // kernel time 1
-    long unsigned int application_miliseconds = (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
+    //long unsigned int application_miliseconds = (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000)); 
+    long unsigned int dwt_miliseconds = (t->t_dwt) / ((double)(CLOCKS_PER_SEC / 1000));
+    long unsigned int bpe_miliseconds = (t->t_bpe) / ((double)(CLOCKS_PER_SEC / 1000));
     //  memory transfer time device-host
     cudaEventElapsedTime(&milliseconds_d_h, *t->start_memory_copy_host, *t->stop_memory_copy_host);
-    print_execution_info(benchmark_info, true, timestamp,milliseconds_h_d,(float)(application_miliseconds),milliseconds_d_h);
+    print_execution_info(benchmark_info, true, timestamp,milliseconds_h_d,(float)(dwt_miliseconds), (float)(bpe_miliseconds),milliseconds_d_h);
     
 }
 

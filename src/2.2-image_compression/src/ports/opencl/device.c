@@ -440,9 +440,11 @@ void get_elapsed_time(
     milliseconds_h_d += t->evt_copy_auxiliar_float_1->getProfilingInfo<CL_PROFILING_COMMAND_END>() - t->evt_copy_auxiliar_float_1->getProfilingInfo<CL_PROFILING_COMMAND_START>();
     milliseconds_h_d += t->evt_copy_auxiliar_float_2->getProfilingInfo<CL_PROFILING_COMMAND_END>() - t->evt_copy_auxiliar_float_2->getProfilingInfo<CL_PROFILING_COMMAND_START>();
     milliseconds_d_h = t->evt_copy_back->getProfilingInfo<CL_PROFILING_COMMAND_END>() - t->evt_copy_back->getProfilingInfo<CL_PROFILING_COMMAND_START>();
-    double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000));
+    //double elapsed_time =   (t->t_test) / ((double)(CLOCKS_PER_SEC / 1000));
+    double elapsed_time_dwt =   (t->t_dwt) / ((double)(CLOCKS_PER_SEC / 1000));
+    double elapsed_time_bpe =   (t->t_bpe) / ((double)(CLOCKS_PER_SEC / 1000));
 
-    print_execution_info(benchmark_info, true, timestamp,milliseconds_h_d,(float)(elapsed_time),milliseconds_d_h);
+    print_execution_info(benchmark_info, true, timestamp,milliseconds_h_d,(float)(elapsed_time_dwt), (float)(elapsed_time_bpe),milliseconds_d_h);
     
 }
 

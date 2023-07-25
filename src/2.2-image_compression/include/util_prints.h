@@ -46,7 +46,8 @@ void print_execution_info(
     bool include_memory_transfer,
     long int timestamp,
     float host_to_device_time,
-    float execution_time,
+    float execution_time_dwt,
+    float execution_time_bpe,
     float device_to_host_time
     );
 
