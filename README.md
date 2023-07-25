@@ -1,5 +1,5 @@
 ### OBPMark (On Board Processing Benchmark)
-Current version: v0.3
+Current version: v0.3.1
 
 Contact: OBPMark@esa.int
 Website: OBPMark.org
@@ -47,7 +47,7 @@ Authors/Chairs:
 Contributors:  
 - Alvaro Jover-Alvarez, Universitat Politècnica de Catalunya and Barcelona Supercomputing Center (UPC/BSC):
 	- Implementation of OpenMP versions. 
-- Ivan Rodriguez Ferrandez, Universitat Politècnica de Catalunya and Barcelona Supercomputing Center (UPC/BSC):
+- Ivan Rodriguez Ferrandez, Universitat Politècnica de Catalunya, Barcelona Supercomputing Center and European Space Agency (UPC/BSC/ESA):
 	- Implementation of Benchmark #1.1 "Image Calibration and Correction"
 	- Implementation of Benchmark #2.1 "CCSDS 121.0 Data Compression"
 	- Implementation of Benchmark #2.2 "CCSDS 122.0 Image Compression"
@@ -55,6 +55,9 @@ Contributors:
 - Marc Solé Bonet, Barcelona Supercomputing Centrer (BSC):
 	- Implementation of Benchmark #3.1 "AES Encryption"
 	- Implementation of Benchmark #1.2 "Radar Image Processing"
+- Sanath Muret, European Space Agency (ESA)  :
+	- Validation of the implementation
+	- Maintainer
 
 ## Description
 This repository contains a set of reference implementations for performing benchmarks on devices and systems on-board spacecraft. 
