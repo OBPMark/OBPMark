@@ -54,7 +54,12 @@ int Preprocessor(int x, unsigned int n_bits){
 // This min method already ensures memory freeing
 struct FCompressedData MIN(struct FCompressedData a, struct FCompressedData b)
 {
-    if(a.size < b.size)
+    // A candidate without a data buffer was discarded, it only carries the
+    // sentinel size. It must never win, not even when the sizes tie.
+    const bool a_viable = a.data != NULL;
+    const bool b_viable = b.data != NULL;
+
+    if(a_viable && (!b_viable || a.size < b.size))
     {
         if(b.data != NULL) free(b.data);
         return a;
@@ -131,18 +136,20 @@ struct FCompressedData SecondExtension(compression_data_t *compression_data, uns
     CompressedData.size = compression_data->j_blocksize * 32;
     CompressedData.data = NULL;
     CompressedData.CompressionIdentifier = SECOND_EXTENSION_ID - 1;
+    CompressedData.CompressionIdentifierInternal = INVALID_COMPRESSION_ID;
 
     // Checks if the compressed size is minor than the uncompressed size 
     const unsigned int CompressedSize = GetSizeSecondExtension(HalfBlockSize,HalvedSamples);
     if(CompressedSize > compression_data->j_blocksize * 32)
     {
+        free(HalvedSamples);
         return CompressedData;
     }
     
     CompressedData.size = CompressedSize;
     CompressedData.data = (unsigned int*) malloc (sizeof( unsigned int ) * compression_data->j_blocksize);
     CompressedData.CompressionIdentifierInternal = SECOND_EXTENSION_ID;
-    memcpy(CompressedData.data, HalvedSamples, sizeof( unsigned int ) * compression_data->j_blocksize);
+    memcpy(CompressedData.data, HalvedSamples, sizeof( unsigned int ) * HalfBlockSize);
     // free HalvedSamples
     free(HalvedSamples);
     
@@ -165,6 +172,7 @@ struct FCompressedData FundamentalSequence(compression_data_t *compression_data,
     CompressedData.size = compression_data->j_blocksize * 32;
     CompressedData.data = NULL;
     CompressedData.CompressionIdentifier = FUNDAMENTAL_SEQUENCE_ID;
+    CompressedData.CompressionIdentifierInternal = INVALID_COMPRESSION_ID;
 
     // Checks if the compressed size is minor than the uncompressed size 
     const unsigned int CompressedSize = GetSizeFundamentalSequence(compression_data->j_blocksize, Samples);
@@ -200,6 +208,7 @@ struct FCompressedData SampleSplitting(compression_data_t *compression_data, uns
     struct FCompressedData CompressedData;
     CompressedData.size = compression_data->j_blocksize * 32;
     CompressedData.data = NULL;
+    CompressedData.CompressionIdentifierInternal = INVALID_COMPRESSION_ID;
     
     // k sanitization
     if(k >= compression_data->n_bits - 2)
@@ -246,7 +255,7 @@ struct FCompressedData ZeroBlock(compression_data_t *compression_data, unsigned 
     struct FCompressedData CompressedData;
     CompressedData.size = CompressedSize;
     CompressedData.data = (unsigned int*) malloc (sizeof( unsigned int ) * compression_data->j_blocksize);
-    memcpy(CompressedData.data, PackedArray, sizeof(PackedArray));
+    memcpy(CompressedData.data, PackedArray, sizeof( unsigned int ) * compression_data->j_blocksize);
     CompressedData.CompressionIdentifier = ZERO_BLOCK_ID;
     CompressedData.CompressionIdentifierInternal = ZERO_BLOCK_ID;
 

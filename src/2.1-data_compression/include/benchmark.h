@@ -58,6 +58,8 @@
 #define SECOND_EXTENSION_ID 2
 #define SAMPLE_SPLITTING_ID 3
 #define NO_COMPRESSION_ID 32
+/* Marks a candidate that was discarded (no data buffer), so it is never written out */
+#define INVALID_COMPRESSION_ID 0xFFFFFFFF
 
 #define MAX_NUMBER_OF_BLOCKS 4096
 

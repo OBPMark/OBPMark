@@ -122,6 +122,7 @@ void clean(
 {
 	// free all memory from compression_data
 	free(compression_data->OutputPreprocessedValue);
+	free(compression_data);
 
 
 }

@@ -246,6 +246,7 @@ void clean(
 	free(compression_data->CompressionIdentifierInternal);
 	free(compression_data->size);
 	free(compression_data->data);
+	free(compression_data);
 
 
 

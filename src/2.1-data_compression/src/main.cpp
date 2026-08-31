@@ -116,6 +116,8 @@ void init_benchmark(
 
 	/* Clean and free device object */
 	clean(compression_data, t);
+	/* clean() releases compression_data, the timing struct is ours to free */
+	free(t);
 }
 
 int main(int argc, char **argv)

@@ -28,7 +28,9 @@ int load_data_from_file(
     // read each of the elements in the file
     for (int i = 0; i < j_blocksize * r_samplesInterval * steps; i++)
     {
-        fread(&data[i], sizeof(short int), 1, file);
+        unsigned short int sample = 0;
+        fread(&sample, sizeof(unsigned short int), 1, file);
+        data[i] = sample;
     }
     fclose(file);
     return FILE_LOADING_SUCCESS;
