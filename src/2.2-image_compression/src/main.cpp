@@ -151,6 +151,8 @@ int main(int argc, char **argv)
     
     // free memory
     clean(ccsds_data, t);
+    /* clean() releases ccsds_data, the timing struct is ours to free */
+    free(t);
     free(benchmark_info);
 
 }

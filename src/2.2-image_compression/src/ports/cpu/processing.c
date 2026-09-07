@@ -518,6 +518,11 @@ void coeff_regroup(
 				transformed_image[i][j] = temp[i][j];
 		}
 	}
+	for(unsigned int i = 0; i < h_size_padded; i++)
+	{
+		free(temp[i]);
+	}
+	free(temp);
 	// finish conversion
 }
 
@@ -2221,6 +2226,13 @@ void stages_encoding(
 	}
 	ref_bit_end_encode(block_data, block_string, compression_data, header_data, segment_number, bit_plane_number);
 
+	for( unsigned int gaggle_id = 0; gaggle_id < total_gaggles; gaggle_id++)
+	{
+		free(code_option_gaggles[gaggle_id]);
+		free(hit_flag[gaggle_id]);
+	}
+	free(code_option_gaggles);
+	free(hit_flag);
 }
 
 

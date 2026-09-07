@@ -30,6 +30,7 @@ int load_data_from_file(
             if(result != 1)
             {
                 printf("error: failed to read file: %s\n", filename);
+                fclose(file);
                 return FILE_LOADING_ERROR;
             }
         }
@@ -42,6 +43,7 @@ int load_data_from_file(
             if(result != 1)
             {
                 printf("error: failed to read file: %s\n", filename);
+                fclose(file);
                 return FILE_LOADING_ERROR;
             }
         }
@@ -54,6 +56,7 @@ int load_data_from_file(
             if(result != 1)
             {
                 printf("error: failed to read file: %s\n", filename);
+                fclose(file);
                 return FILE_LOADING_ERROR;
             }
         }
@@ -61,6 +64,7 @@ int load_data_from_file(
     else
     {
         printf("error: bit size not supported\n");
+        fclose(file);
         return FILE_LOADING_ERROR;
     }
     // read each of the elements in the file
